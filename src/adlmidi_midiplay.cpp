@@ -25,7 +25,7 @@
 
 // Mapping from MIDI volume level to OPL level value.
 
-#if defined(ANDROID) && (cplusplus < 201103L)
+#if defined(ANDROID) && (__cplusplus < 201103L)
 namespace std
 {
     int snprintf(char *out, size_t len, const char *fmt, ...)
@@ -723,10 +723,7 @@ MIDIplay::MIDIplay():
     //m_setup.SkipForward = 0;
     m_setup.loopingIsEnabled = false;
     m_setup.ScaleModulators     = -1;
-    m_setup.delay = 0.0;
-    m_setup.carry = 0.0;
-    m_setup.stored_samples = 0;
-    m_setup.backup_samples_size = 0;
+    m_setup.nextTick = 0;
 
     opl.NumCards = m_setup.NumCards;
     opl.AdlBank = m_setup.AdlBank;
@@ -781,7 +778,7 @@ double MIDIplay::Tick(double s, double granularity)
     CurrentPositionNew.absTimePosition += s;
 
     int antiFreezeCounter = 10000;//Limit 10000 loops to avoid freezing
-    while((CurrentPositionNew.wait <= granularity * 0.5) && (antiFreezeCounter > 0))
+    while((CurrentPositionNew.wait <= granularity) && (antiFreezeCounter > 0))
     {
         //std::fprintf(stderr, "wait = %g...\n", CurrentPosition.wait);
         if(!ProcessEventsNew())
@@ -865,8 +862,7 @@ void MIDIplay::seek(double seconds)
         CurrentPositionNew.wait = 0.0;
 
     m_setup.loopingIsEnabled = loopFlagState;
-    m_setup.delay = CurrentPositionNew.wait;
-    m_setup.carry = 0.0;
+    m_setup.nextTick = CurrentPositionNew.wait * m_setup.PCM_RATE;
 }
 
 double MIDIplay::tell()

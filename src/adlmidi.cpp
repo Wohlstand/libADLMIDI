@@ -55,7 +55,7 @@ ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
     midi_device->adl_midiPlayer = player;
     player->m_setup.PCM_RATE = static_cast<unsigned long>(sample_rate);
     player->m_setup.mindelay = 1.0 / (double)player->m_setup.PCM_RATE;
-    player->m_setup.maxdelay = 512.0 / (double)player->m_setup.PCM_RATE;
+    // player->m_setup.maxdelay = 512.0 / (double)player->m_setup.PCM_RATE;
     player->ChooseDevice("none");
     adlRefreshNumCards(midi_device);
     return midi_device;
@@ -227,8 +227,6 @@ ADLMIDI_EXPORT int adl_openBankFile(struct ADL_MIDIPlayer *device, const char *f
     if(device && device->adl_midiPlayer)
     {
         MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
-        play->m_setup.stored_samples = 0;
-        play->m_setup.backup_samples_size = 0;
         if(!play->LoadBank(filePath))
         {
             std::string err = play->getErrorString();
@@ -248,8 +246,6 @@ ADLMIDI_EXPORT int adl_openBankData(struct ADL_MIDIPlayer *device, const void *m
     if(device && device->adl_midiPlayer)
     {
         MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
-        play->m_setup.stored_samples = 0;
-        play->m_setup.backup_samples_size = 0;
         if(!play->LoadBank(mem, static_cast<size_t>(size)))
         {
             std::string err = play->getErrorString();
@@ -269,8 +265,6 @@ ADLMIDI_EXPORT int adl_openFile(ADL_MIDIPlayer *device, const char *filePath)
     if(device && device->adl_midiPlayer)
     {
         MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
-        play->m_setup.stored_samples = 0;
-        play->m_setup.backup_samples_size = 0;
         if(!play->LoadMIDI(filePath))
         {
             std::string err = play->getErrorString();
@@ -290,8 +284,6 @@ ADLMIDI_EXPORT int adl_openData(ADL_MIDIPlayer *device, const void *mem, unsigne
     if(device && device->adl_midiPlayer)
     {
         MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
-        play->m_setup.stored_samples = 0;
-        play->m_setup.backup_samples_size = 0;
         if(!play->LoadMIDI(mem, static_cast<size_t>(size)))
         {
             std::string err = play->getErrorString();
@@ -360,8 +352,6 @@ ADLMIDI_EXPORT void adl_reset(struct ADL_MIDIPlayer *device)
     if(!device)
         return;
     MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
-    play->m_setup.stored_samples = 0;
-    play->m_setup.backup_samples_size = 0;
     play->opl.Reset(play->m_setup.PCM_RATE);
 }
 
@@ -505,35 +495,6 @@ ADLMIDI_EXPORT void adl_setDebugMessageHook(struct ADL_MIDIPlayer *device, ADL_D
     play->hooks.onDebugMessage_userData = userData;
 }
 
-
-
-inline static void SendStereoAudio(MIDIplay::Setup &device,
-                                   int      &samples_requested,
-                                   ssize_t  &in_size,
-                                   short    *_in,
-                                   ssize_t   out_pos,
-                                   short    *_out)
-{
-    if(!in_size)
-        return;
-    device.stored_samples = 0;
-    size_t offset       = static_cast<size_t>(out_pos);
-    size_t inSamples    = static_cast<size_t>(in_size * 2);
-    size_t maxSamples   = static_cast<size_t>(samples_requested) - offset;
-    size_t toCopy       = std::min(maxSamples, inSamples);
-    std::memcpy(_out + out_pos, _in, toCopy * sizeof(short));
-
-    if(maxSamples < inSamples)
-    {
-        size_t appendSize = inSamples - maxSamples;
-        std::memcpy(device.backup_samples + device.backup_samples_size,
-                    maxSamples + _in, appendSize * sizeof(short));
-        device.backup_samples_size += (ssize_t)appendSize;
-        device.stored_samples += (ssize_t)appendSize;
-    }
-}
-
-
 ADLMIDI_EXPORT int adl_play(ADL_MIDIPlayer *device, int sampleCount, short *out)
 {
     #ifdef ADLMIDI_HW_OPL
@@ -542,7 +503,7 @@ ADLMIDI_EXPORT int adl_play(ADL_MIDIPlayer *device, int sampleCount, short *out)
     (void)out;
     return 0;
     #else
-    sampleCount -= sampleCount % 2; //Avoid even sample requests
+
     if(sampleCount < 0)
         return 0;
     if(!device)
@@ -551,93 +512,53 @@ ADLMIDI_EXPORT int adl_play(ADL_MIDIPlayer *device, int sampleCount, short *out)
     MIDIplay *player = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
     MIDIplay::Setup &setup = player->m_setup;
 
-    ssize_t gotten_len = 0;
-    ssize_t n_periodCountStereo = 512;
-    //ssize_t n_periodCountPhys = n_periodCountStereo * 2;
-    int left = sampleCount;
+    int ret = 0;
+    unsigned int chips = player->opl.NumCards;
 
-    while(left > 0)
+    std::memset(out, 0, static_cast<size_t>(sampleCount * 2) * sizeof(int16_t));
+
+    while(sampleCount && !player->atEnd)
     {
-        if(setup.backup_samples_size > 0)
-        {
-            //Send reserved samples if exist
-            ssize_t ate = 0;
+        const uint32_t samples = setup.nextTick < sampleCount ? setup.nextTick : sampleCount;
 
-            while((ate < setup.backup_samples_size) && (ate < left))
+        #ifdef ADLMIDI_USE_DOSBOX_OPL
+        ssize_t in_generatedStereo = (samples > 512) ? 512 : samples;
+        #else
+        ssize_t in_generatedStereo = samples;
+        #endif
+
+        if (in_generatedStereo > 0) {
+            if(chips == 1)
             {
-                out[ate] = setup.backup_samples[ate];
-                ate++;
+                #ifdef ADLMIDI_USE_DOSBOX_OPL
+                player->opl.cards[0].GenerateArr(out, &in_generatedStereo);
+                #else
+                OPL3_GenerateStream(&player->opl.cards[0], out, static_cast<Bit32u>(in_generatedStereo));
+                #endif                
             }
-
-            left -= (int)ate;
-            gotten_len += ate;
-
-            if(ate < setup.backup_samples_size)
+            else
             {
-                for(ssize_t j = 0; j < ate; j++)
-                    setup.backup_samples[(ate - 1) - j] = setup.backup_samples[(setup.backup_samples_size - 1) - j];
-            }
-
-            setup.backup_samples_size -= ate;
-        }
-        else
-        {
-            const double eat_delay = setup.delay < setup.maxdelay ? setup.delay : setup.maxdelay;
-            setup.delay -= eat_delay;
-            setup.carry += setup.PCM_RATE * eat_delay;
-            n_periodCountStereo = static_cast<ssize_t>(setup.carry);
-            setup.carry -= n_periodCountStereo;
-
-            //if(setup.SkipForward > 0)
-            //    setup.SkipForward -= 1;
-            //else
-            {
-                if((player->atEnd) && (setup.delay <= 0.0))
-                    break;//Stop to fetch samples at reaching the song end with disabled loop
-
-                //! Count of stereo samples
-                ssize_t in_generatedStereo = (n_periodCountStereo > 512) ? 512 : n_periodCountStereo;
-                //! Total count of samples
-                ssize_t in_generatedPhys = in_generatedStereo * 2;
-                //! Unsigned total sample count
-                //fill buffer with zeros
-                int16_t *out_buf = player->outBuf;
-                std::memset(out_buf, 0, static_cast<size_t>(in_generatedPhys) * sizeof(int16_t));
-                unsigned int chips = player->opl.NumCards;
-                if(chips == 1)
+                /* Generate data from every chip and mix result */
+                for(unsigned card = 0; card < chips; ++card)
                 {
                     #ifdef ADLMIDI_USE_DOSBOX_OPL
-                    player->opl.cards[0].GenerateArr(out_buf, &in_generatedStereo);
-                    in_generatedPhys = in_generatedStereo * 2;
+                    player->opl.cards[card].GenerateArrMix(out, &in_generatedStereo);
                     #else
-                    OPL3_GenerateStream(&player->opl.cards[0], out_buf, static_cast<Bit32u>(in_generatedStereo));
+                    OPL3_GenerateStreamMix(&player->opl.cards[card], out, static_cast<Bit32u>(in_generatedStereo));
                     #endif
-                }
-                else if(n_periodCountStereo > 0)
-                {
-                    /* Generate data from every chip and mix result */
-                    for(unsigned card = 0; card < chips; ++card)
-                    {
-                        #ifdef ADLMIDI_USE_DOSBOX_OPL
-                        player->opl.cards[card].GenerateArrMix(out_buf, &in_generatedStereo);
-                        in_generatedPhys = in_generatedStereo * 2;
-                        #else
-                        OPL3_GenerateStreamMix(&player->opl.cards[card], out_buf, static_cast<Bit32u>(in_generatedStereo));
-                        #endif
-                    }
-                }
-                /* Process it */
-                SendStereoAudio(setup, sampleCount, in_generatedStereo, out_buf, gotten_len, out);
-
-                left -= (int)in_generatedPhys;
-                gotten_len += (in_generatedPhys) - setup.stored_samples;
+                }                
             }
-
-            setup.delay = player->Tick(eat_delay, setup.mindelay);
+            ret += in_generatedStereo;
+            out += in_generatedStereo * 2;
         }
+        sampleCount -= in_generatedStereo;
+
+        double eat_delay = in_generatedStereo / (double)setup.PCM_RATE;
+        double delay = player->Tick(eat_delay, setup.mindelay);
+        setup.nextTick = delay * setup.PCM_RATE;
     }
 
-    return static_cast<int>(gotten_len);
+    return static_cast<int>(ret);
     #endif
 }
 
