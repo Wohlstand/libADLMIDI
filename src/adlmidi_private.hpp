@@ -689,19 +689,11 @@ public:
         bool    loopingIsEnabled;
         int     ScaleModulators;
 
-        double delay;
-        double carry;
+        uint32_t nextTick;
 
         /* The lag between visual content and audio content equals */
         /* the sum of these two buffers. */
         double mindelay;
-        double maxdelay;
-
-        /* For internal usage */
-        ssize_t stored_samples; /* num of collected samples */
-        short   backup_samples[1024]; /* Backup sample storage. */
-        ssize_t backup_samples_size; /* Backup sample storage. */
-        /* For internal usage */
 
         unsigned long PCM_RATE;
     };
@@ -788,8 +780,6 @@ public:
             invalidLoop; /*Loop points are invalid (loopStart after loopEnd or loopStart and loopEnd are on same place)*/
     char ____padding2[2];
     OPL3 opl;
-
-    int16_t outBuf[1024];
 
     Setup m_setup;
 
