@@ -778,7 +778,7 @@ double MIDIplay::Tick(double s, double granularity)
     CurrentPositionNew.absTimePosition += s;
 
     int antiFreezeCounter = 10000;//Limit 10000 loops to avoid freezing
-    while((CurrentPositionNew.wait <= granularity * 0.5) && (antiFreezeCounter > 0))
+    while((CurrentPositionNew.wait <= granularity) && (antiFreezeCounter > 0))
     {
         //std::fprintf(stderr, "wait = %g...\n", CurrentPosition.wait);
         if(!ProcessEventsNew())

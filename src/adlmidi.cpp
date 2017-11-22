@@ -503,7 +503,7 @@ ADLMIDI_EXPORT int adl_play(ADL_MIDIPlayer *device, int sampleCount, short *out)
     (void)out;
     return 0;
     #else
-    sampleCount -= sampleCount % 2; //Avoid even sample requests
+
     if(sampleCount < 0)
         return 0;
     if(!device)
@@ -513,6 +513,7 @@ ADLMIDI_EXPORT int adl_play(ADL_MIDIPlayer *device, int sampleCount, short *out)
     MIDIplay::Setup &setup = player->m_setup;
 
     int ret = 0;
+    unsigned int chips = player->opl.NumCards;
 
     std::memset(out, 0, static_cast<size_t>(sampleCount * 2) * sizeof(int16_t));
 
@@ -526,31 +527,31 @@ ADLMIDI_EXPORT int adl_play(ADL_MIDIPlayer *device, int sampleCount, short *out)
         ssize_t in_generatedStereo = samples;
         #endif
 
-        unsigned int chips = player->opl.NumCards;
-        if(chips == 1)
-        {
-            #ifdef ADLMIDI_USE_DOSBOX_OPL
-            player->opl.cards[0].GenerateArr(out, &in_generatedStereo);
-            #else
-            OPL3_GenerateStream(&player->opl.cards[0], out, static_cast<Bit32u>(in_generatedStereo));
-            #endif                
-        }
-        else
-        {
-            /* Generate data from every chip and mix result */
-            for(unsigned card = 0; card < chips; ++card)
+        if (in_generatedStereo > 0) {
+            if(chips == 1)
             {
                 #ifdef ADLMIDI_USE_DOSBOX_OPL
-                player->opl.cards[card].GenerateArrMix(out, &in_generatedStereo);
+                player->opl.cards[0].GenerateArr(out, &in_generatedStereo);
                 #else
-                OPL3_GenerateStreamMix(&player->opl.cards[card], out, static_cast<Bit32u>(in_generatedStereo));
-                #endif
-            }                
+                OPL3_GenerateStream(&player->opl.cards[0], out, static_cast<Bit32u>(in_generatedStereo));
+                #endif                
+            }
+            else
+            {
+                /* Generate data from every chip and mix result */
+                for(unsigned card = 0; card < chips; ++card)
+                {
+                    #ifdef ADLMIDI_USE_DOSBOX_OPL
+                    player->opl.cards[card].GenerateArrMix(out, &in_generatedStereo);
+                    #else
+                    OPL3_GenerateStreamMix(&player->opl.cards[card], out, static_cast<Bit32u>(in_generatedStereo));
+                    #endif
+                }                
+            }
+            ret += in_generatedStereo;
+            out += in_generatedStereo * 2;
         }
-        out += in_generatedStereo * 2;
-
         sampleCount -= in_generatedStereo;
-        ret += in_generatedStereo;
 
         double eat_delay = in_generatedStereo / (double)setup.PCM_RATE;
         double delay = player->Tick(eat_delay, setup.mindelay);
