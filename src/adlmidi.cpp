@@ -44,6 +44,8 @@ static const ADLMIDI_AudioFormat adl_DefaultAudioFormat =
     2 * sizeof(int16_t),
 };
 
+extern ADL_EmulatorCharacteristics globalEmulatorChs[ADLMIDI_EMU_end];
+
 /*---------------------------EXPORTS---------------------------*/
 
 ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
@@ -349,6 +351,17 @@ ADLMIDI_EXPORT const char *adl_chipEmulatorName(struct ADL_MIDIPlayer *device)
     return "Unknown";
 }
 
+ADLMIDI_EXPORT int adl_chipEmulator(struct ADL_MIDIPlayer *device)
+{
+    if(device)
+    {
+        MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
+        if(play)
+            return play->m_setup.emulator;
+    }
+    return -1;
+}
+
 ADLMIDI_EXPORT int adl_switchEmulator(struct ADL_MIDIPlayer *device, int emulator)
 {
     if(device)
@@ -361,6 +374,31 @@ ADLMIDI_EXPORT int adl_switchEmulator(struct ADL_MIDIPlayer *device, int emulato
             return 0;
         }
         play->setErrorString("OPN2 MIDI: Unknown emulation core!");
+    }
+    return -1;
+}
+
+ADLMIDI_EXPORT int adl_getNumEmulators()
+{
+    return ADLMIDI_EMU_end;
+}
+
+ADLMIDI_EXPORT const ADL_EmulatorCharacteristics *adl_describeEmulator(int emulator)
+{
+    if (emulator >= ADLMIDI_EMU_end)
+        return NULL;
+    ADL_EmulatorCharacteristics *chs = &globalEmulatorChs[emulator];
+    return chs->name ? chs : NULL;
+}
+
+ADLMIDI_EXPORT int adl_matchEmulator(int profile)
+{
+    if(profile == 0)
+        return (ADL_Emulator)0;  // the default
+    for(unsigned i = 0; i < ADLMIDI_EMU_end; ++i) {
+        ADL_EmulatorCharacteristics *chs = &globalEmulatorChs[i];
+        if (chs->name && (chs->profile & profile) == profile)
+            return i;
     }
     return -1;
 }

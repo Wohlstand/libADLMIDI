@@ -87,7 +87,9 @@ int NukedOPL3v174::generateAndMix32(int32_t *output, size_t frames)
     return (int)frames;
 }
 
+const char *const NukedOPL3v174::staticEmulatorName = "Nuked OPL3 (v 1.7.4)";
+
 const char *NukedOPL3v174::emulatorName()
 {
-    return "Nuked OPL3 (v 1.7.4)";
+    return staticEmulatorName;
 }

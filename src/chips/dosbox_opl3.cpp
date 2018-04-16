@@ -106,7 +106,9 @@ int DosBoxOPL3::generateAndMix32(int32_t *output, size_t frames)
     return (int)frames;
 }
 
+const char *const DosBoxOPL3::staticEmulatorName = "DosBox 0.74 OPL3";
+
 const char *DosBoxOPL3::emulatorName()
 {
-    return "DosBox 0.74 OPL3";
+    return staticEmulatorName;
 }
