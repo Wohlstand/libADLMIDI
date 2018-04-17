@@ -867,6 +867,8 @@ public:
             LocationData *user = users_find(loc);
             if(!user) {
                 user = users_allocate();
+                if(!user)
+                    return NULL;
                 *user = LocationData();
                 user->loc = loc;
             }
