@@ -124,7 +124,7 @@ void MIDIplay::AdlChannel::AddAge(int64_t ms)
     {
         koff_time_until_neglible = 0;
 
-        for(LocationData *i = users; i; i = i->next)
+        for(LocationData *i = users_first; i; i = i->next)
         {
             i->kon_time_until_neglible =
                 std::max(i->kon_time_until_neglible - ms, static_cast<int64_t>(-0x1FFFFFFFl));
@@ -1455,7 +1455,7 @@ void MIDIplay::NoteUpdate(uint16_t MidCh,
         if(props_mask & Upd_Patch)
         {
             opl.Patch(c, ins.insId);
-            AdlChannel::LocationData *d = ch[c].users_find_or_insert(my_loc);
+            AdlChannel::LocationData *d = ch[c].users_find_or_create(my_loc);
 #warning CHECK d FOR NULL
             d->sustained = false; // inserts if necessary
             d->vibdelay  = 0;
@@ -1500,7 +1500,7 @@ void MIDIplay::NoteUpdate(uint16_t MidCh,
             {
                 // Sustain: Forget about the note, but don't key it off.
                 //          Also will avoid overwriting it very soon.
-                AdlChannel::LocationData *d = ch[c].users_find_or_insert(my_loc);
+                AdlChannel::LocationData *d = ch[c].users_find_or_create(my_loc);
 #warning CHECK d FOR NULL
                 d->sustained = true; // note: not erased!
                 if(hooks.onNote)
@@ -1604,7 +1604,7 @@ void MIDIplay::NoteUpdate(uint16_t MidCh,
 
         if(props_mask & Upd_Pitch)
         {
-            AdlChannel::LocationData *d = ch[c].users_find_or_insert(my_loc);
+            AdlChannel::LocationData *d = ch[c].users_find_or_create(my_loc);
 #warning CHECK d FOR NULL
 
             // Don't bend a sustained note
@@ -2133,7 +2133,7 @@ int64_t MIDIplay::CalculateAdlChannelGoodness(unsigned c, const MIDIchannel::Not
 
     // Same midi-instrument = some stability
     //if(c == MidCh) s += 4;
-    for (AdlChannel::LocationData *j = ch[c].users; j; j = j->next)
+    for (AdlChannel::LocationData *j = ch[c].users_first; j; j = j->next)
     {
         s -= 4000;
 
@@ -2181,7 +2181,7 @@ int64_t MIDIplay::CalculateAdlChannelGoodness(unsigned c, const MIDIchannel::Not
             if(opl.four_op_category[c2]
                != opl.four_op_category[c]) continue;
 
-            for(AdlChannel::LocationData *m = ch[c2].users; m; m = m->next)
+            for(AdlChannel::LocationData *m = ch[c2].users_first; m; m = m->next)
             {
                 if(m->sustained)       continue;
                 if(m->vibdelay >= 200) continue;
@@ -2202,7 +2202,7 @@ void MIDIplay::PrepareAdlChannelForNewNote(size_t c, const MIDIchannel::NoteInfo
     if(ch[c].users_empty()) return; // Nothing to do
 
     //bool doing_arpeggio = false;
-    for(AdlChannel::LocationData *jnext = ch[c].users; jnext;)
+    for(AdlChannel::LocationData *jnext = ch[c].users_first; jnext;)
     {
         AdlChannel::LocationData *j = jnext;
         jnext = jnext->next;
@@ -2260,7 +2260,7 @@ void MIDIplay::KillOrEvacuate(size_t from_channel,
         if(opl.four_op_category[c] != opl.four_op_category[from_channel])
             continue;
 
-        for(AdlChannel::LocationData *m = ch[c].users; m; m = m->next)
+        for(AdlChannel::LocationData *m = ch[c].users_first; m; m = m->next)
         {
             if(m->vibdelay >= 200
                && m->kon_time_until_neglible < 10000) continue;
@@ -2325,7 +2325,7 @@ void MIDIplay::KillSustainingNotes(int32_t MidCh, int32_t this_adlchn)
     {
         if(ch[c].users_empty()) continue; // Nothing to do
 
-        for(AdlChannel::LocationData *jnext = ch[c].users; jnext;)
+        for(AdlChannel::LocationData *jnext = ch[c].users_first; jnext;)
         {
             AdlChannel::LocationData *j = jnext;
             jnext = jnext->next;
@@ -2480,7 +2480,7 @@ retry_arpeggio:
 
         if(n_users > 1)
         {
-            AdlChannel::LocationData *i = ch[c].users;
+            AdlChannel::LocationData *i = ch[c].users_first;
             size_t rate_reduction = 3;
 
             if(n_users >= 3)
@@ -2489,7 +2489,9 @@ retry_arpeggio:
             if(n_users >= 4)
                 rate_reduction = 1;
 
-            std::advance(i, (arpeggio_counter / rate_reduction) % n_users);
+            for(unsigned count = (arpeggio_counter / rate_reduction) % n_users,
+                     n = 0; n < count; ++n)
+                i = i->next;
 
             if(i->sustained == false)
             {

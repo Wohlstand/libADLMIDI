@@ -646,8 +646,6 @@ public:
                 {
                     return !operator==(oth);
                 }
-
-                // Phys() : chip_chan(0), insId(0), pseudo4op(false) {}
             };
             //! List of OPL3 channels it is currently occupying.
             Phys chip_channels[MaxNumPhysItemCount];
@@ -824,26 +822,25 @@ public:
             MIDIchannel::NoteInfo::Phys ins;  // a copy of that in phys[]
             int64_t kon_time_until_neglible;
             int64_t vibdelay;
-
-            // LocationData() : sustained(false), kon_time_until_neglible(0), vibdelay(0) {}
         };
 
         // If the channel is keyoff'd
         int64_t koff_time_until_neglible;
 
         enum { users_max = 128 };
-        LocationData *users, *users_free_cells;
+        LocationData *users_first, *users_free_cells;
         LocationData users_cells[users_max];
         unsigned users_size;
 
         bool users_empty() const
-            { return !users; }
+            { return !users_first; }
         LocationData *users_find(Location loc)
         {
-            for(LocationData *user = users; user; user = user->next)
-                if(user->loc == loc)
-                    return user;
-            return NULL;
+            LocationData *user = NULL;
+            for(LocationData *curr = users_first; !user && curr; curr = curr->next)
+                if(curr->loc == loc)
+                    user = curr;
+            return user;
         }
         LocationData *users_allocate()
         {
@@ -854,15 +851,15 @@ public:
             users_free_cells = user->next;
             users_free_cells->prev = NULL;
             // add to users front
-            if(users)
-                users->prev = user;
+            if(users_first)
+                users_first->prev = user;
             user->prev = NULL;
-            user->next = users;
-            users = user;
+            user->next = users_first;
+            users_first = user;
             ++users_size;
             return user;
         }
-        LocationData *users_find_or_insert(Location loc)
+        LocationData *users_find_or_create(Location loc)
         {
             LocationData *user = users_find(loc);
             if(!user) {
@@ -874,7 +871,7 @@ public:
             }
             return user;
         }
-        LocationData *users_insert(LocationData &x)
+        LocationData *users_insert(const LocationData &x)
         {
             LocationData *user = users_find(x.loc);
             if(!user)
@@ -888,12 +885,12 @@ public:
         }
         void users_erase(LocationData *user)
         {
-            if (user->prev)
+            if(user->prev)
                 user->prev->next = user->next;
-            if (user->next)
+            if(user->next)
                 user->next->prev = user->prev;
-            if (user == users)
-                users = user->next;
+            if(user == users_first)
+                users_first = user->next;
             user->prev = NULL;
             user->next = users_free_cells;
             users_free_cells = user;
@@ -901,7 +898,7 @@ public:
         }
 
         // For channel allocation:
-        AdlChannel(): koff_time_until_neglible(0), users(NULL), users_size(0)
+        AdlChannel(): koff_time_until_neglible(0), users_first(NULL), users_size(0)
         {
             users_free_cells = users_cells;
             for(size_t i = 0; i < users_max; ++i)
