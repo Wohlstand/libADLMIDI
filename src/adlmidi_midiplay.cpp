@@ -1456,11 +1456,12 @@ void MIDIplay::NoteUpdate(uint16_t MidCh,
         {
             opl.Patch(c, ins.insId);
             AdlChannel::LocationData *d = ch[c].users_find_or_create(my_loc);
-#warning CHECK d FOR NULL
-            d->sustained = false; // inserts if necessary
-            d->vibdelay  = 0;
-            d->kon_time_until_neglible = ains.ms_sound_kon;
-            d->ins       = ins;
+            if(d) {  // inserts if necessary
+                d->sustained = false;
+                d->vibdelay  = 0;
+                d->kon_time_until_neglible = ains.ms_sound_kon;
+                d->ins       = ins;
+            }
         }
     }
 
@@ -1501,8 +1502,8 @@ void MIDIplay::NoteUpdate(uint16_t MidCh,
                 // Sustain: Forget about the note, but don't key it off.
                 //          Also will avoid overwriting it very soon.
                 AdlChannel::LocationData *d = ch[c].users_find_or_create(my_loc);
-#warning CHECK d FOR NULL
-                d->sustained = true; // note: not erased!
+                if(d)
+                    d->sustained = true; // note: not erased!
                 if(hooks.onNote)
                     hooks.onNote(hooks.onNote_userData, c, tone, midiins, -1, 0.0);
             }
@@ -1604,11 +1605,10 @@ void MIDIplay::NoteUpdate(uint16_t MidCh,
 
         if(props_mask & Upd_Pitch)
         {
-            AdlChannel::LocationData *d = ch[c].users_find_or_create(my_loc);
-#warning CHECK d FOR NULL
+            AdlChannel::LocationData *d = ch[c].users_find(my_loc);
 
             // Don't bend a sustained note
-            if(!d->sustained)
+            if(!d || !d->sustained)
             {
                 double bend = Ch[MidCh].bend + opl.GetAdlIns(ins.insId).finetune;
                 double phase = 0.0;
@@ -2260,7 +2260,11 @@ void MIDIplay::KillOrEvacuate(size_t from_channel,
         if(opl.four_op_category[c] != opl.four_op_category[from_channel])
             continue;
 
-        for(AdlChannel::LocationData *m = ch[c].users_first; m; m = m->next)
+        AdlChannel &adlch = ch[c];
+        if(adlch.users_size == AdlChannel::users_max)
+            continue;  // no room for more arpeggio on channel
+
+        for(AdlChannel::LocationData *m = adlch.users_first; m; m = m->next)
         {
             if(m->vibdelay >= 200
                && m->kon_time_until_neglible < 10000) continue;
@@ -2281,8 +2285,8 @@ void MIDIplay::KillOrEvacuate(size_t from_channel,
 
             i->phys_erase(static_cast<uint16_t>(from_channel));
             i->phys_ensure_find_or_create(cs)->assign(j->ins);
-            ch[cs].users_insert(*j);
-#warning CHECK FOR NULL
+            if(!ch[cs].users_insert(*j))
+                assert(false);
             ch[from_channel].users_erase(j);
             return;
         }
