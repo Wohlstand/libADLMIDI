@@ -865,7 +865,9 @@ public:
                 user = users_allocate();
                 if(!user)
                     return NULL;
+                LocationData *prev = user->prev, *next = user->next;
                 *user = LocationData();
+                user->prev = prev; user->next = next;
                 user->loc = loc;
             }
             return user;
@@ -878,7 +880,9 @@ public:
                 user = users_allocate();
                 if(!user)
                     return NULL;
+                LocationData *prev = user->prev, *next = user->next;
                 *user = x;
+                user->prev = prev; user->next = next;
             }
             return user;
         }
