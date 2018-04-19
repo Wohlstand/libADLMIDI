@@ -816,7 +816,6 @@ public:
         {
             LocationData *prev, *next;
             Location loc;
-            uint8_t     note;
             bool sustained;
             char ____padding[7];
             MIDIchannel::NoteInfo::Phys ins;  // a copy of that in phys[]

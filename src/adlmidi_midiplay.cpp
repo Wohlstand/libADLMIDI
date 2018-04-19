@@ -2143,7 +2143,7 @@ int64_t MIDIplay::CalculateAdlChannelGoodness(unsigned c, const MIDIchannel::Not
             s -= (j->kon_time_until_neglible / 2);
 
         MIDIchannel::activenoteiterator
-        k = const_cast<MIDIchannel &>(Ch[j->loc.MidCh]).activenotes_find(j->note);
+        k = const_cast<MIDIchannel &>(Ch[j->loc.MidCh]).activenotes_find(j->loc.note);
 
         if(k)
         {
@@ -2212,7 +2212,7 @@ void MIDIplay::PrepareAdlChannelForNewNote(size_t c, const MIDIchannel::NoteInfo
             // Collision: Kill old note,
             // UNLESS we're going to do arpeggio
             MIDIchannel::activenoteiterator i
-            (Ch[j->loc.MidCh].activenotes_ensure_find(j->note));
+            (Ch[j->loc.MidCh].activenotes_ensure_find(j->loc.note));
 
             // Check if we can do arpeggio.
             if((j->vibdelay < 70
@@ -2335,7 +2335,7 @@ void MIDIplay::KillSustainingNotes(int32_t MidCh, int32_t this_adlchn)
             {
                 int midiins = '?';
                 if(hooks.onNote)
-                    hooks.onNote(hooks.onNote_userData, (int)c, j->note, midiins, 0, 0.0);
+                    hooks.onNote(hooks.onNote_userData, (int)c, j->loc.note, midiins, 0, 0.0);
                 ch[c].users_erase(j);
             }
         }
@@ -2499,7 +2499,7 @@ retry_arpeggio:
                 {
                     NoteUpdate(
                         i->loc.MidCh,
-                        Ch[ i->loc.MidCh ].activenotes_ensure_find(i->note),
+                        Ch[ i->loc.MidCh ].activenotes_ensure_find(i->loc.note),
                         Upd_Off,
                         static_cast<int32_t>(c));
                     goto retry_arpeggio;
@@ -2507,7 +2507,7 @@ retry_arpeggio:
 
                 NoteUpdate(
                     i->loc.MidCh,
-                    Ch[ i->loc.MidCh ].activenotes_ensure_find(i->note),
+                    Ch[ i->loc.MidCh ].activenotes_ensure_find(i->loc.note),
                     Upd_Pitch | Upd_Volume | Upd_Pan,
                     static_cast<int32_t>(c));
             }
