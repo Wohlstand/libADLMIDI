@@ -20,6 +20,8 @@ public:
     virtual int generate32(int32_t *output, size_t frames) override;
     virtual int generateAndMix32(int32_t *output, size_t frames) override;
     virtual const char *emulatorName() override;
+
+    static const char *const staticEmulatorName;
 };
 
 #endif // NUKED_OPL3_H

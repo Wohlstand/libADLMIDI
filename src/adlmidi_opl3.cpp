@@ -42,6 +42,26 @@ static const unsigned OPLBase = 0x388;
 #   endif
 #endif
 
+ADL_EmulatorCharacteristics globalEmulatorChs[ADLMIDI_EMU_end] =
+{
+#ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
+    { NukedOPL3::staticEmulatorName,
+      ADLMIDI_EMUPROFILE_ACCURATE|ADLMIDI_EMUPROFILE_MOST_ACCURATE },
+    { NukedOPL3v174::staticEmulatorName,
+      ADLMIDI_EMUPROFILE_ACCURATE },
+#else
+    { NULL, 0 },
+    { NULL, 0 },
+#endif
+
+#ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
+    { DosBoxOPL3::staticEmulatorName,
+      ADLMIDI_EMUPROFILE_FAST|ADLMIDI_EMUPROFILE_FASTEST|ADLMIDI_EMUPROFILE_BALANCED },
+#else
+    { NULL, 0 },
+#endif
+};
+
 #ifdef DISABLE_EMBEDDED_BANKS
 /*
     Dummy data which replaces adldata.cpp banks database

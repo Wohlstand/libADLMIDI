@@ -168,9 +168,35 @@ enum ADL_Emulator
     ADLMIDI_EMU_end
 };
 
+/* Returns chip emulator */
+extern int adl_chipEmulator(struct ADL_MIDIPlayer *device);
+
 /* Switch the emulation core */
 extern int adl_switchEmulator(struct ADL_MIDIPlayer *device, int emulator);
 
+enum ADL_EmulatorProfileFlag
+{
+    ADLMIDI_EMUPROFILE_FAST          = 1 << 0,
+    ADLMIDI_EMUPROFILE_FASTEST       = 1 << 1,
+    ADLMIDI_EMUPROFILE_ACCURATE      = 1 << 2,
+    ADLMIDI_EMUPROFILE_MOST_ACCURATE = 1 << 3,
+    ADLMIDI_EMUPROFILE_BALANCED      = 1 << 4,
+};
+
+struct ADL_EmulatorCharacteristics
+{
+    const char *name;
+    int profile;
+};
+
+/* Returns the number of emulators built into the library. */
+extern int adl_getNumEmulators();
+
+/* Returns the characteristics of the emulator. */
+extern const struct ADL_EmulatorCharacteristics *adl_describeEmulator(int emulator);
+
+/* Returns an emulation core matching all given profile flags. */
+extern int adl_matchEmulator(int profile);
 
 typedef struct {
     ADL_UInt16 major;
