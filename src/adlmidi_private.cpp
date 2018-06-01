@@ -76,13 +76,19 @@ int adlRefreshNumCards(ADL_MIDIPlayer *device)
     else if(n_fourop[0] > 0)
         numFourOps = 4;
 
+    // Scale to chip count, but keep the 4op usage low on single chip
+    if(play->m_setup.NumCards > 1)
+        numFourOps *= play->m_setup.NumCards;
+    else
+        numFourOps = (numFourOps > 0) ? 1 : 0;
+
 /* //Old formula
     unsigned NumFourOps = ((n_fourop[0] == 0) && (n_fourop[1] == 0)) ? 0
         : (n_fourop[0] >= (n_total[0] * 7) / 8) ? play->m_setup.NumCards * 6
         : (play->m_setup.NumCards == 1 ? 1 : play->m_setup.NumCards * 4);
 */
 
-    play->opl.NumFourOps = play->m_setup.NumFourOps = (numFourOps * play->m_setup.NumCards);
+    play->opl.NumFourOps = play->m_setup.NumFourOps = numFourOps;
 
     return 0;
 }
