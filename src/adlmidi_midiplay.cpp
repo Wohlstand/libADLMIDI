@@ -1479,6 +1479,17 @@ bool MIDIplay::realTime_SysEx(const uint8_t *msg, unsigned size)
     {
     default:
         break;
+    case Manufacturer_UniversalNonRealtime:
+    case Manufacturer_UniversalRealtime:
+        if (size >= 2)
+        {
+            bool realtime = manufacturer == Manufacturer_UniversalRealtime;
+            uint16_t address = (uint16_t)(((msg[0] & 0x7fU) << 8) | (msg[1] & 0x7fU));
+            msg += 2;
+            size -= 2;
+            return doUniversalSysEx(realtime, address, msg, size);
+        }
+        break;
     case Manufacturer_Yamaha:
         /*TODO*/
         break;
@@ -1516,6 +1527,25 @@ bool MIDIplay::realTime_SysEx(const uint8_t *msg, unsigned size)
     return false;
 }
 
+bool MIDIplay::doUniversalSysEx(bool realtime, uint16_t address, const uint8_t *data, unsigned size)
+{
+    switch((realtime << 16) | address)
+    {
+        case (0 << 16) | 0x0901U: // GM System On
+            /*TODO*/
+            break;
+        case (1 << 16) | 0x0401U: // MIDI Master Volume
+            if(size != 2)
+                break;
+            unsigned volume = (data[0] & 0x7FU) | ((data[1] & 0x7FU) << 7);
+            /*TODO*/
+            (void)volume;
+            break;
+    }
+
+    return false;
+}
+
 bool MIDIplay::doRolandSysEx(uint8_t model, uint8_t mode, uint32_t address, const uint8_t *data, unsigned size)
 {
     if(mode != RolandMode_Send) // don't have MIDI-Out reply ability
@@ -1525,7 +1555,7 @@ bool MIDIplay::doRolandSysEx(uint8_t model, uint8_t mode, uint32_t address, cons
     {
     case (RolandModel_GS << 24U) | 0x40007F: // reset
         if(size != 1)
-            return false;
+            break;
         uint8_t value = data[0] & 0x7f;
         /*TODO*/
         (void)value;

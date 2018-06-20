@@ -1212,20 +1212,23 @@ public:
 private:
     enum
     {
-        Manufacturer_Roland = 0x41,
-        Manufacturer_Yamaha = 0x43
+        Manufacturer_Roland               = 0x41,
+        Manufacturer_Yamaha               = 0x43,
+        Manufacturer_UniversalNonRealtime = 0x7E,
+        Manufacturer_UniversalRealtime    = 0x7F
     };
     enum
     {
         RolandMode_Request = 0x11,
-        RolandMode_Send = 0x12
+        RolandMode_Send    = 0x12
     };
     enum
     {
-        RolandModel_GS = 0x42,
+        RolandModel_GS   = 0x42,
         RolandModel_SC55 = 0x45
     };
 
+    bool doUniversalSysEx(bool realtime, uint16_t address, const uint8_t *data, unsigned size);
     bool doRolandSysEx(uint8_t model, uint8_t mode, uint32_t address, const uint8_t *data, unsigned size);
 
 private:
