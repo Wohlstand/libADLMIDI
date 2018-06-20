@@ -984,6 +984,7 @@ public:
 
     std::vector<MIDIchannel> Ch;
     bool cmf_percussion_mode;
+    uint8_t m_sysExDeviceId;
 
     MIDIEventHooks hooks;
 
@@ -1198,12 +1199,37 @@ public:
     void realTime_BankChangeMSB(uint8_t channel, uint8_t msb);
     void realTime_BankChange(uint8_t channel, uint16_t bank);
 
+    void setDeviceId(uint8_t id);
+    bool realTime_SysEx(const uint8_t *msg, unsigned size);
+
     void realTime_panic();
 
 #if defined(ADLMIDI_AUDIO_TICK_HANDLER)
     // Audio rate tick handler
     void AudioTick(uint32_t chipId, uint32_t rate);
 #endif
+
+private:
+    enum
+    {
+        Manufacturer_Roland               = 0x41,
+        Manufacturer_Yamaha               = 0x43,
+        Manufacturer_UniversalNonRealtime = 0x7E,
+        Manufacturer_UniversalRealtime    = 0x7F
+    };
+    enum
+    {
+        RolandMode_Request = 0x11,
+        RolandMode_Send    = 0x12
+    };
+    enum
+    {
+        RolandModel_GS   = 0x42,
+        RolandModel_SC55 = 0x45
+    };
+
+    bool doUniversalSysEx(bool realtime, uint16_t address, const uint8_t *data, unsigned size);
+    bool doRolandSysEx(uint8_t model, uint8_t mode, uint32_t address, const uint8_t *data, unsigned size);
 
 private:
     enum
