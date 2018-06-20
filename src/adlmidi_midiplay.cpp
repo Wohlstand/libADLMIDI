@@ -680,6 +680,7 @@ bool MIDIplay::buildTrackData()
 
 MIDIplay::MIDIplay(unsigned long sampleRate):
     cmf_percussion_mode(false),
+    m_sysExDeviceId(0x10),
     m_arpeggioCounter(0)
 #if defined(ADLMIDI_AUDIO_TICK_HANDLER)
     , m_audioTickCounter(0)
@@ -1457,6 +1458,81 @@ void MIDIplay::realTime_BankChange(uint8_t channel, uint16_t bank)
     channel = channel % 16;
     Ch[channel].bank_lsb = uint8_t(bank & 0xFF);
     Ch[channel].bank_msb = uint8_t((bank >> 8) & 0xFF);
+}
+
+void MIDIplay::setDeviceId(uint8_t id)
+{
+    m_sysExDeviceId = id;
+}
+
+bool MIDIplay::realTime_SysEx(const uint8_t *msg, unsigned size)
+{
+    if (size < 4 || msg[0] != 0xf0 || msg[size - 1] != 0xf7 ||
+        (msg[2] != m_sysExDeviceId && msg[2] != 0x7f))
+        return false;
+
+    uint8_t manufacturer = msg[1];
+    msg += 3;
+    size -= 4;
+
+    switch(manufacturer)
+    {
+    default:
+        break;
+    case Manufacturer_Yamaha:
+        /*TODO*/
+        break;
+    case Manufacturer_Roland:
+        if(size >= 6)
+        {
+            uint8_t model = msg[0] & 0x7f;
+            uint8_t mode = msg[1] & 0x7f;
+            uint8_t checksum = msg[size - 1] & 0x7f;
+
+            msg += 2;
+            size -= 3;
+
+#if !defined(ADLMIDI_SKIP_ROLAND_CHECKSUM)
+            unsigned checkvalue = 0;
+            for(unsigned i = 0; i < size; ++i)
+                checkvalue += msg[i];
+            checkvalue = (128 - (checkvalue & 127)) & 127;
+            if(checkvalue != checksum)
+                break;
+#endif
+
+            uint32_t address =
+                ((msg[0] & 0x7fU) << 16) |
+                ((msg[1] & 0x7fU) << 8) |
+                (msg[2] & 0x7fU);
+            msg += 3;
+            size -= 3;
+
+            return doRolandSysEx(model, mode, address, msg, size);
+        }
+        break;
+    }
+
+    return false;
+}
+
+bool MIDIplay::doRolandSysEx(uint8_t model, uint8_t mode, uint32_t address, const uint8_t *data, unsigned size)
+{
+    if(mode != RolandMode_Send) // don't have MIDI-Out reply ability
+        return false;
+
+    switch(((unsigned)model << 24U) | address)
+    {
+    case (RolandModel_GS << 24U) | 0x40007F: // reset
+        if(size != 1)
+            return false;
+        uint8_t value = data[0] & 0x7f;
+        /*TODO*/
+        (void)value;
+        return true;
+    }
+
+    return false;
 }
 
 void MIDIplay::realTime_panic()
