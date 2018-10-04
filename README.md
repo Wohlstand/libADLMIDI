@@ -1,9 +1,9 @@
 # libADLMIDI
-libADLMIDI is a free MIDI to WAV conversion library with OPL3 emulation
+libADLMIDI is a free Software MIDI synthesizer library with OPL3 emulation
 
-Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
+Original ADLMIDI code: Copyright (c) 2010-2018 Joel Yliluoma <bisqwit@iki.fi>
 
-ADLMIDI Library API:   Copyright (c) 2015-2018 Vitaly Novichkov <admin@wohlnet.ru>
+libADLMIDI and related utils: Copyright (c) 2015-2018 Vitaly Novichkov <admin@wohlnet.ru>
 
 Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
 
@@ -61,13 +61,15 @@ sudo make install
 * To compile for DOS via DJGPP on Linux, use `cmake/djgpp/djgpp-cmake.sh` script which a wrapper over CMake to pass DJGPP's stuff required for build
 
 # License
-The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT.
+The library is licensed under in it's parts LGPL 2.1+, and MIT.
 * Nuked OPL3 emulators are licensed under LGPL v2.1+.
-* DosBox OPL3 emulator is licensed under GPL v2+.
+* DosBox OPL3 emulator is licensed under GPL v2+ **(To use DOSBox-equiped build of libADLMIDI you are agree to use a GPLv2+ license on your project).**
 * Chip interfaces are licensed under LGPL v2.1+.
 * File Reader class and MIDI Sequencer is licensed under MIT.
 * WOPL reader and writer module is licensed under MIT.
-* Other parts of library are licensed under GPLv3+.
+* Other parts of library are licensed under LGPL v2.1+.
+* Misc. utilities, players, and player plugins are licensed under GPLv3+.
+* Examples are licensed under MIT.
 
 ## Available CMake options
 
@@ -169,6 +171,9 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
+## 1.4.1   <dev>
+ * License has been changed into LGPL 2.1+ include all previous versions of this library (Except for usage with DOSBox emulator which still require GPLv2+ license)
+
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Added support for SysEx event handling! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)

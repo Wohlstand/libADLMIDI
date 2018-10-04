@@ -1,3 +1,8 @@
+/* A block puzzle game.
+ * Most of the source code comes from https://www.youtube.com/watch?v=V65mtR08fH0
+ * Copyright (c) 2012 Joel Yliluoma (http://iki.fi/bisqwit/)
+ * License: MIT
+ */
 
 #define Timer TimerRead()
 
