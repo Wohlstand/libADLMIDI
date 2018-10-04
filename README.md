@@ -171,8 +171,9 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
-## 1.4.1   <dev>
+## 1.4.0.1 2018-10-05
  * License has been changed into LGPL 2.1+ include all previous versions of this library (Except for usage with DOSBox emulator which still require GPLv2+ license)
+ * Improve CMake build to allow proper install on platforms with the multilib (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
