@@ -172,6 +172,8 @@ To build that example you will need to have installed SDL2 library.
 
 # Changelog
 ## 1.4.0.1 2018-10-05
+ * Fixed a measurer on side of Gen-ADLDATA utility where it caused some false zero releasing time of some instruments.
+ * Full set of embedded banks has been re-calculated
  * License has been changed into LGPL 2.1+ include all previous versions of this library (Except for usage with DOSBox emulator which still require GPLv2+ license)
  * Improve CMake build to allow proper install on platforms with the multilib (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
 
