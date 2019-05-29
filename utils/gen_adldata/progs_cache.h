@@ -125,6 +125,127 @@ extern std::vector<std::string> banknames;
 //static std::map<unsigned, std::map<unsigned, unsigned> > Correlate;
 //extern unsigned maxvalues[30];
 
+
+struct BanksDump
+{
+    struct BankEntry
+    {
+        uint_fast32_t bankId;
+
+        /* Global OPL flags */
+        typedef enum WOPLFileFlags
+        {
+            /* Enable Deep-Tremolo flag */
+            WOPL_FLAG_DEEP_TREMOLO = 0x01,
+            /* Enable Deep-Vibrato flag */
+            WOPL_FLAG_DEEP_VIBRATO = 0x02
+        } WOPLFileFlags;
+
+        /* Volume scaling model implemented in the libADLMIDI */
+        typedef enum WOPL_VolumeModel
+        {
+            WOPL_VM_Generic = 0,
+            WOPL_VM_Native,
+            WOPL_VM_DMX,
+            WOPL_VM_Apogee,
+            WOPL_VM_Win9x
+        } WOPL_VolumeModel;
+
+        /**
+         * @brief Suggested bank setup in dependence from a driver that does use of this
+         */
+        enum BankSetup
+        {
+            SETUP_Generic = 0x0300,
+            SETUP_Win9X   = 0x0304,
+            SETUP_DMX     = 0x0002,
+            SETUP_Apogee  = 0x0003,
+            SETUP_AIL     = 0x0300,
+            SETUP_IBK     = 0x0301,
+            SETUP_IMF     = 0x0200,
+            SETUP_CMF     = 0x0201
+        };
+
+        uint_fast16_t       bankSetup; // 0xAABB, AA - OPL flags, BB - Volume model
+        std::vector<size_t> melodic;
+        std::vector<size_t> percussion;
+    };
+
+    struct MidiBank
+    {
+        uint_fast32_t midiBankId;
+        uint_fast8_t msb, lsb;
+        int_fast32_t instruments[128];
+    };
+
+    struct InstrumentEntry
+    {
+        uint_fast32_t instId;
+
+        typedef enum WOPL_InstrumentFlags
+        {
+            /* Is two-operator single-voice instrument (no flags) */
+            WOPL_Ins_2op        = 0x00,
+            /* Is true four-operator instrument */
+            WOPL_Ins_4op        = 0x01,
+            /* Is pseudo four-operator (two 2-operator voices) instrument */
+            WOPL_Ins_Pseudo4op  = 0x02,
+            /* Is a blank instrument entry */
+            WOPL_Ins_IsBlank    = 0x04,
+
+            /* RythmMode flags mask */
+            WOPL_RhythmModeMask  = 0x38,
+
+            /* Mask of the flags range */
+            WOPL_Ins_ALL_MASK   = 0x07
+        } WOPL_InstrumentFlags;
+
+        typedef enum WOPL_RhythmMode
+        {
+            /* RythmMode: BassDrum */
+            WOPL_RM_BassDrum  = 0x08,
+            /* RythmMode: Snare */
+            WOPL_RM_Snare     = 0x10,
+            /* RythmMode: TomTom */
+            WOPL_RM_TomTom    = 0x18,
+            /* RythmMode: Cymbell */
+            WOPL_RM_Cymbal   = 0x20,
+            /* RythmMode: HiHat */
+            WOPL_RM_HiHat     = 0x28
+        } WOPL_RhythmMode;
+
+        uint_fast8_t  noteOffset1;
+        uint_fast8_t  noteOffset2;
+        int_fast8_t   midiVelocityOffset;
+        uint_fast8_t  percussionKeyNumber;
+        uint_fast32_t instFlags;
+        double        secondVoiceDetune;
+        /*
+            2op: modulator1, carrier1, feedback1
+            2vo: modulator1, carrier1, modulator2, carrier2, feedback(1+2)
+            4op: modulator1, carrier1, modulator2, carrier2, feedback1
+        */
+        //! Contains FeedBack-Connection for both operators 0xBBAA - AA - first, BB - second
+        int16_t   fbConn;
+        size_t    ops[5] = {-1, -1, -1, -1, -1};
+        int64_t   delay_on_ms;
+        int64_t   delay_off_ms;
+    };
+
+    struct Operator
+    {
+        uint_fast32_t d_E862;
+        uint_fast32_t d_40;
+    };
+
+    std::vector<BankEntry>       banks;
+    std::vector<MidiBank>        midiBanks;
+    std::vector<InstrumentEntry> instruments;
+    std::vector<Operator>        operators;
+};
+
+
+
 void SetBank(size_t bank, unsigned patch, size_t insno);
 void SetBankSetup(size_t bank, const AdlBankSetup &setup);
 
