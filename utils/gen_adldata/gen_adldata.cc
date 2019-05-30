@@ -46,6 +46,8 @@ int main(int argc, char**argv)
         return 1;
     }
 
+    BanksDump db;
+
     std::fprintf(outFile, "\
 #include \"adldata.hh\"\n\
 \n\
@@ -130,7 +132,7 @@ int main(int argc, char**argv)
             else
             if(format == "WOPL")
             {
-                if(!LoadWopl(filepath.c_str(), bank, prefix.c_str()))
+                if(!LoadWopl(db, filepath.c_str(), bank, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -564,6 +566,8 @@ int main(int argc, char**argv)
     std::fflush(outFile);
 
     std::fclose(outFile);
+
+    db.exportBanks(std::string(outFile_s) + "x");
 
     std::printf("Generation of ADLMIDI data has been completed!\n");
     std::fflush(stdout);

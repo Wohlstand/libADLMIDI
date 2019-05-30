@@ -18,7 +18,7 @@ enum class WOPL_Flags
     WOPL_RhythmModeMask = 0x38,
 };
 
-static bool LoadWopl(const char *fn, unsigned bank, const char *prefix)
+static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *prefix)
 {
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
@@ -27,6 +27,7 @@ static bool LoadWopl(const char *fn, unsigned bank, const char *prefix)
         std::fflush(stderr);
         return false;
     }
+
     std::fseek(fp, 0, SEEK_END);
     std::vector<unsigned char> data(size_t(std::ftell(fp)));
     std::rewind(fp);
@@ -63,6 +64,8 @@ static bool LoadWopl(const char *fn, unsigned bank, const char *prefix)
     setup.volumeModel = (int)data[0x12];
     setup.scaleModulators  = false;
 
+    size_t bankDb = (unsigned)db.initBank(bank, static_cast<uint_fast16_t>((static_cast<unsigned>(data[0x11]) << 8) | static_cast<unsigned>(data[0x12])));
+
     // Validate file format by size calculation
     if(version == 1)
     {
@@ -98,12 +101,14 @@ static bool LoadWopl(const char *fn, unsigned bank, const char *prefix)
 
     percussion_offset = melodic_offset + (insSize * 128 * mbanks_count);
 
-    uint32_t root_offsets[2] = {melodic_offset, percussion_offset};
+    //uint32_t root_sizes[2] =    {mbanks_count, pbanks_count};
+    uint32_t root_sizes[2] =    {1, 1};
+    uint32_t root_offsets[2] =  {melodic_offset, percussion_offset};
 
     for(size_t bset = 0; bset < 2; bset++)
     {
         bool is_percussion = (bset == 1);
-        for(uint32_t bankno = 0; bankno < 1; bankno++) // only first melodic bank (Until multi-banks support will be implemented)
+        for(uint32_t bankno = 0; bankno < root_sizes[bset]; bankno++) // only first melodic bank (Until multi-banks support will be implemented)
         {
             uint32_t bank_offset = root_offsets[bset] + (bankno * insSize * 128);
 

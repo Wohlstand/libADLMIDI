@@ -12,6 +12,10 @@
 #include <vector>
 #include <limits>
 #include <cmath>
+#include <cstdint>
+
+#include <cassert>
+
 
 struct insdata
 {
@@ -130,7 +134,7 @@ struct BanksDump
 {
     struct BankEntry
     {
-        uint_fast32_t bankId;
+        uint_fast32_t bankId = 0;
 
         /* Global OPL flags */
         typedef enum WOPLFileFlags
@@ -166,21 +170,68 @@ struct BanksDump
             SETUP_CMF     = 0x0201
         };
 
-        uint_fast16_t       bankSetup; // 0xAABB, AA - OPL flags, BB - Volume model
+        uint_fast16_t       bankSetup = SETUP_Generic; // 0xAABB, AA - OPL flags, BB - Volume model
         std::vector<size_t> melodic;
         std::vector<size_t> percussion;
+
+        explicit BankEntry() = default;
+
+        BankEntry(const BankEntry &o)
+        {
+            bankId = o.bankId;
+            bankSetup = o.bankSetup;
+            melodic = o.melodic;
+            percussion = o.percussion;
+        }
+
+        BankEntry(const BankEntry &&o)
+        {
+            bankId = std::move(o.bankId);
+            bankSetup = std::move(o.bankSetup);
+            melodic = std::move(o.melodic);
+            percussion = std::move(o.percussion);
+        }
     };
 
     struct MidiBank
     {
-        uint_fast32_t midiBankId;
-        uint_fast8_t msb, lsb;
-        int_fast32_t instruments[128];
+        uint_fast32_t midiBankId = 0;
+        uint_fast8_t  msb = 0, lsb = 0;
+        int_fast32_t  instruments[128];
+
+        MidiBank()
+        {
+            for(size_t i = 0; i < 128; i++)
+                instruments[i] = -1;
+        }
+
+        MidiBank(const MidiBank &o)
+        {
+            midiBankId = 0;
+            msb = 0;
+            lsb = 0;
+            std::memcpy(instruments, o.instruments, sizeof(int_fast32_t) * 128);
+        }
+
+        bool operator==(const MidiBank &o)
+        {
+            if(msb != o.msb)
+                return false;
+            if(lsb != o.lsb)
+                return false;
+            if(std::memcmp(instruments, o.instruments, sizeof(int_fast32_t) * 128) != 0)
+                return false;
+            return true;
+        }
+        bool operator!=(const MidiBank &o)
+        {
+            return !operator==(o);
+        }
     };
 
     struct InstrumentEntry
     {
-        uint_fast32_t instId;
+        uint_fast32_t instId = 0;
 
         typedef enum WOPL_InstrumentFlags
         {
@@ -214,34 +265,68 @@ struct BanksDump
             WOPL_RM_HiHat     = 0x28
         } WOPL_RhythmMode;
 
-        uint_fast8_t  noteOffset1;
-        uint_fast8_t  noteOffset2;
-        int_fast8_t   midiVelocityOffset;
-        uint_fast8_t  percussionKeyNumber;
-        uint_fast32_t instFlags;
-        double        secondVoiceDetune;
+        uint_fast8_t  noteOffset1 = 0;
+        uint_fast8_t  noteOffset2 = 0;
+        int_fast8_t   midiVelocityOffset = 0;
+        uint_fast8_t  percussionKeyNumber = 0;
+        uint_fast32_t instFlags = 0;
+        int_fast8_t   secondVoiceDetune = 0;
         /*
             2op: modulator1, carrier1, feedback1
             2vo: modulator1, carrier1, modulator2, carrier2, feedback(1+2)
             4op: modulator1, carrier1, modulator2, carrier2, feedback1
         */
         //! Contains FeedBack-Connection for both operators 0xBBAA - AA - first, BB - second
-        int16_t   fbConn;
-        size_t    ops[5] = {-1, -1, -1, -1, -1};
-        int64_t   delay_on_ms;
-        int64_t   delay_off_ms;
+        int_fast16_t fbConn = 0;
+        int_fast64_t delay_on_ms = 0;
+        int_fast64_t delay_off_ms = 0;
+        int_fast32_t ops[5] = {-1, -1, -1, -1, -1};
+
+        bool operator==(const InstrumentEntry &o)
+        {
+            return (
+                (noteOffset1 == o.noteOffset1) &&
+                (noteOffset2 == o.noteOffset2) &&
+                (midiVelocityOffset == o.midiVelocityOffset) &&
+                (percussionKeyNumber == o.percussionKeyNumber) &&
+                (instFlags == o.instFlags) &&
+                (secondVoiceDetune == o.secondVoiceDetune) &&
+                (fbConn == o.fbConn) &&
+                (delay_on_ms == o.delay_on_ms) &&
+                (delay_off_ms == o.delay_off_ms) &&
+                (std::memcmp(ops, o.ops, sizeof(int_fast32_t) * 5) == 0)
+            );
+        }
+        bool operator!=(const InstrumentEntry &o)
+        {
+            return !operator==(o);
+        }
     };
 
     struct Operator
     {
-        uint_fast32_t d_E862;
-        uint_fast32_t d_40;
+        uint_fast32_t opId = 0;
+        uint_fast32_t d_E862 = 0;
+        uint_fast32_t d_40 = 0;
+        bool operator==(const Operator &o)
+        {
+            return ((d_E862 == o.d_E862) && (d_40 == o.d_40));
+        }
+        bool operator!=(const Operator &o)
+        {
+            return !operator==(o);
+        }
     };
 
     std::vector<BankEntry>       banks;
     std::vector<MidiBank>        midiBanks;
     std::vector<InstrumentEntry> instruments;
     std::vector<Operator>        operators;
+
+    size_t initBank(size_t bankId, uint_fast16_t bankSetup);
+    void addMidiBank(size_t bankId, bool percussion, MidiBank b);
+    void addInstrument(MidiBank &bank, size_t patchId, InstrumentEntry e, Operator *ops);
+    void exportBanks(const std::string &outPath, const std::string &headerName = "adlmidi_db.h");
 };
 
 
