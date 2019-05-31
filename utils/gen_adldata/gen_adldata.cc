@@ -112,7 +112,7 @@ int main(int argc, char**argv)
             else
             if(format == "Bisqwit")
             {
-                if(!BankFormats::LoadBisqwit(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadBisqwit(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -130,7 +130,7 @@ int main(int argc, char**argv)
             else
             if(format == "OP2")
             {
-                if(!BankFormats::LoadDoom(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadDoom(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -148,7 +148,7 @@ int main(int argc, char**argv)
             else
             if(format == "TMB")
             {
-                if(!BankFormats::LoadTMB(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadTMB(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;

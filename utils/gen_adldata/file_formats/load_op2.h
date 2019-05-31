@@ -49,7 +49,7 @@ struct Doom_opl_instr
 #endif
 
 
-bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("OP2", fn, prefix, bank, INI_Both);
@@ -68,11 +68,17 @@ bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
     }
     std::fclose(fp);
 
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_DMX);
+    BanksDump::MidiBank bnkMelodique;
+    BanksDump::MidiBank bnkPercussion;
+
     for(unsigned a = 0; a < 175; ++a)
     {
         const size_t offset1 = 0x18A4 + a * 32;
         const size_t offset2 = 8      + a * 36;
-
+        BanksDump::MidiBank &bnk = a < 128 ? bnkMelodique : bnkPercussion;
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
         std::string name;
         for(unsigned p = 0; p < 32; ++p)
             if(data[offset1] != '\0')
@@ -80,6 +86,7 @@ bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
 
         //printf("%3d %3d %3d %8s: ", a,b,c, name.c_str());
         int gmno = int(a < 128 ? a : ((a | 128) + 35));
+        size_t patchId = a < 128 ? a : ((a - 128) + 35);
 
         char name2[512];
         snprintf(name2, 512, "%s%c%u", prefix, (gmno < 128 ? 'M' : 'P'), gmno & 127);
@@ -104,6 +111,12 @@ bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
             tmp[index].data[9] = src.scale_2 | src.level_2;
             tmp[index].data[10] = src.feedback;
             tmp[index].finetune = int8_t(src.basenote + 12);
+            inst.fbConn |= (uint_fast16_t(src.feedback) << (a == 1 ? 8 : 0));
+            if(a == 0)
+                inst.noteOffset1 = int8_t(src.basenote + 12);
+            else
+                inst.noteOffset2 = int8_t(src.basenote + 12);
+            db.toOps(tmp[index], ops, index * 2);
         }
         struct ins tmp2;
         tmp2.notenum  = ins.note;
@@ -119,6 +132,11 @@ bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
             tmp[0].finetune -= 12;
             tmp[1].finetune -= 12;
         }
+
+        if((ins.flags & FL_DOUBLE_VOICE) != 0)
+            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op;
+        inst.percussionKeyNumber = tmp2.notenum;
+        inst.secondVoiceDetune = ins.finetune;
 
         if(!(ins.flags & FL_DOUBLE_VOICE))
         {
@@ -137,6 +155,8 @@ bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
             size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
             SetBank(bank, (unsigned int)gmno, resno);
         }
+
+        db.addInstrument(bnk, patchId, inst, ops);
 
         /*const Doom_OPL2instrument& A = ins.patchdata[0];
         const Doom_OPL2instrument& B = ins.patchdata[1];
@@ -158,6 +178,9 @@ bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
         printf(" %s VS %s\n", name.c_str(), MidiInsName[a]);
         printf("------------------------------------------------------------\n");*/
     }
+
+    db.addMidiBank(bankDb, false, bnkMelodique);
+    db.addMidiBank(bankDb, true, bnkPercussion);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_DMX;

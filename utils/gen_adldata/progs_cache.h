@@ -361,7 +361,7 @@ namespace BankFormats
 {
 
 bool LoadMiles(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
-bool LoadBisqwit(const char *fn, unsigned bank, const char *prefix);
+bool LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadBNK(const char *fn, unsigned bank, const char *prefix, bool is_fat, bool percussive);
 bool LoadBNK2(const char *fn, unsigned bank, const char *prefix,
                      const std::string &melo_filter,
@@ -369,8 +369,8 @@ bool LoadBNK2(const char *fn, unsigned bank, const char *prefix,
 bool LoadEA(const char *fn, unsigned bank, const char *prefix);
 bool LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode = false);
 bool LoadJunglevision(const char *fn, unsigned bank, const char *prefix);
-bool LoadDoom(const char *fn, unsigned bank, const char *prefix);
-bool LoadTMB(const char *fn, unsigned bank, const char *prefix);
+bool LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
+bool LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix);
 
 }

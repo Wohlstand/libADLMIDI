@@ -4,7 +4,7 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-bool BankFormats::LoadTMB(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("TMB", fn, prefix, bank, INI_Both);
@@ -22,7 +22,11 @@ bool BankFormats::LoadTMB(const char *fn, unsigned bank, const char *prefix)
     }
     std::fclose(fp);
 
-    for(unsigned a = 0; a < 256; ++a)
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Apogee);
+    BanksDump::MidiBank bnkMelodique;
+    BanksDump::MidiBank bnkPercussion;
+
+    for(unsigned a = 0, patchId = 0; a < 256; ++a, patchId++)
     {
         unsigned offset = a * 0x0D;
         unsigned gmno = a;
@@ -30,6 +34,12 @@ bool BankFormats::LoadTMB(const char *fn, unsigned bank, const char *prefix)
                          : gmno < 128 + 35 ? -1
                          : gmno < 128 + 88 ? int(gmno - 35)
                          : -1;
+        if(patchId == 128)
+            patchId = 0;
+        bool isPercussion = a >= 128;
+        BanksDump::MidiBank &bnk = isPercussion ? bnkPercussion : bnkMelodique;
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
 
         insdata tmp;
 
@@ -55,6 +65,11 @@ bool BankFormats::LoadTMB(const char *fn, unsigned bank, const char *prefix)
         tmp2.midi_velocity_offset = (int8_t)data[offset + 12];
         tmp2.rhythmModeDrum = 0;
 
+        inst.percussionKeyNumber = data[offset + 11];
+        inst.midiVelocityOffset = (int8_t)data[offset + 12];
+        inst.fbConn = data[offset + 10];
+        db.toOps(tmp, ops, 0);
+
         std::string name;
         if(midi_index >= 0) name = std::string(1, '\377') + MidiInsName[midi_index];
 
@@ -64,7 +79,12 @@ bool BankFormats::LoadTMB(const char *fn, unsigned bank, const char *prefix)
 
         size_t resno = InsertIns(tmp, tmp2, name, name2);
         SetBank(bank, gmno, resno);
+
+        db.addInstrument(bnk, patchId, inst, ops);
     }
+
+    db.addMidiBank(bankDb, false, bnkMelodique);
+    db.addMidiBank(bankDb, true, bnkPercussion);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_APOGEE;

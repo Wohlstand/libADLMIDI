@@ -4,7 +4,7 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-bool BankFormats::LoadBisqwit(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("Bisqwit", fn, prefix, bank, INI_Both);
@@ -13,14 +13,25 @@ bool BankFormats::LoadBisqwit(const char *fn, unsigned bank, const char *prefix)
     if(!fp)
         return false;
 
-    for(uint32_t a = 0; a < 256; ++a)
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Generic);
+    BanksDump::MidiBank bnkMelodique;
+    BanksDump::MidiBank bnkPercussion;
+
+    for(uint32_t a = 0, patchId = 0; a < 256; ++a, patchId++)
     {
         //unsigned offset = a * 25;
         uint32_t gmno = a;
+        bool isPercussion = gmno >= 128;
         int32_t midi_index = gmno < 128 ? int32_t(gmno)
                          : gmno < 128 + 35 ? -1
                          : gmno < 128 + 88 ? int32_t(gmno - 35)
                          : -1;
+        if(patchId == 128)
+            patchId = 0;
+
+        BanksDump::MidiBank &bnk = isPercussion ? bnkPercussion : bnkMelodique;
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
 
         struct ins tmp2;
         tmp2.notenum = (uint8_t)std::fgetc(fp);
@@ -49,8 +60,23 @@ bool BankFormats::LoadBisqwit(const char *fn, unsigned bank, const char *prefix)
         tmp2.real4op = tmp[1].diff;
         size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2, (tmp[0] == tmp[1]));
         SetBank(bank, gmno, resno);
+
+        db.toOps(tmp[0], ops, 0);
+        if(tmp[0] != tmp[1])
+        {
+            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
+            db.toOps(tmp[1], ops, 2);
+        }
+
+        inst.fbConn = uint_fast16_t(tmp[0].data[10]) | (uint_fast16_t(tmp[1].data[10]) << 8);
+        inst.percussionKeyNumber = tmp2.notenum;
+        inst.noteOffset1 = tmp2.notenum;
+        db.addInstrument(bnk, patchId, inst, ops);
     }
     std::fclose(fp);
+
+    db.addMidiBank(bankDb, false, bnkMelodique);
+    db.addMidiBank(bankDb, true, bnkPercussion);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_Generic;
