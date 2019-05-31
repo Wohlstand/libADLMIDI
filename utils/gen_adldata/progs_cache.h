@@ -135,6 +135,7 @@ struct BanksDump
     struct BankEntry
     {
         uint_fast32_t bankId = 0;
+        std::string bankTitle = "Untitled";
 
         /* Global OPL flags */
         typedef enum WOPLFileFlags
@@ -179,6 +180,7 @@ struct BanksDump
         BankEntry(const BankEntry &o)
         {
             bankId = o.bankId;
+            bankTitle = o.bankTitle;
             bankSetup = o.bankSetup;
             melodic = o.melodic;
             percussion = o.percussion;
@@ -187,6 +189,7 @@ struct BanksDump
         BankEntry(const BankEntry &&o)
         {
             bankId = std::move(o.bankId);
+            bankTitle = std::move(o.bankTitle);
             bankSetup = std::move(o.bankSetup);
             melodic = std::move(o.melodic);
             percussion = std::move(o.percussion);
@@ -207,9 +210,9 @@ struct BanksDump
 
         MidiBank(const MidiBank &o)
         {
-            midiBankId = 0;
-            msb = 0;
-            lsb = 0;
+            midiBankId = o.midiBankId;
+            msb = o.msb;
+            lsb = o.lsb;
             std::memcpy(instruments, o.instruments, sizeof(int_fast32_t) * 128);
         }
 
@@ -277,7 +280,7 @@ struct BanksDump
             4op: modulator1, carrier1, modulator2, carrier2, feedback1
         */
         //! Contains FeedBack-Connection for both operators 0xBBAA - AA - first, BB - second
-        int_fast16_t fbConn = 0;
+        uint_fast16_t fbConn = 0;
         int_fast64_t delay_on_ms = 0;
         int_fast64_t delay_off_ms = 0;
         int_fast32_t ops[5] = {-1, -1, -1, -1, -1};
@@ -323,7 +326,9 @@ struct BanksDump
     std::vector<InstrumentEntry> instruments;
     std::vector<Operator>        operators;
 
-    size_t initBank(size_t bankId, uint_fast16_t bankSetup);
+    void toOps(const insdata &inData, Operator *outData, size_t begin = 0);
+
+    size_t initBank(size_t bankId, const std::string &title, uint_fast16_t bankSetup);
     void addMidiBank(size_t bankId, bool percussion, MidiBank b);
     void addInstrument(MidiBank &bank, size_t patchId, InstrumentEntry e, Operator *ops);
     void exportBanks(const std::string &outPath, const std::string &headerName = "adlmidi_db.h");

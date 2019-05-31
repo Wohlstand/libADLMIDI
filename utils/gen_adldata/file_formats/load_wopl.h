@@ -18,7 +18,7 @@ enum class WOPL_Flags
     WOPL_RhythmModeMask = 0x38,
 };
 
-static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *prefix)
+static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix)
 {
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
@@ -64,7 +64,7 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *p
     setup.volumeModel = (int)data[0x12];
     setup.scaleModulators  = false;
 
-    size_t bankDb = (unsigned)db.initBank(bank, static_cast<uint_fast16_t>((static_cast<unsigned>(data[0x11]) << 8) | static_cast<unsigned>(data[0x12])));
+    size_t bankDb = (unsigned)db.initBank(bank, bankTitle, static_cast<uint_fast16_t>((static_cast<unsigned>(data[0x11]) << 8) | static_cast<unsigned>(data[0x12])));
 
     // Validate file format by size calculation
     if(version == 1)
@@ -94,16 +94,28 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *p
 
     uint32_t melodic_offset = 0;
     uint32_t percussion_offset = 0;
+    uint32_t melodic_meta_offset = 0;
+    uint32_t percussion_meta_offset = 0;
+
     if(version < 2)
+    {
         melodic_offset = 0x13;
+        melodic_meta_offset = 0;
+    }
     else
+    {
         melodic_offset = 0x13 + 34 * mbanks_count + 34 * pbanks_count;
+        melodic_meta_offset = 0x13;
+        percussion_meta_offset = 0x13 + 34 * mbanks_count;
+    }
 
     percussion_offset = melodic_offset + (insSize * 128 * mbanks_count);
 
     //uint32_t root_sizes[2] =    {mbanks_count, pbanks_count};
-    uint32_t root_sizes[2] =    {1, 1};
+    uint32_t root_sizes[2]  =   {(version >= 2) ? mbanks_count : 1u,
+                                 (version >= 2) ? pbanks_count : 1u};
     uint32_t root_offsets[2] =  {melodic_offset, percussion_offset};
+    uint32_t root_meta_offsets[2] =  {melodic_meta_offset, percussion_meta_offset};
 
     for(size_t bset = 0; bset < 2; bset++)
     {
@@ -112,11 +124,22 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *p
         {
             uint32_t bank_offset = root_offsets[bset] + (bankno * insSize * 128);
 
+            BanksDump::MidiBank bnk;
+            if(version >= 2)
+            {
+                uint32_t meta_offset = root_meta_offsets[bset] + (bankno * 34);
+                bnk.lsb = data[meta_offset + 32 + 0];
+                bnk.msb = data[meta_offset + 32 + 1];
+            }
+
             for(uint32_t i = 0; i < 128; i++)
             {
                 uint32_t offset = bank_offset + uint32_t(i * insSize);
                 std::string name;
                 insdata tmp[2];
+
+                BanksDump::InstrumentEntry inst;
+                BanksDump::Operator ops[5];
 
                 name.resize(32);
                 std::memcpy(&name[0], data.data() + offset, 32);
@@ -165,6 +188,9 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *p
                  * Those fields are made for hot-loading while runtime, but not
                  * for generation of embedded banks database.
                  */
+                db.toOps(tmp[0], ops, 0);
+                db.toOps(tmp[1], ops, 2);
+
 
                 tmp[0].finetune = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 32));
                 tmp[1].finetune = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 34));
@@ -180,6 +206,21 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *p
                 tmp2.rhythmModeDrum = (flags & (uint8_t)WOPL_Flags::WOPL_RhythmModeMask);
                 tmp[0].diff = false;
                 tmp[1].diff = real4op && !tmp2.pseudo4op;
+                //----------------
+                inst.instFlags = flags;
+                inst.percussionKeyNumber = is_percussion ? data[offset + 38] : 0;
+                inst.noteOffset1 = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 32));
+                inst.noteOffset2 = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 32));
+                inst.secondVoiceDetune = static_cast<int_fast8_t>(data[offset + 37]);
+                inst.midiVelocityOffset = static_cast<int_fast8_t>(data[offset + 36]);
+                inst.fbConn = (static_cast<uint_fast16_t>(data[offset + 40])) |
+                              (static_cast<uint_fast16_t>(data[offset + 41]) << 8);
+                if(version >= 2)
+                {
+                    inst.delay_on_ms = toUint16BE((const uint8_t *)data.data() + offset + 62);
+                    inst.delay_off_ms = toUint16BE((const uint8_t *)data.data() + offset + 64);
+                }
+                //----------------
 
                 int8_t fine_tune = (int8_t)data[offset + 37];
                 if(fine_tune != 0)
@@ -229,7 +270,9 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const char *p
                     size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
                     SetBank(bank, gmno, resno);
                 }
+                db.addInstrument(bnk, i, inst, ops);
             }
+            db.addMidiBank(bankDb, is_percussion, bnk);
         }
     }
 

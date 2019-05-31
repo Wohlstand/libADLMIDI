@@ -123,7 +123,23 @@ insdata MakeNoSoundIns()
 }
 
 
-size_t BanksDump::initBank(size_t bankId, uint_fast16_t bankSetup)
+void BanksDump::toOps(const insdata &inData, BanksDump::Operator *outData, size_t begin)
+{
+    outData[begin + 0].d_E862 =
+            uint_fast32_t(inData.data[6] << 24)
+          + uint_fast32_t(inData.data[4] << 16)
+          + uint_fast32_t(inData.data[2] << 8)
+          + uint_fast32_t(inData.data[0] << 0);
+    outData[begin + 1].d_E862 =
+            uint_fast32_t(inData.data[7] << 24)
+          + uint_fast32_t(inData.data[5] << 16)
+          + uint_fast32_t(inData.data[3] << 8)
+          + uint_fast32_t(inData.data[1] << 0);
+    outData[begin + 0].d_40 = inData.data[8];
+    outData[begin + 1].d_40 = inData.data[9];
+}
+
+size_t BanksDump::initBank(size_t bankId, const std::string &title, uint_fast16_t bankSetup)
 {
 #if 0
     assert(bankId <= banks.size());
@@ -131,10 +147,12 @@ size_t BanksDump::initBank(size_t bankId, uint_fast16_t bankSetup)
         banks.emplace_back();
     BankEntry &b = banks[bankId];
 #else
+    bankId = banks.size();
     banks.emplace_back();
     BankEntry &b = banks.back();
 #endif
     b.bankId = bankId;
+    b.bankTitle = title;
     b.bankSetup = bankSetup;
     return b.bankId;
 }
@@ -167,6 +185,13 @@ void BanksDump::addInstrument(BanksDump::MidiBank &bank, size_t patchId, BanksDu
     size_t opsCount = ((e.instFlags & InstrumentEntry::WOPL_Ins_4op) != 0 ||
             (e.instFlags & InstrumentEntry::WOPL_Ins_Pseudo4op) != 0) ?
                 4 : 2;
+
+    if((e.instFlags & InstrumentEntry::WOPL_Ins_IsBlank) != 0)
+    {
+        bank.instruments[patchId] = -1;
+        return;
+    }
+
     for(size_t op = 0; op < opsCount; op++)
     {
         Operator o = ops[op];
@@ -213,22 +238,38 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                       "{\n");
     for(const BankEntry &be : banks)
     {
+        bool commaNeeded = true;
         std::fprintf(out, "    {\n");
-        std::fprintf(out, "        0x%04lX, %zu, %zu,",
+        std::fprintf(out, "        0x%04lX, %zu, %zu, \"%s\",\n",
                                    be.bankSetup,
                                    be.melodic.size(),
-                                   be.percussion.size());
+                                   be.percussion.size(),
+                                   be.bankTitle.c_str());
         // Melodic banks
-        std::fprintf(out, "        { ");
+        std::fprintf(out, "        {");
+        commaNeeded = false;
         for(const size_t &me : be.melodic)
-            std::fprintf(out, "%zu, ", me);
-        std::fprintf(out, " },\n");
+        {
+            if(commaNeeded)
+                std::fprintf(out, ", ");
+            else
+                commaNeeded = true;
+            std::fprintf(out, "%zu", me);
+        }
+        std::fprintf(out, "},\n");
 
         // Percussive banks
-        std::fprintf(out, "        { ");
+        commaNeeded = false;
+        std::fprintf(out, "        {");
         for(const size_t &me : be.percussion)
-            std::fprintf(out, "%zu, ", me);
-        std::fprintf(out, " }\n");
+        {
+            if(commaNeeded)
+                std::fprintf(out, ", ");
+            else
+                commaNeeded = true;
+            std::fprintf(out, "%zu", me);
+        }
+        std::fprintf(out, "}\n");
 
         std::fprintf(out, "    },\n");
     }
@@ -240,13 +281,21 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                       "{\n");
     for(const MidiBank &be : midiBanks)
     {
+        bool commaNeeded = true;
         std::fprintf(out, "    {\n");
-        std::fprintf(out, "        %u, %u,", be.msb, be.lsb);
+        std::fprintf(out, "        %u, %u,\n", be.msb, be.lsb);
 
-        std::fprintf(out, "        { ");
+        std::fprintf(out, "        {");
+        commaNeeded = false;
         for(size_t i = 0; i < 128; i++)
-            std::fprintf(out, "%ld, ", be.instruments[i]);
-        std::fprintf(out, " },\n");
+        {
+            if(commaNeeded)
+                std::fprintf(out, ", ");
+            else
+                commaNeeded = true;
+            std::fprintf(out, "%ld", be.instruments[i]);
+        }
+        std::fprintf(out, "},\n");
 
         std::fprintf(out, "    },\n");
     }
@@ -260,7 +309,7 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
         size_t opsCount = ((be.instFlags & InstrumentEntry::WOPL_Ins_4op) != 0 ||
                            (be.instFlags & InstrumentEntry::WOPL_Ins_Pseudo4op) != 0) ? 4 : 2;
         std::fprintf(out, "    {\n");
-        std::fprintf(out, "        %u, %u, %d, %u, %lu, %d, %lu, %lu, %lu, ",
+        std::fprintf(out, "        %u, %u, %d, %u, %lu, %d, 0x%04lX, 0x%lX, 0x%lX,\n",
                      be.noteOffset1,
                      be.noteOffset2,
                      be.midiVelocityOffset,
@@ -272,10 +321,10 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                      be.delay_off_ms);
 
         if(opsCount == 4)
-            std::fprintf(out, "{%ld, %ld, %ld, %ld}",
+            std::fprintf(out, "        {%ld, %ld, %ld, %ld}\n",
                          be.ops[0], be.ops[1], be.ops[2], be.ops[3]);
         else
-            std::fprintf(out, "{%ld, %ld}",
+            std::fprintf(out, "        {%ld, %ld}\n",
                          be.ops[0], be.ops[1]);
 
         std::fprintf(out, "    },\n");
@@ -286,7 +335,7 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                       "{\n");
     for(const Operator &be : operators)
     {
-        std::fprintf(out, "    { %08lX, %02lX },\n",
+        std::fprintf(out, "    {0x%07lX, 0x%02lX},\n",
                      be.d_E862,
                      be.d_40);
     }

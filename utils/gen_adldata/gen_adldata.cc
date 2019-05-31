@@ -132,7 +132,7 @@ int main(int argc, char**argv)
             else
             if(format == "WOPL")
             {
-                if(!LoadWopl(db, filepath.c_str(), bank, prefix.c_str()))
+                if(!LoadWopl(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
