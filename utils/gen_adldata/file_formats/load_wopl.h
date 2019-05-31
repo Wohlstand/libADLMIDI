@@ -111,9 +111,7 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
 
     percussion_offset = melodic_offset + (insSize * 128 * mbanks_count);
 
-    //uint32_t root_sizes[2] =    {mbanks_count, pbanks_count};
-    uint32_t root_sizes[2]  =   {(version >= 2) ? mbanks_count : 1u,
-                                 (version >= 2) ? pbanks_count : 1u};
+    uint32_t root_sizes[2]  =   {mbanks_count, pbanks_count};
     uint32_t root_offsets[2] =  {melodic_offset, percussion_offset};
     uint32_t root_meta_offsets[2] =  {melodic_meta_offset, percussion_meta_offset};
 
@@ -260,15 +258,18 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
                 else
                     snprintf(name2, 512, "%sM%u", prefix, i);
 
-                if(!real4op && !tmp2.pseudo4op)
+                if(bankno == 0)
                 {
-                    size_t resno = InsertIns(tmp[0], tmp2, name, name2);
-                    SetBank(bank, gmno, resno);
-                }
-                else
-                {
-                    size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
-                    SetBank(bank, gmno, resno);
+                    if(!real4op && !tmp2.pseudo4op)
+                    {
+                        size_t resno = InsertIns(tmp[0], tmp2, name, name2);
+                        SetBank(bank, gmno, resno);
+                    }
+                    else
+                    {
+                        size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
+                        SetBank(bank, gmno, resno);
+                    }
                 }
                 db.addInstrument(bnk, i, inst, ops);
             }
