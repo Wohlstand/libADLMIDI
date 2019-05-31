@@ -8,9 +8,9 @@ inline int stdstoi(const std::string& str)
     return std::atoi(str.c_str());
 }
 
-static bool LoadBNK2(const char *fn, unsigned bank, const char *prefix,
-                     const std::string &melo_filter,
-                     const std::string &perc_filter)
+bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
+                           const std::string &melo_filter,
+                           const std::string &perc_filter)
 {
     #ifdef HARD_BANKS
     writeIni("AdLibGold", fn, prefix, bank, INI_Both, melo_filter.c_str(), perc_filter.c_str());

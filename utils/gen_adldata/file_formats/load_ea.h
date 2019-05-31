@@ -4,7 +4,7 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-static bool LoadEA(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadEA(const char *fn, unsigned bank, const char *prefix)
 {
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)

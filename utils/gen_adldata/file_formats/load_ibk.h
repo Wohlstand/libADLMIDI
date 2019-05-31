@@ -3,7 +3,7 @@
 
 #include "../progs_cache.h"
 
-static bool LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode = false)
+bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode)
 {
     #ifdef HARD_BANKS
     writeIni("IBK", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);

@@ -1,5 +1,15 @@
 #include "progs_cache.h"
-#include <cstdio>
+
+#include "file_formats/load_ail.h"
+#include "file_formats/load_bisqwit.h"
+#include "file_formats/load_bnk2.h"
+#include "file_formats/load_bnk.h"
+#include "file_formats/load_ibk.h"
+#include "file_formats/load_jv.h"
+#include "file_formats/load_op2.h"
+#include "file_formats/load_tmb.h"
+#include "file_formats/load_wopl.h"
+#include "file_formats/load_ea.h"
 
 InstrumentDataTab insdatatab;
 
@@ -309,7 +319,7 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
         size_t opsCount = ((be.instFlags & InstrumentEntry::WOPL_Ins_4op) != 0 ||
                            (be.instFlags & InstrumentEntry::WOPL_Ins_Pseudo4op) != 0) ? 4 : 2;
         std::fprintf(out, "    {\n");
-        std::fprintf(out, "        %u, %u, %d, %u, %lu, %d, 0x%04lX, 0x%lX, 0x%lX,\n",
+        std::fprintf(out, "        %d, %d, %d, %u, %lu, %d, 0x%04lX, 0x%lX, 0x%lX,\n",
                      be.noteOffset1,
                      be.noteOffset2,
                      be.midiVelocityOffset,

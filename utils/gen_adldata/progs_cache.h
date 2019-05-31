@@ -13,9 +13,9 @@
 #include <limits>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 
 #include <cassert>
-
 
 struct insdata
 {
@@ -128,6 +128,28 @@ extern std::vector<std::string> banknames;
 
 //static std::map<unsigned, std::map<unsigned, unsigned> > Correlate;
 //extern unsigned maxvalues[30];
+
+void SetBank(size_t bank, unsigned patch, size_t insno);
+void SetBankSetup(size_t bank, const AdlBankSetup &setup);
+
+/* 2op voice instrument */
+size_t InsertIns(const insdata &id, ins &in,
+                 const std::string &name, const std::string &name2);
+
+/* 4op voice instrument or double-voice 2-op instrument */
+size_t InsertIns(const insdata &id, const insdata &id2, ins &in,
+                 const std::string &name, const std::string &name2,
+                 bool oneVoice = false);
+
+size_t InsertNoSoundIns();
+insdata MakeNoSoundIns();
+
+
+
+
+
+
+
 
 
 struct BanksDump
@@ -268,8 +290,8 @@ struct BanksDump
             WOPL_RM_HiHat     = 0x28
         } WOPL_RhythmMode;
 
-        uint_fast8_t  noteOffset1 = 0;
-        uint_fast8_t  noteOffset2 = 0;
+        int_fast8_t   noteOffset1 = 0;
+        int_fast8_t   noteOffset2 = 0;
         int_fast8_t   midiVelocityOffset = 0;
         uint_fast8_t  percussionKeyNumber = 0;
         uint_fast32_t instFlags = 0;
@@ -335,20 +357,22 @@ struct BanksDump
 };
 
 
+namespace BankFormats
+{
 
-void SetBank(size_t bank, unsigned patch, size_t insno);
-void SetBankSetup(size_t bank, const AdlBankSetup &setup);
+bool LoadMiles(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
+bool LoadBisqwit(const char *fn, unsigned bank, const char *prefix);
+bool LoadBNK(const char *fn, unsigned bank, const char *prefix, bool is_fat, bool percussive);
+bool LoadBNK2(const char *fn, unsigned bank, const char *prefix,
+                     const std::string &melo_filter,
+                     const std::string &perc_filter);
+bool LoadEA(const char *fn, unsigned bank, const char *prefix);
+bool LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode = false);
+bool LoadJunglevision(const char *fn, unsigned bank, const char *prefix);
+bool LoadDoom(const char *fn, unsigned bank, const char *prefix);
+bool LoadTMB(const char *fn, unsigned bank, const char *prefix);
+bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix);
 
-/* 2op voice instrument */
-size_t InsertIns(const insdata &id, ins &in,
-                 const std::string &name, const std::string &name2);
-
-/* 4op voice instrument or double-voice 2-op instrument */
-size_t InsertIns(const insdata &id, const insdata &id2, ins &in,
-                 const std::string &name, const std::string &name2,
-                 bool oneVoice = false);
-
-size_t InsertNoSoundIns();
-insdata MakeNoSoundIns();
+}
 
 #endif // PROGS_H

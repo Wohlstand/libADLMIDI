@@ -49,7 +49,7 @@ struct Doom_opl_instr
 #endif
 
 
-static bool LoadDoom(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadDoom(const char *fn, unsigned bank, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("OP2", fn, prefix, bank, INI_Both);

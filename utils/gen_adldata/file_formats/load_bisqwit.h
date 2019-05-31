@@ -4,7 +4,7 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-static bool LoadBisqwit(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadBisqwit(const char *fn, unsigned bank, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("Bisqwit", fn, prefix, bank, INI_Both);

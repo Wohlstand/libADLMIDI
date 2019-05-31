@@ -18,7 +18,7 @@ enum class WOPL_Flags
     WOPL_RhythmModeMask = 0x38,
 };
 
-static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix)
+bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix)
 {
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
@@ -64,7 +64,7 @@ static bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::st
     setup.volumeModel = (int)data[0x12];
     setup.scaleModulators  = false;
 
-    size_t bankDb = (unsigned)db.initBank(bank, bankTitle, static_cast<uint_fast16_t>((static_cast<unsigned>(data[0x11]) << 8) | static_cast<unsigned>(data[0x12])));
+    size_t bankDb = db.initBank(bank, bankTitle, static_cast<uint_fast16_t>((static_cast<unsigned>(data[0x11]) << 8) | static_cast<unsigned>(data[0x12])));
 
     // Validate file format by size calculation
     if(version == 1)

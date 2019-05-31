@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 
-static bool LoadBNK(const char *fn, unsigned bank, const char *prefix, bool is_fat, bool percussive)
+bool BankFormats::LoadBNK(const char *fn, unsigned bank, const char *prefix, bool is_fat, bool percussive)
 {
     #ifdef HARD_BANKS
     writeIni("HMI", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);

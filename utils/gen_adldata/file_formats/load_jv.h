@@ -4,7 +4,7 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-static bool LoadJunglevision(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadJunglevision(const char *fn, unsigned bank, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("Junglevision", fn, prefix, bank, INI_Both);

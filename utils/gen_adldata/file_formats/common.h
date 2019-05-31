@@ -25,4 +25,13 @@ inline uint16_t toUint16LE(const uint8_t *arr)
     return num;
 }
 
+inline uint32_t toUint32LE(const uint8_t *arr)
+{
+    uint32_t num = arr[0];
+    num |= (static_cast<uint32_t>(arr[1] << 8)  & 0x0000FF00);
+    num |= (static_cast<uint32_t>(arr[2] << 16) & 0x00FF0000);
+    num |= (static_cast<uint32_t>(arr[3] << 24) & 0xFF000000);
+    return num;
+}
+
 #endif // COMMON_H

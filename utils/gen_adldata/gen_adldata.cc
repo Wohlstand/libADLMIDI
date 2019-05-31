@@ -15,17 +15,6 @@
 
 #include "midi_inst_list.h"
 
-#include "file_formats/load_ail.h"
-#include "file_formats/load_bisqwit.h"
-#include "file_formats/load_bnk2.h"
-#include "file_formats/load_bnk.h"
-#include "file_formats/load_ibk.h"
-#include "file_formats/load_jv.h"
-#include "file_formats/load_op2.h"
-#include "file_formats/load_tmb.h"
-#include "file_formats/load_wopl.h"
-#include "file_formats/load_ea.h"
-
 int main(int argc, char**argv)
 {
     if(argc == 1)
@@ -114,7 +103,7 @@ int main(int argc, char**argv)
 
             if(format == "AIL")
             {
-                if(!LoadMiles(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadMiles(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -123,7 +112,7 @@ int main(int argc, char**argv)
             else
             if(format == "Bisqwit")
             {
-                if(!LoadBisqwit(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadBisqwit(filepath.c_str(), bank, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -132,7 +121,7 @@ int main(int argc, char**argv)
             else
             if(format == "WOPL")
             {
-                if(!LoadWopl(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
+                if(!BankFormats::LoadWopl(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -141,7 +130,7 @@ int main(int argc, char**argv)
             else
             if(format == "OP2")
             {
-                if(!LoadDoom(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadDoom(filepath.c_str(), bank, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -150,7 +139,7 @@ int main(int argc, char**argv)
             else
             if(format == "EA")
             {
-                if(!LoadEA(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadEA(filepath.c_str(), bank, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -159,7 +148,7 @@ int main(int argc, char**argv)
             else
             if(format == "TMB")
             {
-                if(!LoadTMB(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadTMB(filepath.c_str(), bank, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -168,7 +157,7 @@ int main(int argc, char**argv)
             else
             if(format == "Junglevision")
             {
-                if(!LoadJunglevision(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadJunglevision(filepath.c_str(), bank, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -177,7 +166,7 @@ int main(int argc, char**argv)
             else
             if(format == "AdLibGold")
             {
-                if(!LoadBNK2(filepath.c_str(), bank, prefix.c_str(), filter_m, filter_p))
+                if(!BankFormats::LoadBNK2(filepath.c_str(), bank, prefix.c_str(), filter_m, filter_p))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -186,14 +175,14 @@ int main(int argc, char**argv)
             else
             if(format == "HMI")
             {
-                if(!LoadBNK(filepath.c_str(),  bank, prefix.c_str(),   false, false))
+                if(!BankFormats::LoadBNK(filepath.c_str(),  bank, prefix.c_str(),   false, false))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
                 }
                 if(!filepath_d.empty())
                 {
-                    if(!LoadBNK(filepath_d.c_str(),bank, prefix_d.c_str(), false, true))
+                    if(!BankFormats::LoadBNK(filepath_d.c_str(),bank, prefix_d.c_str(), false, true))
                     {
                         std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                         return 1;
@@ -203,7 +192,7 @@ int main(int argc, char**argv)
             else
             if(format == "IBK")
             {
-                if(!LoadIBK(filepath.c_str(),  bank, prefix.c_str(),   false))
+                if(!BankFormats::LoadIBK(filepath.c_str(),  bank, prefix.c_str(),   false))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -211,7 +200,7 @@ int main(int argc, char**argv)
                 if(!filepath_d.empty())
                 {
                     //printf("Loading %s... \n", filepath_d.c_str());
-                    if(!LoadIBK(filepath_d.c_str(),bank, prefix_d.c_str(), true, noRhythmMode))
+                    if(!BankFormats::LoadIBK(filepath_d.c_str(),bank, prefix_d.c_str(), true, noRhythmMode))
                     {
                         std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                         return 1;
