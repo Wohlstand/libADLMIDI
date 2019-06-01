@@ -4,7 +4,7 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-bool BankFormats::LoadJunglevision(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
     #ifdef HARD_BANKS
     writeIni("Junglevision", fn, prefix, bank, INI_Both);
@@ -22,6 +22,10 @@ bool BankFormats::LoadJunglevision(const char *fn, unsigned bank, const char *pr
     }
     std::fclose(fp);
 
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Win9X);
+    BanksDump::MidiBank bnkMelodique;
+    BanksDump::MidiBank bnkPercussion;
+
     uint16_t ins_count  = uint16_t(data[0x20] + (data[0x21] << 8));
     uint16_t drum_count = uint16_t(data[0x22] + (data[0x23] << 8));
     uint16_t first_ins  = uint16_t(data[0x24] + (data[0x25] << 8));
@@ -37,6 +41,12 @@ bool BankFormats::LoadJunglevision(const char *fn, unsigned bank, const char *pr
                          : gmno < 128 + 35 ? -1
                          : gmno < 128 + 88 ? int(gmno - 35)
                          : -1;
+
+        bool isPercussion = ins_count >= 128;
+        size_t patchId = (a < ins_count) ? (a + first_ins) : ((a - ins_count) + first_drum);
+        BanksDump::MidiBank &bnk = isPercussion ? bnkPercussion : bnkMelodique;
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
 
         insdata tmp[2];
 
@@ -83,6 +93,14 @@ bool BankFormats::LoadJunglevision(const char *fn, unsigned bank, const char *pr
             tmp[1].finetune -= 12;
         }
 
+        if(data[offset] != 0)
+            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
+        inst.percussionKeyNumber = data[offset + 1];
+        inst.fbConn = (static_cast<uint_fast16_t>(data[offset + 7] & 0x0F)) |
+                      (static_cast<uint_fast16_t>(data[offset + 7 + 11] & 0x0F) << 8);
+        db.toOps(tmp[0], ops, 0);
+        db.toOps(tmp[1], ops, 2);
+
         std::string name;
         if(midi_index >= 0) name = std::string(1, '\377') + MidiInsName[midi_index];
 
@@ -100,7 +118,11 @@ bool BankFormats::LoadJunglevision(const char *fn, unsigned bank, const char *pr
             size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
             SetBank(bank, gmno, resno);
         }
+        db.addInstrument(bnk, patchId, inst, ops);
     }
+
+    db.addMidiBank(bankDb, false, bnkMelodique);
+    db.addMidiBank(bankDb, true, bnkPercussion);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_9X;

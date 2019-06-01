@@ -368,7 +368,7 @@ bool LoadBNK2(const char *fn, unsigned bank, const char *prefix,
                      const std::string &perc_filter);
 bool LoadEA(const char *fn, unsigned bank, const char *prefix);
 bool LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode = false);
-bool LoadJunglevision(const char *fn, unsigned bank, const char *prefix);
+bool LoadJunglevision(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix);

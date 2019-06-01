@@ -151,20 +151,25 @@ void BanksDump::toOps(const insdata &inData, BanksDump::Operator *outData, size_
 
 size_t BanksDump::initBank(size_t bankId, const std::string &title, uint_fast16_t bankSetup)
 {
-#if 0
-    assert(bankId <= banks.size());
-    if(bankId >= banks.size())
-        banks.emplace_back();
-    BankEntry &b = banks[bankId];
-#else
-    bankId = banks.size();
+    for(size_t bID = 0; bID < banks.size(); bID++)
+    {
+        BankEntry &be = banks[bID];
+        if(bankId == be.bankId)
+        {
+            be.bankTitle = title;
+            be.bankSetup = bankSetup;
+            return bID;
+        }
+    }
+
+    size_t bankIndex = banks.size();
     banks.emplace_back();
     BankEntry &b = banks.back();
-#endif
+
     b.bankId = bankId;
     b.bankTitle = title;
     b.bankSetup = bankSetup;
-    return b.bankId;
+    return bankIndex;
 }
 
 void BanksDump::addMidiBank(size_t bankId, bool percussion, BanksDump::MidiBank b)
