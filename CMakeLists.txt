@@ -217,6 +217,8 @@ set(libADLMIDI_SOURCES
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi_midiplay.cpp
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi_opl3.cpp
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi_private.cpp
+    ${libADLMIDI_SOURCE_DIR}/src/midiplay/chip_voice.cpp
+    ${libADLMIDI_SOURCE_DIR}/src/midiplay/cpp_extras.cpp
     ${libADLMIDI_SOURCE_DIR}/src/wopl/wopl_file.c
 )
 
@@ -225,6 +227,7 @@ if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(ADLMIDI_static STATIC ${libADLMIDI_SOURCES})
     set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
     target_include_directories(ADLMIDI_static PUBLIC ${libADLMIDI_SOURCE_DIR}/include)
+    target_include_directories(ADLMIDI_static PRIVATE ${libADLMIDI_SOURCE_DIR}/src)
     set_legacy_standard(ADLMIDI_static)
     set_visibility_hidden(ADLMIDI_static)
     handle_options(ADLMIDI_static)
@@ -238,6 +241,7 @@ if(libADLMIDI_SHARED)
     add_library(ADLMIDI_shared SHARED ${libADLMIDI_SOURCES})
     set_target_properties(ADLMIDI_shared PROPERTIES OUTPUT_NAME ADLMIDI)
     target_include_directories(ADLMIDI_shared PUBLIC ${libADLMIDI_SOURCE_DIR}/include)
+    target_include_directories(ADLMIDI_shared PRIVATE ${libADLMIDI_SOURCE_DIR}/src)
     set_legacy_standard(ADLMIDI_shared)
     set_visibility_hidden(ADLMIDI_shared)
     handle_options(ADLMIDI_shared)

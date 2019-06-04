@@ -86,28 +86,6 @@ inline bool isXgPercChannel(uint8_t msb, uint8_t lsb)
     return (msb == 0x7E || msb == 0x7F) && (lsb == 0);
 }
 
-void MIDIplay::AdlChannel::addAge(int64_t us)
-{
-    const int64_t neg = 1000 * static_cast<int64_t>(-0x1FFFFFFFl);
-    if(users.empty())
-    {
-        koff_time_until_neglible_us = std::max(koff_time_until_neglible_us - us, neg);
-        if(koff_time_until_neglible_us < 0)
-            koff_time_until_neglible_us = 0;
-    }
-    else
-    {
-        koff_time_until_neglible_us = 0;
-        for(users_iterator i = users.begin(); !i.is_end(); ++i)
-        {
-            LocationData &d = i->value;
-            if(!d.fixed_sustain)
-                d.kon_time_until_neglible_us = std::max(d.kon_time_until_neglible_us - us, neg);
-            d.vibdelay_us += us;
-        }
-    }
-}
-
 MIDIplay::MIDIplay(unsigned long sampleRate):
     m_cmfPercussionMode(false),
     m_masterVolume(MasterVolumeDefault),
@@ -237,7 +215,7 @@ void MIDIplay::TickIterators(double s)
     Synth &synth = *m_synth;
     for(uint32_t c = 0, n = synth.m_numChannels; c < n; ++c)
     {
-        AdlChannel &ch = m_chipChannels[c];
+        ChipChannel &ch = m_chipChannels[c];
         ch.addAge(static_cast<int64_t>(s * 1e6));
     }
 
@@ -753,14 +731,14 @@ void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
     case 64: // Enable/disable sustain
         m_midiChannels[channel].sustain = (value >= 64);
         if(!m_midiChannels[channel].sustain)
-            killSustainingNotes(channel, -1, AdlChannel::LocationData::Sustain_Pedal);
+            killSustainingNotes(channel, -1, ChipChannel::LocationData::Sustain_Pedal);
         break;
 
     case 66: // Enable/disable sostenuto
         if(value >= 64) //Find notes and mark them as sostenutoed
             markSostenutoNotes(channel);
         else
-            killSustainingNotes(channel, -1, AdlChannel::LocationData::Sustain_Sostenuto);
+            killSustainingNotes(channel, -1, ChipChannel::LocationData::Sustain_Sostenuto);
         break;
 
     case 67: // Enable/disable soft-pedal
@@ -782,7 +760,7 @@ void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
         m_midiChannels[channel].resetAllControllers();
         noteUpdateAll(channel, Upd_Pan + Upd_Volume + Upd_Pitch);
         // Kill all sustained notes
-        killSustainingNotes(channel, -1, AdlChannel::LocationData::Sustain_ANY);
+        killSustainingNotes(channel, -1, ChipChannel::LocationData::Sustain_ANY);
         break;
 
     case 120: // All sounds off
@@ -1118,7 +1096,7 @@ bool MIDIplay::doYamahaSysEx(unsigned dev, const uint8_t *data, size_t size)
 void MIDIplay::realTime_panic()
 {
     panic();
-    killSustainingNotes(-1, -1, AdlChannel::LocationData::Sustain_ANY);
+    killSustainingNotes(-1, -1, ChipChannel::LocationData::Sustain_ANY);
 }
 
 void MIDIplay::realTime_deviceSwitch(size_t track, const char *data, size_t length)
@@ -1164,7 +1142,7 @@ void MIDIplay::AudioTick(uint32_t chipId, uint32_t rate)
 #endif
 
 void MIDIplay::noteUpdate(size_t midCh,
-                          MIDIplay::MIDIchannel::notes_iterator i,
+                          MIDIchannel::notes_iterator i,
                           unsigned props_mask,
                           int32_t select_adlchn)
 {
@@ -1175,7 +1153,7 @@ void MIDIplay::noteUpdate(size_t midCh,
     const uint8_t vol     = info.vol;
     const int midiins     = static_cast<int>(info.midiins);
     const adlinsdata2 &ains = *info.ains;
-    AdlChannel::Location my_loc;
+    ChipChannel::Location my_loc;
     my_loc.MidCh = static_cast<uint16_t>(midCh);
     my_loc.note  = info.note;
 
@@ -1196,11 +1174,11 @@ void MIDIplay::noteUpdate(size_t midCh,
         if(props_mask & Upd_Patch)
         {
             synth.setPatch(c, ins.ains);
-            AdlChannel::users_iterator i = m_chipChannels[c].find_or_create_user(my_loc);
+            ChipChannel::users_iterator i = m_chipChannels[c].find_or_create_user(my_loc);
             if(!i.is_end())    // inserts if necessary
             {
-                AdlChannel::LocationData &d = i->value;
-                d.sustained = AdlChannel::LocationData::Sustain_None;
+                ChipChannel::LocationData &d = i->value;
+                d.sustained = ChipChannel::LocationData::Sustain_None;
                 d.vibdelay_us = 0;
                 d.fixed_sustain = (ains.ms_sound_kon == static_cast<uint16_t>(adlNoteOnMaxTime));
                 d.kon_time_until_neglible_us = 1000 * ains.ms_sound_kon;
@@ -1222,8 +1200,8 @@ void MIDIplay::noteUpdate(size_t midCh,
         {
             if(!m_midiChannels[midCh].sustain)
             {
-                AdlChannel::users_iterator k = m_chipChannels[c].find_user(my_loc);
-                bool do_erase_user = (!k.is_end() && ((k->value.sustained & AdlChannel::LocationData::Sustain_Sostenuto) == 0));
+                ChipChannel::users_iterator k = m_chipChannels[c].find_user(my_loc);
+                bool do_erase_user = (!k.is_end() && ((k->value.sustained & ChipChannel::LocationData::Sustain_Sostenuto) == 0));
                 if(do_erase_user)
                     m_chipChannels[c].users.erase(k);
 
@@ -1248,9 +1226,9 @@ void MIDIplay::noteUpdate(size_t midCh,
             {
                 // Sustain: Forget about the note, but don't key it off.
                 //          Also will avoid overwriting it very soon.
-                AdlChannel::users_iterator d = m_chipChannels[c].find_or_create_user(my_loc);
+                ChipChannel::users_iterator d = m_chipChannels[c].find_or_create_user(my_loc);
                 if(!d.is_end())
-                    d->value.sustained |= AdlChannel::LocationData::Sustain_Pedal; // note: not erased!
+                    d->value.sustained |= ChipChannel::LocationData::Sustain_Pedal; // note: not erased!
                 if(hooks.onNote)
                     hooks.onNote(hooks.onNote_userData, c, noteTone, midiins, -1, 0.0);
             }
@@ -1352,10 +1330,10 @@ void MIDIplay::noteUpdate(size_t midCh,
 
         if(props_mask & Upd_Pitch)
         {
-            AdlChannel::users_iterator d = m_chipChannels[c].find_user(my_loc);
+            ChipChannel::users_iterator d = m_chipChannels[c].find_user(my_loc);
 
             // Don't bend a sustained note
-            if(d.is_end() || (d->value.sustained == AdlChannel::LocationData::Sustain_None))
+            if(d.is_end() || (d->value.sustained == ChipChannel::LocationData::Sustain_None))
             {
                 MIDIchannel &chan = m_midiChannels[midCh];
                 double midibend = chan.bend * chan.bendsense;
@@ -1410,7 +1388,7 @@ void MIDIplay::setErrorString(const std::string &err)
 int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::NoteInfo::Phys &ins) const
 {
     Synth &synth = *m_synth;
-    const AdlChannel &chan = m_chipChannels[c];
+    const ChipChannel &chan = m_chipChannels[c];
     int64_t koff_ms = chan.koff_time_until_neglible_us / 1000;
     int64_t s = -koff_ms;
 
@@ -1425,12 +1403,12 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
     }
 
     // Same midi-instrument = some stability
-    for(AdlChannel::const_users_iterator j = chan.users.begin(); !j.is_end(); ++j)
+    for(ChipChannel::const_users_iterator j = chan.users.begin(); !j.is_end(); ++j)
     {
-        const AdlChannel::LocationData &jd = j->value;
+        const ChipChannel::LocationData &jd = j->value;
 
         int64_t kon_ms = jd.kon_time_until_neglible_us / 1000;
-        s -= (jd.sustained == AdlChannel::LocationData::Sustain_None) ?
+        s -= (jd.sustained == ChipChannel::LocationData::Sustain_None) ?
             (4000000 + kon_ms) : (500000 + (kon_ms / 2));
 
         MIDIchannel::notes_iterator
@@ -1474,10 +1452,10 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
             if(synth.m_channelCategory[c2]
                != synth.m_channelCategory[c]) continue;
 
-            for(AdlChannel::const_users_iterator m = m_chipChannels[c2].users.begin(); !m.is_end(); ++m)
+            for(ChipChannel::const_users_iterator m = m_chipChannels[c2].users.begin(); !m.is_end(); ++m)
             {
-                const AdlChannel::LocationData &md = m->value;
-                if(md.sustained != AdlChannel::LocationData::Sustain_None) continue;
+                const ChipChannel::LocationData &md = m->value;
+                if(md.sustained != ChipChannel::LocationData::Sustain_None) continue;
                 if(md.vibdelay_us >= 200000) continue;
                 if(md.ins != jd.ins) continue;
                 n_evacuation_stations += 1;
@@ -1498,13 +1476,13 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
     Synth &synth = *m_synth;
 
     //bool doing_arpeggio = false;
-    for(AdlChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
+    for(ChipChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
     {
-        AdlChannel::users_iterator j = jnext;
-        AdlChannel::LocationData &jd = jnext->value;
+        ChipChannel::users_iterator j = jnext;
+        ChipChannel::LocationData &jd = jnext->value;
         ++jnext;
 
-        if(jd.sustained == AdlChannel::LocationData::Sustain_None)
+        if(jd.sustained == ChipChannel::LocationData::Sustain_None)
         {
             // Collision: Kill old note,
             // UNLESS we're going to do arpeggio
@@ -1529,7 +1507,7 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
     // Kill all sustained notes on this channel
     // Don't keep them for arpeggio, because arpeggio requires
     // an intact "activenotes" record. This is a design flaw.
-    killSustainingNotes(-1, static_cast<int32_t>(c), AdlChannel::LocationData::Sustain_ANY);
+    killSustainingNotes(-1, static_cast<int32_t>(c), ChipChannel::LocationData::Sustain_ANY);
 
     // Keyoff the channel so that it can be retriggered,
     // unless the new note will be introduced as just an arpeggio.
@@ -1538,12 +1516,12 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
 }
 
 void MIDIplay::killOrEvacuate(size_t from_channel,
-                              AdlChannel::users_iterator j,
-                              MIDIplay::MIDIchannel::notes_iterator i)
+                              ChipChannel::users_iterator j,
+                              MIDIchannel::notes_iterator i)
 {
     Synth &synth = *m_synth;
     uint32_t maxChannels = ADL_MAX_CHIPS * 18;
-    AdlChannel::LocationData &jd = j->value;
+    ChipChannel::LocationData &jd = j->value;
     MIDIchannel::NoteInfo &info = i->value;
 
     // Before killing the note, check if it can be
@@ -1562,7 +1540,7 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
         if(synth.m_channelCategory[c] != synth.m_channelCategory[from_channel])
             continue;
 
-        AdlChannel &adlch = m_chipChannels[c];
+        ChipChannel &adlch = m_chipChannels[c];
         if(adlch.users.size() == adlch.users.capacity())
             continue;  // no room for more arpeggio on channel
 
@@ -1570,9 +1548,9 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
             continue;  // channel already has this note playing (sustained)
                        // avoid introducing a duplicate location.
 
-        for(AdlChannel::users_iterator m = adlch.users.begin(); !m.is_end(); ++m)
+        for(ChipChannel::users_iterator m = adlch.users.begin(); !m.is_end(); ++m)
         {
-            AdlChannel::LocationData &mv = m->value;
+            ChipChannel::LocationData &mv = m->value;
 
             if(mv.vibdelay_us >= 200000
                && mv.kon_time_until_neglible_us < 10000000) continue;
@@ -1638,10 +1616,10 @@ void MIDIplay::killSustainingNotes(int32_t midCh, int32_t this_adlchn, uint32_t 
         if(m_chipChannels[c].users.empty())
             continue; // Nothing to do
 
-        for(AdlChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
+        for(ChipChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
         {
-            AdlChannel::users_iterator j = jnext;
-            AdlChannel::LocationData &jd = j->value;
+            ChipChannel::users_iterator j = jnext;
+            ChipChannel::LocationData &jd = j->value;
             ++jnext;
 
             if((midCh < 0 || jd.loc.MidCh == midCh)
@@ -1651,7 +1629,7 @@ void MIDIplay::killSustainingNotes(int32_t midCh, int32_t this_adlchn, uint32_t 
                 if(hooks.onNote)
                     hooks.onNote(hooks.onNote_userData, (int)c, jd.loc.note, midiins, 0, 0.0);
                 jd.sustained &= ~sustain_type;
-                if(jd.sustained == AdlChannel::LocationData::Sustain_None)
+                if(jd.sustained == ChipChannel::LocationData::Sustain_None)
                     m_chipChannels[c].users.erase(j);//Remove only when note is clean from any holders
             }
         }
@@ -1671,13 +1649,13 @@ void MIDIplay::markSostenutoNotes(int32_t midCh)
         if(m_chipChannels[c].users.empty())
             continue; // Nothing to do
 
-        for(AdlChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
+        for(ChipChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
         {
-            AdlChannel::users_iterator j = jnext;
-            AdlChannel::LocationData &jd = j->value;
+            ChipChannel::users_iterator j = jnext;
+            ChipChannel::LocationData &jd = j->value;
             ++jnext;
-            if((jd.loc.MidCh == midCh) && (jd.sustained == AdlChannel::LocationData::Sustain_None))
-                jd.sustained |= AdlChannel::LocationData::Sustain_Sostenuto;
+            if((jd.loc.MidCh == midCh) && (jd.sustained == ChipChannel::LocationData::Sustain_None))
+                jd.sustained |= ChipChannel::LocationData::Sustain_Sostenuto;
         }
     }
 }
@@ -1816,7 +1794,7 @@ retry_arpeggio:
 
         if(n_users > 1)
         {
-            AdlChannel::users_iterator i = m_chipChannels[c].users.begin();
+            ChipChannel::users_iterator i = m_chipChannels[c].users.begin();
             size_t rate_reduction = 3;
 
             if(n_users >= 3)
@@ -1829,8 +1807,8 @@ retry_arpeggio:
                 n = 0; n < count; ++n)
                 ++i;
 
-            AdlChannel::LocationData &d = i->value;
-            if(d.sustained == AdlChannel::LocationData::Sustain_None)
+            ChipChannel::LocationData &d = i->value;
+            if(d.sustained == ChipChannel::LocationData::Sustain_None)
             {
                 if(d.kon_time_until_neglible_us <= 0)
                 {
@@ -1896,13 +1874,13 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
     uint32_t index = 0;
     while(index < numChannels && index < size - 1)
     {
-        const AdlChannel &adlChannel = m_chipChannels[index];
+        const ChipChannel &adlChannel = m_chipChannels[index];
 
-        AdlChannel::const_users_iterator loc = adlChannel.users.begin();
-        AdlChannel::const_users_iterator locnext(loc);
+        ChipChannel::const_users_iterator loc = adlChannel.users.begin();
+        ChipChannel::const_users_iterator locnext(loc);
         if(!loc.is_end()) ++locnext;
 
-	if(loc.is_end())  // off
+        if(loc.is_end())  // off
         {
             str[index] = '-';
         }
@@ -1938,233 +1916,3 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
     str[index] = 0;
     attr[index] = 0;
 }
-
-#ifndef ADLMIDI_DISABLE_CPP_EXTRAS
-
-struct AdlInstrumentTester::Impl
-{
-    uint32_t cur_gm;
-    uint32_t ins_idx;
-    std::vector<uint32_t> adl_ins_list;
-    Synth *opl;
-    MIDIplay *play;
-};
-
-ADLMIDI_EXPORT AdlInstrumentTester::AdlInstrumentTester(ADL_MIDIPlayer *device)
-    : P(new Impl)
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    MIDIplay *play = reinterpret_cast<MIDIplay *>(device->adl_midiPlayer);
-    P->cur_gm = 0;
-    P->ins_idx = 0;
-    P->play = play;
-    P->opl = play ? play->m_synth.get() : NULL;
-#else
-    ADL_UNUSED(device);
-#endif
-}
-
-ADLMIDI_EXPORT AdlInstrumentTester::~AdlInstrumentTester()
-{
-    delete P;
-}
-
-ADLMIDI_EXPORT void AdlInstrumentTester::FindAdlList()
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    const unsigned NumBanks = (unsigned)adl_getBanksCount();
-    std::set<unsigned> adl_ins_set;
-    for(unsigned bankno = 0; bankno < NumBanks; ++bankno)
-        adl_ins_set.insert(banks[bankno][P->cur_gm]);
-    P->adl_ins_list.assign(adl_ins_set.begin(), adl_ins_set.end());
-    P->ins_idx = 0;
-    NextAdl(0);
-    P->opl->silenceAll();
-#endif
-}
-
-
-
-ADLMIDI_EXPORT void AdlInstrumentTester::Touch(unsigned c, unsigned volume) // Volume maxes at 127*127*127
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    Synth *opl = P->opl;
-    if(opl->m_volumeScale == Synth::VOLUME_NATIVE)
-        opl->touchNote(c, static_cast<uint8_t>(volume * 127 / (127 * 127 * 127) / 2));
-    else
-    {
-        // The formula below: SOLVE(V=127^3 * 2^( (A-63.49999) / 8), A)
-        opl->touchNote(c, static_cast<uint8_t>(volume > 8725 ? static_cast<unsigned int>(std::log((double)volume) * 11.541561 + (0.5 - 104.22845)) : 0));
-        // The incorrect formula below: SOLVE(V=127^3 * (2^(A/63)-1), A)
-        //Touch_Real(c, volume>11210 ? 91.61112 * std::log(4.8819E-7*volume + 1.0)+0.5 : 0);
-    }
-#else
-    ADL_UNUSED(c);
-    ADL_UNUSED(volume);
-#endif
-}
-
-ADLMIDI_EXPORT void AdlInstrumentTester::DoNote(int note)
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    MIDIplay *play = P->play;
-    Synth *opl = P->opl;
-    if(P->adl_ins_list.empty()) FindAdlList();
-    const unsigned meta = P->adl_ins_list[P->ins_idx];
-    const adlinsdata2 ains = adlinsdata2::from_adldata(::adlins[meta]);
-
-    int tone = (P->cur_gm & 128) ? (P->cur_gm & 127) : (note + 50);
-    if(ains.tone)
-    {
-        /*if(ains.tone < 20)
-                tone += ains.tone;
-            else */
-        if(ains.tone < 128)
-            tone = ains.tone;
-        else
-            tone -= ains.tone - 128;
-    }
-    double hertz = 172.00093 * std::exp(0.057762265 * (tone + 0.0));
-    int32_t adlchannel[2] = { 0, 3 };
-    if((ains.flags & (adlinsdata::Flag_Pseudo4op|adlinsdata::Flag_Real4op)) == 0)
-    {
-        adlchannel[1] = -1;
-        adlchannel[0] = 6; // single-op
-        if(play->hooks.onDebugMessage)
-        {
-            play->hooks.onDebugMessage(play->hooks.onDebugMessage_userData,
-                                       "noteon at %d for %g Hz\n", adlchannel[0], hertz);
-        }
-    }
-    else
-    {
-        if(play->hooks.onDebugMessage)
-        {
-            play->hooks.onDebugMessage(play->hooks.onDebugMessage_userData,
-                                       "noteon at %d and %d for %g Hz\n", adlchannel[0], adlchannel[1], hertz);
-        }
-    }
-
-    opl->noteOff(0);
-    opl->noteOff(3);
-    opl->noteOff(6);
-    for(unsigned c = 0; c < 2; ++c)
-    {
-        if(adlchannel[c] < 0) continue;
-        opl->setPatch(static_cast<size_t>(adlchannel[c]), ains.adl[c]);
-        opl->touchNote(static_cast<size_t>(adlchannel[c]), 63);
-        opl->setPan(static_cast<size_t>(adlchannel[c]), 0x30);
-        opl->noteOn(static_cast<size_t>(adlchannel[c]), static_cast<size_t>(adlchannel[1]), hertz);
-    }
-#else
-    ADL_UNUSED(note);
-#endif
-}
-
-ADLMIDI_EXPORT void AdlInstrumentTester::NextGM(int offset)
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    P->cur_gm = (P->cur_gm + 256 + (uint32_t)offset) & 0xFF;
-    FindAdlList();
-#else
-    ADL_UNUSED(offset);
-#endif
-}
-
-ADLMIDI_EXPORT void AdlInstrumentTester::NextAdl(int offset)
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    //Synth *opl = P->opl;
-    if(P->adl_ins_list.empty()) FindAdlList();
-    const unsigned NumBanks = (unsigned)adl_getBanksCount();
-    P->ins_idx = (uint32_t)((int32_t)P->ins_idx + (int32_t)P->adl_ins_list.size() + offset) % (int32_t)P->adl_ins_list.size();
-
-#if 0
-    UI.Color(15);
-    std::fflush(stderr);
-    std::printf("SELECTED G%c%d\t%s\n",
-                cur_gm < 128 ? 'M' : 'P', cur_gm < 128 ? cur_gm + 1 : cur_gm - 128,
-                "<-> select GM, ^v select ins, qwe play note");
-    std::fflush(stdout);
-    UI.Color(7);
-    std::fflush(stderr);
-#endif
-
-    for(size_t a = 0, n = P->adl_ins_list.size(); a < n; ++a)
-    {
-        const unsigned i = P->adl_ins_list[a];
-        const adlinsdata2 ains = adlinsdata2::from_adldata(::adlins[i]);
-
-        char ToneIndication[8] = "   ";
-        if(ains.tone)
-        {
-            /*if(ains.tone < 20)
-                    snprintf(ToneIndication, 8, "+%-2d", ains.tone);
-                else*/
-            if(ains.tone < 128)
-                snprintf(ToneIndication, 8, "=%-2d", ains.tone);
-            else
-                snprintf(ToneIndication, 8, "-%-2d", ains.tone - 128);
-        }
-        std::printf("%s%s%s%u\t",
-                    ToneIndication,
-                    (ains.flags & (adlinsdata::Flag_Pseudo4op|adlinsdata::Flag_Real4op)) ? "[2]" : "   ",
-                    (P->ins_idx == a) ? "->" : "\t",
-                    i
-                   );
-
-        for(unsigned bankno = 0; bankno < NumBanks; ++bankno)
-            if(banks[bankno][P->cur_gm] == i)
-                std::printf(" %u", bankno);
-
-        std::printf("\n");
-    }
-#else
-    ADL_UNUSED(offset);
-#endif
-}
-
-ADLMIDI_EXPORT bool AdlInstrumentTester::HandleInputChar(char ch)
-{
-#ifndef DISABLE_EMBEDDED_BANKS
-    static const char notes[] = "zsxdcvgbhnjmq2w3er5t6y7ui9o0p";
-    //                           c'd'ef'g'a'bC'D'EF'G'A'Bc'd'e
-    switch(ch)
-    {
-    case '/':
-    case 'H':
-    case 'A':
-        NextAdl(-1);
-        break;
-    case '*':
-    case 'P':
-    case 'B':
-        NextAdl(+1);
-        break;
-    case '-':
-    case 'K':
-    case 'D':
-        NextGM(-1);
-        break;
-    case '+':
-    case 'M':
-    case 'C':
-        NextGM(+1);
-        break;
-    case 3:
-#if !((!defined(__WIN32__) || defined(__CYGWIN__)) && !defined(__DJGPP__))
-    case 27:
-#endif
-        return false;
-    default:
-        const char *p = std::strchr(notes, ch);
-        if(p && *p)
-            DoNote((int)(p - notes) - 12);
-    }
-#else
-    ADL_UNUSED(ch);
-#endif
-    return true;
-}
-
-#endif /* ADLMIDI_DISABLE_CPP_EXTRAS */

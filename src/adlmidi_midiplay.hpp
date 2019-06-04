@@ -27,30 +27,11 @@
 #include "adldata.hh"
 #include "adlmidi_private.hpp"
 #include "adlmidi_ptr.hpp"
-#include "structures/pl_list.hpp"
-
-/**
- * @brief Hooks of the internal events
- */
-struct MIDIEventHooks
-{
-    MIDIEventHooks() :
-        onNote(NULL),
-        onNote_userData(NULL),
-        onDebugMessage(NULL),
-        onDebugMessage_userData(NULL)
-    {}
-
-    //! Note on/off hooks
-    typedef void (*NoteHook)(void *userdata, int adlchn, int note, int ins, int pressure, double bend);
-    NoteHook     onNote;
-    void         *onNote_userData;
-
-    //! Library internal debug messages
-    typedef void (*DebugMessageHook)(void *userdata, const char *fmt, ...);
-    DebugMessageHook onDebugMessage;
-    void *onDebugMessage_userData;
-};
+#include "midiplay/event_hooks.hpp"
+#include "midiplay/midi_channel.hpp"
+#include "midiplay/chip_voice.hpp"
+#include "midiplay/setup.hpp"
+#include "midiplay/player.hpp"
 
 class MIDIplay
 {
@@ -63,413 +44,6 @@ public:
 
     void partialReset();
     void resetMIDI();
-
-    /**********************Internal structures and classes**********************/
-
-    /**
-     * @brief Persistent settings for each MIDI channel
-     */
-    struct MIDIchannel
-    {
-        //! LSB Bank number
-        uint8_t bank_lsb,
-        //! MSB Bank number
-                bank_msb;
-        //! Current patch number
-        uint8_t patch;
-        //! Volume level
-        uint8_t volume,
-        //! Expression level
-                expression;
-        //! Panning level
-        uint8_t panning,
-        //! Vibrato level
-                vibrato,
-        //! Channel aftertouch level
-                aftertouch;
-        //! Portamento time
-        uint16_t portamento;
-        //! Is Pedal sustain active
-        bool sustain;
-        //! Is Soft pedal active
-        bool softPedal;
-        //! Is portamento enabled
-        bool portamentoEnable;
-        //! Source note number used by portamento
-        int8_t portamentoSource;  // note number or -1
-        //! Portamento rate
-        double portamentoRate;
-        //! Per note Aftertouch values
-        uint8_t noteAftertouch[128];
-        //! Is note aftertouch has any non-zero value
-        bool    noteAfterTouchInUse;
-        //! Reserved
-        char _padding[6];
-        //! Pitch bend value
-        int bend;
-        //! Pitch bend sensitivity
-        double bendsense;
-        //! Pitch bend sensitivity LSB value
-        int bendsense_lsb,
-        //! Pitch bend sensitivity MSB value
-            bendsense_msb;
-        //! Vibrato position value
-        double  vibpos,
-        //! Vibrato speed value
-                vibspeed,
-        //! Vibrato depth value
-                vibdepth;
-        //! Vibrato delay time
-        int64_t vibdelay_us;
-        //! Last LSB part of RPN value received
-        uint8_t lastlrpn,
-        //! Last MSB poart of RPN value received
-                lastmrpn;
-        //! Interpret RPN value as NRPN
-        bool nrpn;
-        //! Brightness level
-        uint8_t brightness;
-
-        //! Is melodic channel turned into percussion
-        bool is_xg_percussion;
-
-        /**
-         * @brief Per-Note information
-         */
-        struct NoteInfo
-        {
-            //! Note number
-            uint8_t note;
-            //! Current pressure
-            uint8_t vol;
-            //! Note vibrato (a part of Note Aftertouch feature)
-            uint8_t vibrato;
-            //! Tone selected on noteon:
-            int16_t noteTone;
-            //! Current tone (!= noteTone if gliding note)
-            double currentTone;
-            //! Gliding rate
-            double glideRate;
-            //! Patch selected on noteon; index to bank.ins[]
-            size_t  midiins;
-            //! Is note the percussion instrument
-            bool    isPercussion;
-            //! Note that plays missing instrument. Doesn't using any chip channels
-            bool    isBlank;
-            //! Whether releasing and on extended life time defined by TTL
-            bool    isOnExtendedLifeTime;
-            //! Time-to-live until release (short percussion note fix)
-            double  ttl;
-            //! Patch selected
-            const adlinsdata2 *ains;
-            enum
-            {
-                MaxNumPhysChans = 2,
-                MaxNumPhysItemCount = MaxNumPhysChans
-            };
-
-            struct FindPredicate
-            {
-                explicit FindPredicate(unsigned note)
-                    : note(note) {}
-                bool operator()(const NoteInfo &ni) const
-                    { return ni.note == note; }
-                unsigned note;
-            };
-
-            /**
-             * @brief Reference to currently using chip channel
-             */
-            struct Phys
-            {
-                //! Destination chip channel
-                uint16_t chip_chan;
-                //! ins, inde to adl[]
-                adldata ains;
-                //! Is this voice must be detunable?
-                bool    pseudo4op;
-
-                void assign(const Phys &oth)
-                {
-                    ains = oth.ains;
-                    pseudo4op = oth.pseudo4op;
-                }
-                bool operator==(const Phys &oth) const
-                {
-                    return (ains == oth.ains) && (pseudo4op == oth.pseudo4op);
-                }
-                bool operator!=(const Phys &oth) const
-                {
-                    return !operator==(oth);
-                }
-            };
-
-            //! List of OPL3 channels it is currently occupying.
-            Phys chip_channels[MaxNumPhysItemCount];
-            //! Count of used channels.
-            unsigned chip_channels_count;
-
-            Phys *phys_find(unsigned chip_chan)
-            {
-                Phys *ph = NULL;
-                for(unsigned i = 0; i < chip_channels_count && !ph; ++i)
-                    if(chip_channels[i].chip_chan == chip_chan)
-                        ph = &chip_channels[i];
-                return ph;
-            }
-            Phys *phys_find_or_create(uint16_t chip_chan)
-            {
-                Phys *ph = phys_find(chip_chan);
-                if(!ph) {
-                    if(chip_channels_count < MaxNumPhysItemCount) {
-                        ph = &chip_channels[chip_channels_count++];
-                        ph->chip_chan = chip_chan;
-                    }
-                }
-                return ph;
-            }
-            Phys *phys_ensure_find_or_create(uint16_t chip_chan)
-            {
-                Phys *ph = phys_find_or_create(chip_chan);
-                assert(ph);
-                return ph;
-            }
-            void phys_erase_at(const Phys *ph)
-            {
-                intptr_t pos = ph - chip_channels;
-                assert(pos < static_cast<intptr_t>(chip_channels_count));
-                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count); ++i)
-                    chip_channels[i - 1] = chip_channels[i];
-                --chip_channels_count;
-            }
-            void phys_erase(unsigned chip_chan)
-            {
-                Phys *ph = phys_find(chip_chan);
-                if(ph)
-                    phys_erase_at(ph);
-            }
-        };
-
-        //! Reserved
-        char _padding2[5];
-        //! Count of gliding notes in this channel
-        unsigned gliding_note_count;
-        //! Count of notes having a TTL countdown in this channel
-        unsigned extended_note_count;
-
-        //! Active notes in the channel
-        pl_list<NoteInfo> activenotes;
-        typedef pl_list<NoteInfo>::iterator notes_iterator;
-        typedef pl_list<NoteInfo>::const_iterator const_notes_iterator;
-
-        notes_iterator find_activenote(unsigned note)
-        {
-            return activenotes.find_if(NoteInfo::FindPredicate(note));
-        }
-
-        notes_iterator ensure_find_activenote(unsigned note)
-        {
-            notes_iterator it = find_activenote(note);
-            assert(!it.is_end());
-            return it;
-        }
-
-        notes_iterator find_or_create_activenote(unsigned note)
-        {
-            notes_iterator it = find_activenote(note);
-            if(!it.is_end())
-                cleanupNote(it);
-            else
-            {
-                NoteInfo ni;
-                ni.note = note;
-                it = activenotes.insert(activenotes.end(), ni);
-            }
-            return it;
-        }
-
-        notes_iterator ensure_find_or_create_activenote(unsigned note)
-        {
-            notes_iterator it = find_or_create_activenote(note);
-            assert(!it.is_end());
-            return it;
-        }
-
-        /**
-         * @brief Reset channel into initial state
-         */
-        void reset()
-        {
-            resetAllControllers();
-            patch = 0;
-            vibpos = 0;
-            bank_lsb = 0;
-            bank_msb = 0;
-            lastlrpn = 0;
-            lastmrpn = 0;
-            nrpn = false;
-            is_xg_percussion = false;
-        }
-
-        /**
-         * @brief Reset all MIDI controllers into initial state
-         */
-        void resetAllControllers()
-        {
-            bend = 0;
-            bendsense_msb = 2;
-            bendsense_lsb = 0;
-            updateBendSensitivity();
-            volume  = 100;
-            expression = 127;
-            sustain = false;
-            softPedal = false;
-            vibrato = 0;
-            aftertouch = 0;
-            std::memset(noteAftertouch, 0, 128);
-            noteAfterTouchInUse = false;
-            vibspeed = 2 * 3.141592653 * 5.0;
-            vibdepth = 0.5 / 127;
-            vibdelay_us = 0;
-            panning = 64;
-            portamento = 0;
-            portamentoEnable = false;
-            portamentoSource = -1;
-            portamentoRate = HUGE_VAL;
-            brightness = 127;
-        }
-
-        /**
-         * @brief Has channel vibrato to process
-         * @return
-         */
-        bool hasVibrato()
-        {
-            return (vibrato > 0) || (aftertouch > 0) || noteAfterTouchInUse;
-        }
-
-        /**
-         * @brief Commit pitch bend sensitivity value from MSB and LSB
-         */
-        void updateBendSensitivity()
-        {
-            int cent = bendsense_msb * 128 + bendsense_lsb;
-            bendsense = cent * (1.0 / (128 * 8192));
-        }
-
-        /**
-         * @brief Clean up the state of the active note before removal
-         */
-        void cleanupNote(notes_iterator i)
-        {
-            NoteInfo &info = i->value;
-            if(info.glideRate != HUGE_VAL)
-                --gliding_note_count;
-            if(info.ttl > 0)
-                --extended_note_count;
-        }
-
-        MIDIchannel()
-            : activenotes(128)
-        {
-            gliding_note_count = 0;
-            extended_note_count = 0;
-            reset();
-        }
-    };
-
-    /**
-     * @brief Additional information about OPL3 channels
-     */
-    struct AdlChannel
-    {
-        struct Location
-        {
-            uint16_t    MidCh;
-            uint8_t     note;
-            bool operator==(const Location &l) const
-                { return MidCh == l.MidCh && note == l.note; }
-            bool operator!=(const Location &l) const
-                { return !operator==(l); }
-        };
-        struct LocationData
-        {
-            Location loc;
-            enum {
-                Sustain_None        = 0x00,
-                Sustain_Pedal       = 0x01,
-                Sustain_Sostenuto   = 0x02,
-                Sustain_ANY         = Sustain_Pedal | Sustain_Sostenuto
-            };
-            uint32_t sustained;
-            char _padding[6];
-            MIDIchannel::NoteInfo::Phys ins;  // a copy of that in phys[]
-            //! Has fixed sustain, don't iterate "on" timeout
-            bool    fixed_sustain;
-            //! Timeout until note will be allowed to be killed by channel manager while it is on
-            int64_t kon_time_until_neglible_us;
-            int64_t vibdelay_us;
-
-            struct FindPredicate
-            {
-                explicit FindPredicate(Location loc)
-                    : loc(loc) {}
-                bool operator()(const LocationData &ld) const
-                    { return ld.loc == loc; }
-                Location loc;
-            };
-        };
-
-        //! Time left until sounding will be muted after key off
-        int64_t koff_time_until_neglible_us;
-
-        //! Recently passed instrument, improves a goodness of released but busy channel when matching
-        MIDIchannel::NoteInfo::Phys recent_ins;
-
-        pl_list<LocationData> users;
-        typedef pl_list<LocationData>::iterator users_iterator;
-        typedef pl_list<LocationData>::const_iterator const_users_iterator;
-
-        users_iterator find_user(const Location &loc)
-        {
-            return users.find_if(LocationData::FindPredicate(loc));
-        }
-
-        users_iterator find_or_create_user(const Location &loc)
-        {
-            users_iterator it = find_user(loc);
-            if(it.is_end() && users.size() != users.capacity())
-            {
-                LocationData ld;
-                ld.loc = loc;
-                it = users.insert(users.end(), ld);
-            }
-            return it;
-        }
-
-        // For channel allocation:
-        AdlChannel(): koff_time_until_neglible_us(0), users(128)
-        {
-            std::memset(&recent_ins, 0, sizeof(MIDIchannel::NoteInfo::Phys));
-        }
-
-        AdlChannel(const AdlChannel &oth): koff_time_until_neglible_us(oth.koff_time_until_neglible_us), users(oth.users)
-        {
-        }
-
-        AdlChannel &operator=(const AdlChannel &oth)
-        {
-            koff_time_until_neglible_us = oth.koff_time_until_neglible_us;
-            users = oth.users;
-            return *this;
-        }
-
-        /**
-         * @brief Increases age of active note in microseconds time
-         * @param us Amount time in microseconds
-         */
-        void addAge(int64_t us);
-    };
 
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
     /**
@@ -487,37 +61,6 @@ public:
      */
     void initSequencerInterface();
 #endif //ADLMIDI_DISABLE_MIDI_SEQUENCER
-
-    struct Setup
-    {
-        int          emulator;
-        bool         runAtPcmRate;
-        unsigned int bankId;
-        int          numFourOps;
-        unsigned int numChips;
-        int     deepTremoloMode;
-        int     deepVibratoMode;
-        int     rhythmMode;
-        bool    logarithmicVolumes;
-        int     volumeScaleModel;
-        //unsigned int SkipForward;
-        int     scaleModulators;
-        bool    fullRangeBrightnessCC74;
-
-        double delay;
-        double carry;
-
-        /* The lag between visual content and audio content equals */
-        /* the sum of these two buffers. */
-        double mindelay;
-        double maxdelay;
-
-        /* For internal usage */
-        ssize_t tick_skip_samples_delay; /* Skip tick processing after samples count. */
-        /* For internal usage */
-
-        unsigned long PCM_RATE;
-    };
 
     /**
      * @brief MIDI Marker entry
@@ -570,7 +113,7 @@ private:
     char _padding[7];
 
     //! Chip channels map
-    std::vector<AdlChannel> m_chipChannels;
+    std::vector<ChipChannel> m_chipChannels;
     //! Counter of arpeggio processing
     size_t m_arpeggioCounter;
 
@@ -601,7 +144,7 @@ public:
     int32_t m_outBuf[1024];
 
     //! Synthesizer setup
-    Setup m_setup;
+    MIDIsetup m_setup;
 
     /**
      * @brief Load custom bank from file
@@ -922,7 +465,7 @@ private:
      */
     void killOrEvacuate(
         size_t  from_channel,
-        AdlChannel::users_iterator j,
+        ChipChannel::users_iterator j,
         MIDIchannel::notes_iterator i);
 
     /**
@@ -938,7 +481,7 @@ private:
      */
     void killSustainingNotes(int32_t midCh = -1,
                              int32_t this_adlchn = -1,
-                             uint32_t sustain_type = AdlChannel::LocationData::Sustain_ANY);
+                             uint32_t sustain_type = ChipChannel::LocationData::Sustain_ANY);
     /**
      * @brief Find active notes and mark them as sostenuto-sustained
      * @param MidCh MIDI channel, -1 - all MIDI channels
