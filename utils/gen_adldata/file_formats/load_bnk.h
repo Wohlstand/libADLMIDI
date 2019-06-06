@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <string>
 
-bool BankFormats::LoadBNK(const char *fn, unsigned bank, const char *prefix, bool is_fat, bool percussive)
+bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
+                          const std::string &bankTitle, const char *prefix,
+                          bool is_fat, bool percussive)
 {
     #ifdef HARD_BANKS
     writeIni("HMI", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);
@@ -24,6 +26,9 @@ bool BankFormats::LoadBNK(const char *fn, unsigned bank, const char *prefix, boo
         return false;
     }
     std::fclose(fp);
+
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Generic);
+    BanksDump::MidiBank bnk;
 
     /*printf("%s:\n", fn);*/
     //unsigned short version = *(short*)&data[0]; // major,minor (2 bytes)
@@ -80,6 +85,9 @@ bool BankFormats::LoadBNK(const char *fn, unsigned bank, const char *prefix, boo
         else
             sprintf(name2, "%s%u", prefix, n);
 
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
+
         insdata tmp;
         tmp.data[0] = uint8_t(
                       (op1[ 9] << 7) // TREMOLO FLAG
@@ -115,11 +123,16 @@ bool BankFormats::LoadBNK(const char *fn, unsigned bank, const char *prefix, boo
 
         if(is_fat) tmp.data[10] ^= 1;
 
+        db.toOps(tmp, ops, 0);
+        inst.percussionKeyNumber = is_fat ? voice_num : (percussive ? usage_flag : 0);
+        inst.setFbConn(op1[2] * 2 + op1[12]);
+
         size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
 
         if(!is_fat)
         {
             SetBank(bank, (unsigned int)gmno, resno);
+            db.addInstrument(bnk, n & 127, inst, ops);
         }
         else
         {
@@ -150,6 +163,8 @@ bool BankFormats::LoadBNK(const char *fn, unsigned bank, const char *prefix, boo
         printf("\n");
         */
     }
+
+    db.addMidiBank(bankDb, percussive, bnk);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_Generic;

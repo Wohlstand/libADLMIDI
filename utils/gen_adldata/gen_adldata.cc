@@ -139,7 +139,7 @@ int main(int argc, char**argv)
             else
             if(format == "EA")
             {
-                if(!BankFormats::LoadEA(filepath.c_str(), bank, prefix.c_str()))
+                if(!BankFormats::LoadEA(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -166,7 +166,7 @@ int main(int argc, char**argv)
             else
             if(format == "AdLibGold")
             {
-                if(!BankFormats::LoadBNK2(filepath.c_str(), bank, prefix.c_str(), filter_m, filter_p))
+                if(!BankFormats::LoadBNK2(db, filepath.c_str(), bank, bank_name, prefix.c_str(), filter_m, filter_p))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -175,14 +175,14 @@ int main(int argc, char**argv)
             else
             if(format == "HMI")
             {
-                if(!BankFormats::LoadBNK(filepath.c_str(),  bank, prefix.c_str(),   false, false))
+                if(!BankFormats::LoadBNK(db, filepath.c_str(),  bank, bank_name, prefix.c_str(),   false, false))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
                 }
                 if(!filepath_d.empty())
                 {
-                    if(!BankFormats::LoadBNK(filepath_d.c_str(),bank, prefix_d.c_str(), false, true))
+                    if(!BankFormats::LoadBNK(db, filepath_d.c_str(), bank, bank_name, prefix_d.c_str(), false, true))
                     {
                         std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                         return 1;

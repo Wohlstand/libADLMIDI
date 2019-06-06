@@ -4,11 +4,16 @@
 #include "../progs_cache.h"
 #include "../midi_inst_list.h"
 
-bool BankFormats::LoadEA(const char *fn, unsigned bank, const char *prefix)
+bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
+                         const std::string &bankTitle, const char *prefix)
 {
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
+
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_CMF);
+    BanksDump::MidiBank bnkMelodic = db.midiBanks[db.banks[0].melodic[0]];
+    BanksDump::MidiBank bnkPercussion = db.midiBanks[db.banks[0].percussion[0]];
 
     // Copy all instruments from bank 0
     for(unsigned gmno = 0; gmno < 128; ++gmno)
@@ -61,6 +66,9 @@ bool BankFormats::LoadEA(const char *fn, unsigned bank, const char *prefix)
             return false;
         }
 
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
+
         insdata tmp;
         tmp.data[0] = bytes[0]; // reg 0x20: modulator AM/VIG/EG/KSR
         tmp.data[8] = bytes[1]; // reg 0x40: modulator ksl/attenuation
@@ -88,6 +96,10 @@ bool BankFormats::LoadEA(const char *fn, unsigned bank, const char *prefix)
         tmp2.real4op = false;
         tmp2.rhythmModeDrum = 0;
 
+        db.toOps(tmp, ops, 0);
+        inst.setFbConn(bytes[8]);
+        inst.noteOffset1 = int8_t(bytes[9] + 12);
+
         std::string name;
         char name2[512];
         if(gmno < 20)
@@ -101,28 +113,38 @@ bool BankFormats::LoadEA(const char *fn, unsigned bank, const char *prefix)
         size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
         SetBank(bank, gmno, resno);
 
+        db.addInstrument(bnkMelodic, gmno, inst, ops);
+
         if(gmno == 10)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x49;
             SetBank(bank, 0x80 + 0x36, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x36 - 35], std::string(1, '\377') + prefix + "P54"));
+            inst.percussionKeyNumber = 0x49;
+            db.addInstrument(bnkPercussion, 0x36, inst, ops);
         }
 
         if(gmno == 18)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x17;
             SetBank(bank, 0x80 + 0x2A, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x2A - 35], std::string(1, '\377') + prefix + "P42"));
+            inst.percussionKeyNumber = 0x17;
+            db.addInstrument(bnkPercussion, 0x2A, inst, ops);
         }
 
         if(gmno == 16)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x0C;
             SetBank(bank, 0x80 + 0x24, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x24 - 35], std::string(1, '\377') + prefix + "P36"));
+            inst.percussionKeyNumber = 0x0C;
+            db.addInstrument(bnkPercussion, 0x24, inst, ops);
         }
 
         if(gmno == 17)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x01;
             SetBank(bank, 0x80 + 0x26, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x26 - 35], std::string(1, '\377') + prefix + "P38"));
+            inst.percussionKeyNumber = 0x01;
+            db.addInstrument(bnkPercussion, 0x26, inst, ops);
         }
     }
 
@@ -134,6 +156,9 @@ bool BankFormats::LoadEA(const char *fn, unsigned bank, const char *prefix)
     setup.deepVibrato = false;
     setup.scaleModulators = false;
     SetBankSetup(bank, setup);
+
+    db.addMidiBank(bankDb, false, bnkMelodic);
+    db.addMidiBank(bankDb, true, bnkPercussion);
 
     return true;
 }

@@ -8,7 +8,8 @@ inline int stdstoi(const std::string& str)
     return std::atoi(str.c_str());
 }
 
-bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
+bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
+                           const std::string &bankTitle, const char *prefix,
                            const std::string &melo_filter,
                            const std::string &perc_filter)
 {
@@ -27,6 +28,10 @@ bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
         return false;
     }
     std::fclose(fp);
+
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Generic);
+    BanksDump::MidiBank bnkMelodic;
+    BanksDump::MidiBank bnkPercussion;
 
     unsigned short ins_entries = *(unsigned short *)&data[28 + 2 + 10];
     unsigned char *records = &data[48];
@@ -47,12 +52,23 @@ bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
         }
 
         int gmno = 0;
+        int patchId = 0;
+        bool isPercussion = false;
         if(name.substr(0, melo_filter.size()) == melo_filter)
-            gmno = stdstoi(name.substr(melo_filter.size()));
+        {
+            gmno = patchId = stdstoi(name.substr(melo_filter.size()));
+            isPercussion = false;
+        }
         else if(name.substr(0, perc_filter.size()) == perc_filter)
-            gmno = stdstoi(name.substr(perc_filter.size())) + 128;
+        {
+            patchId = stdstoi(name.substr(perc_filter.size()));
+            gmno = patchId + 128;
+            isPercussion = false;
+        }
         else
             continue;
+
+        BanksDump::MidiBank &bnk = isPercussion ? bnkMelodic : bnkPercussion;
 
         const unsigned char *insdata = &data[size_t(offset2)];
         const unsigned char *ops[4] = { insdata + 0, insdata + 6, insdata + 12, insdata + 18 };
@@ -63,6 +79,9 @@ bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
 
         char name2[512];
         sprintf(name2, "%s%c%u", prefix, (gmno & 128) ? 'P' : 'M', gmno & 127);
+
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator opsD[5];
 
         struct insdata tmp[2];
         for(unsigned a = 0; a < 2; ++a)
@@ -79,6 +98,7 @@ bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
             tmp[a].data[9] = ops[a * 2 + 1][1];
             tmp[a].finetune = (int8_t)TTTTTTTT;
             tmp[a].diff = false;
+            db.toOps(tmp[a], opsD, a * 2);
         }
         tmp[0].data[10] = C4xxxFFFC & 0x0F;
         tmp[1].data[10] = (tmp[0].data[10] & 0x0E) | (C4xxxFFFC >> 7);
@@ -91,6 +111,10 @@ bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
         tmp2.midi_velocity_offset = 0;
         tmp2.rhythmModeDrum = 0;
 
+        inst.setFbConn(C4xxxFFFC & 0x0F, (tmp[0].data[10] & 0x0E) | (C4xxxFFFC >> 7));
+        inst.noteOffset1 = (int8_t)TTTTTTTT;
+        inst.percussionKeyNumber = (gmno & 128) ? 35 : 0;
+
         if(xxP24NNN & 8)
         {
             // dual-op
@@ -98,14 +122,22 @@ bool BankFormats::LoadBNK2(const char *fn, unsigned bank, const char *prefix,
             tmp[1].diff = true;
             size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
             SetBank(bank, (unsigned int)gmno, resno);
+
+            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
+            db.addInstrument(bnk, patchId, inst, opsD);
         }
         else
         {
             // single-op
             size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
             SetBank(bank, (unsigned int)gmno, resno);
+
+            db.addInstrument(bnk, patchId, inst, opsD);
         }
     }
+
+    db.addMidiBank(bankDb, false, bnkMelodic);
+    db.addMidiBank(bankDb, true, bnkPercussion);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_Generic;
