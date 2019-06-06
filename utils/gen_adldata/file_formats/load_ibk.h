@@ -3,7 +3,9 @@
 
 #include "../progs_cache.h"
 
-bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode)
+bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
+                          const std::string &bankTitle, const char *prefix,
+                          bool percussive, bool noRhythmMode)
 {
     #ifdef HARD_BANKS
     writeIni("IBK", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);
@@ -20,6 +22,9 @@ bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, boo
         return false;
     }
     std::fclose(fp);
+
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Generic);
+    BanksDump::MidiBank bnk;
 
     unsigned offs1_base = 0x804, offs1_len = 9;
     unsigned offs2_base = 0x004, offs2_len = 16;
@@ -42,6 +47,9 @@ bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, boo
         char name2[512];
         sprintf(name2, "%s%c%u", prefix,
                 (gmno < 128 ? 'M' : 'P'), gmno & 127);
+
+        BanksDump::InstrumentEntry inst;
+        BanksDump::Operator ops[5];
 
         insdata tmp;
         tmp.data[0] = data[offset2 + 0];
@@ -66,6 +74,11 @@ bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, boo
         tmp2.voice2_fine_tune = 0.0;
         tmp2.midi_velocity_offset = 0;
 
+        db.toOps(tmp, ops, 0);
+        inst.noteOffset1 = percussive ? 0 : data[offset2 + 12];
+        inst.percussionKeyNumber = percussive ? data[offset2 + 13] : 0;
+        inst.setFbConn(data[offset2 + 10]);
+
         tmp2.rhythmModeDrum = 0;
         if(percussive && !noRhythmMode)
         {
@@ -74,18 +87,23 @@ bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, boo
             {
             case 6:
                 tmp2.rhythmModeDrum = ins::Flag_RM_BassDrum;
+                inst.instFlags |= BanksDump::InstrumentEntry::WOPL_RM_BassDrum;
                 break;
             case 7:
                 tmp2.rhythmModeDrum = ins::Flag_RM_Snare;
+                inst.instFlags |= BanksDump::InstrumentEntry::WOPL_RM_Snare;
                 break;
             case 8:
                 tmp2.rhythmModeDrum = ins::Flag_RM_TomTom;
+                inst.instFlags |= BanksDump::InstrumentEntry::WOPL_RM_TomTom;
                 break;
             case 9:
                 tmp2.rhythmModeDrum = ins::Flag_RM_Cymbal;
+                inst.instFlags |= BanksDump::InstrumentEntry::WOPL_RM_Cymbal;
                 break;
             case 10:
                 tmp2.rhythmModeDrum = ins::Flag_RM_HiHat;
+                inst.instFlags |= BanksDump::InstrumentEntry::WOPL_RM_HiHat;
                 break;
             default:
                 // IBK logic: make non-percussion instrument be silent
@@ -96,7 +114,11 @@ bool BankFormats::LoadIBK(const char *fn, unsigned bank, const char *prefix, boo
 
         size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
         SetBank(bank, (unsigned int)gmno, resno);
+
+        db.addInstrument(bnk, a, inst, ops);
     }
+
+    db.addMidiBank(bankDb, percussive, bnk);
 
     AdlBankSetup setup;
     setup.volumeModel = VOLUME_Generic;

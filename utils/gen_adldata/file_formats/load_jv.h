@@ -96,8 +96,7 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
         if(data[offset] != 0)
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
         inst.percussionKeyNumber = data[offset + 1];
-        inst.fbConn = (static_cast<uint_fast16_t>(data[offset + 7] & 0x0F)) |
-                      (static_cast<uint_fast16_t>(data[offset + 7 + 11] & 0x0F) << 8);
+        inst.setFbConn(data[offset + 7], data[offset + 7 + 11]);
         db.toOps(tmp[0], ops, 0);
         db.toOps(tmp[1], ops, 2);
 

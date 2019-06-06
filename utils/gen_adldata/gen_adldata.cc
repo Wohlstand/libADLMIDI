@@ -192,7 +192,7 @@ int main(int argc, char**argv)
             else
             if(format == "IBK")
             {
-                if(!BankFormats::LoadIBK(filepath.c_str(),  bank, prefix.c_str(),   false))
+                if(!BankFormats::LoadIBK(db, filepath.c_str(),  bank, bank_name, prefix.c_str(),   false))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -200,7 +200,7 @@ int main(int argc, char**argv)
                 if(!filepath_d.empty())
                 {
                     //printf("Loading %s... \n", filepath_d.c_str());
-                    if(!BankFormats::LoadIBK(filepath_d.c_str(),bank, prefix_d.c_str(), true, noRhythmMode))
+                    if(!BankFormats::LoadIBK(db, filepath_d.c_str(),bank, bank_name, prefix_d.c_str(), true, noRhythmMode))
                     {
                         std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                         return 1;

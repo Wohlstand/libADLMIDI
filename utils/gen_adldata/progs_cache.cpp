@@ -251,56 +251,54 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
     std::fprintf(out, "const size_t g_embeddedBanksCount = %zu;\n\n", banks.size());
     std::fprintf(out, "const BanksDump::BankEntry g_embeddedBanks[] =\n"
                       "{\n");
+
+    std::vector<size_t> bankNumberLists;
+
     for(const BankEntry &be : banks)
     {
-        bool commaNeeded = true;
-        std::fprintf(out, "    {\n");
-        std::fprintf(out, "        0x%04lX, %zu, %zu, \"%s\",\n",
+        std::fprintf(out, "    {0x%04lX, %zu, %zu, \"%s\", ",
                                    be.bankSetup,
                                    be.melodic.size(),
                                    be.percussion.size(),
                                    be.bankTitle.c_str());
-        // Melodic banks
-        std::fprintf(out, "        {");
-        commaNeeded = false;
+
+        fprintf(out, "%zu, ", bankNumberLists.size()); // Use offset to point the common array of bank IDs
         for(const size_t &me : be.melodic)
-        {
-            if(commaNeeded)
-                std::fprintf(out, ", ");
-            else
-                commaNeeded = true;
-            std::fprintf(out, "%zu", me);
-        }
-        std::fprintf(out, "},\n");
+            bankNumberLists.push_back(me);
 
-        // Percussive banks
-        commaNeeded = false;
-        std::fprintf(out, "        {");
+        fprintf(out, "%zu", bankNumberLists.size());
         for(const size_t &me : be.percussion)
-        {
-            if(commaNeeded)
-                std::fprintf(out, ", ");
-            else
-                commaNeeded = true;
-            std::fprintf(out, "%zu", me);
-        }
-        std::fprintf(out, "}\n");
+            bankNumberLists.push_back(me);
 
-        std::fprintf(out, "    },\n");
+        std::fprintf(out, "},\n");
     }
 
-    std::fprintf(out, "}\n\n");
+    std::fprintf(out, "};\n\n");
 
+
+    std::fprintf(out, "const size_t g_embeddedBanksMidiIndex[] =\n"
+                      "{ ");
+    {
+        bool commaNeeded = false;
+        for(const size_t &me : bankNumberLists)
+        {
+            if(commaNeeded)
+                std::fprintf(out, ", ");
+            else
+                commaNeeded = true;
+            std::fprintf(out, "%zu", me);
+        }
+    }
+    std::fprintf(out, " };\n\n");
 
     std::fprintf(out, "const BanksDump::MidiBank g_embeddedBanksMidi[] =\n"
                       "{\n");
     for(const MidiBank &be : midiBanks)
     {
         bool commaNeeded = true;
-        std::fprintf(out, "    {\n");
-        std::fprintf(out, "        %u, %u,\n", be.msb, be.lsb);
+        std::fprintf(out, "    { %u, %u, ", be.msb, be.lsb);
 
-        std::fprintf(out, "        {");
+        std::fprintf(out, "{");
         commaNeeded = false;
         for(size_t i = 0; i < 128; i++)
         {
@@ -310,11 +308,11 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                 commaNeeded = true;
             std::fprintf(out, "%ld", be.instruments[i]);
         }
-        std::fprintf(out, "},\n");
+        std::fprintf(out, "} ");
 
-        std::fprintf(out, "    },\n");
+        std::fprintf(out, "},\n");
     }
-    std::fprintf(out, "}\n\n");
+    std::fprintf(out, "};\n\n");
 
 
     std::fprintf(out, "const BanksDump::InstrumentEntry g_embeddedBanksInstruments[] =\n"
@@ -323,38 +321,52 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
     {
         size_t opsCount = ((be.instFlags & InstrumentEntry::WOPL_Ins_4op) != 0 ||
                            (be.instFlags & InstrumentEntry::WOPL_Ins_Pseudo4op) != 0) ? 4 : 2;
-        std::fprintf(out, "    {\n");
-        std::fprintf(out, "        %d, %d, %d, %u, %lu, %d, 0x%04lX, 0x%lX, 0x%lX,\n",
+        std::fprintf(out, "    { %d, %d, %d, %u, %s%lX, %d, %s%lX, %s%lX, %s%lX, ",
                      be.noteOffset1,
                      be.noteOffset2,
                      be.midiVelocityOffset,
                      be.percussionKeyNumber,
-                     be.instFlags,
+                     (be.instFlags == 0 ? "" : "0x"), be.instFlags, // for compactness, don't print "0x" when is zero
                      be.secondVoiceDetune,
-                     be.fbConn,
-                     be.delay_on_ms,
-                     be.delay_off_ms);
+                     (be.fbConn == 0 ? "" : "0x"), be.fbConn,
+                     (be.delay_on_ms == 0 ? "" : "0x"), be.delay_on_ms,
+                     (be.delay_off_ms == 0 ? "" : "0x"), be.delay_off_ms);
 
         if(opsCount == 4)
-            std::fprintf(out, "        {%ld, %ld, %ld, %ld}\n",
+            std::fprintf(out, "{%ld, %ld, %ld, %ld} ",
                          be.ops[0], be.ops[1], be.ops[2], be.ops[3]);
         else
-            std::fprintf(out, "        {%ld, %ld}\n",
+            std::fprintf(out, "{%ld, %ld} ",
                          be.ops[0], be.ops[1]);
 
-        std::fprintf(out, "    },\n");
+        std::fprintf(out, "},\n");
     }
-    std::fprintf(out, "}\n\n");
+    std::fprintf(out, "};\n\n");
 
     std::fprintf(out, "const BanksDump::Operator g_embeddedBanksOperators[] =\n"
                       "{\n");
+    size_t operatorEntryCounter = 0;
     for(const Operator &be : operators)
     {
-        std::fprintf(out, "    {0x%07lX, 0x%02lX},\n",
+        if(operatorEntryCounter == 0)
+            std::fprintf(out, "    ");
+        std::fprintf(out, "{0x%07lX, %s%02lX},",
                      be.d_E862,
-                     be.d_40);
+                     (be.d_40 == 0 ? "" : "0x"), be.d_40);
+        operatorEntryCounter++;
+        if(operatorEntryCounter >= 25)
+        {
+            std::fprintf(out, "\n");
+            operatorEntryCounter = 0;
+        }
     }
-    std::fprintf(out, "}\n\n");
+    std::fprintf(out, "\n};\n\n");
 
     std::fclose(out);
+}
+
+void BanksDump::InstrumentEntry::setFbConn(uint_fast16_t fbConn1, uint_fast16_t fbConn2)
+{
+    fbConn = (static_cast<uint_fast16_t>(fbConn1 & 0x0F)) |
+             (static_cast<uint_fast16_t>(fbConn2 & 0x0F) << 8);
 }

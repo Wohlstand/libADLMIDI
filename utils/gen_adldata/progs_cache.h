@@ -307,6 +307,8 @@ struct BanksDump
         int_fast64_t delay_off_ms = 0;
         int_fast32_t ops[5] = {-1, -1, -1, -1, -1};
 
+        void setFbConn(uint_fast16_t fbConn1, uint_fast16_t fbConn2 = 0x00);
+
         bool operator==(const InstrumentEntry &o)
         {
             return (
@@ -367,7 +369,7 @@ bool LoadBNK2(const char *fn, unsigned bank, const char *prefix,
                      const std::string &melo_filter,
                      const std::string &perc_filter);
 bool LoadEA(const char *fn, unsigned bank, const char *prefix);
-bool LoadIBK(const char *fn, unsigned bank, const char *prefix, bool percussive, bool noRhythmMode = false);
+bool LoadIBK(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix, bool percussive, bool noRhythmMode = false);
 bool LoadJunglevision(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
