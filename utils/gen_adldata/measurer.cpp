@@ -16,6 +16,48 @@
 #    include "../../src/chips/dosbox_opl3.h"
 #endif
 
+#define NUM_OF_CHANNELS                 23
+#define NUM_OF_RM_CHANNELS              5
+
+//! Per-channel and per-operator registers map
+static const uint16_t g_operatorsMap[(NUM_OF_CHANNELS + NUM_OF_RM_CHANNELS) * 2] =
+{
+    // Channels 0-2
+    0x000, 0x003, 0x001, 0x004, 0x002, 0x005, // operators  0, 3,  1, 4,  2, 5
+    // Channels 3-5
+    0x008, 0x00B, 0x009, 0x00C, 0x00A, 0x00D, // operators  6, 9,  7,10,  8,11
+    // Channels 6-8
+    0x010, 0x013, 0x011, 0x014, 0x012, 0x015, // operators 12,15, 13,16, 14,17
+    // Same for second card
+    0x100, 0x103, 0x101, 0x104, 0x102, 0x105, // operators 18,21, 19,22, 20,23
+    0x108, 0x10B, 0x109, 0x10C, 0x10A, 0x10D, // operators 24,27, 25,28, 26,29
+    0x110, 0x113, 0x111, 0x114, 0x112, 0x115, // operators 30,33, 31,34, 32,35
+
+    //==For Rhythm-mode percussions
+    // Channel 18
+    0x010, 0x013,  // operators 12,15
+    // Channel 19
+    0xFFF, 0x014,  // operator 16
+    // Channel 19
+    0x012, 0xFFF,  // operator 14
+    // Channel 19
+    0xFFF, 0x015,  // operator 17
+    // Channel 19
+    0x011, 0xFFF,  // operator 13
+
+    //==For Rhythm-mode percussions in CMF, snare and cymbal operators has inverted!
+    0x010, 0x013,  // operators 12,15
+    // Channel 19
+    0x014, 0xFFF,  // operator 16
+    // Channel 19
+    0x012, 0xFFF,  // operator 14
+    // Channel 19
+    0x015, 0xFFF,  // operator 17
+    // Channel 19
+    0x011, 0xFFF   // operator 13
+};
+
+
 template <class T>
 class AudioHistory
 {
@@ -159,6 +201,76 @@ struct TinySynth
                 m_chip->writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
             m_chip->writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
         }
+    }
+
+    void setInstrument(const BanksDump &db, const BanksDump::InstrumentEntry &ins)
+    {
+        // TODO: Implement this function correctly!
+        bool is4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_4op) != 0);
+        bool isPseudo4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op) != 0);
+        size_t opsNum = (is4ops || isPseudo4ops) ? 4 : 2;
+        BanksDump::Operator ops[4];
+        assert(ins.ops[0] >= 0);
+        assert(ins.ops[1] >= 0);
+        ops[0] = db.operators[ins.ops[0]];
+        ops[1] = db.operators[ins.ops[1]];
+        if(opsNum > 0)
+        {
+            assert(ins.ops[2] >= 0);
+            assert(ins.ops[3] >= 0);
+            ops[2] = db.operators[ins.ops[2]];
+            ops[3] = db.operators[ins.ops[3]];
+        }
+
+        std::memset(m_x, 0, sizeof(m_x));
+        m_notenum = ins.percussionKeyNumber >= 128 ? (ins.percussionKeyNumber - 128) : ins.percussionKeyNumber;
+        if(m_notenum == 0)
+            m_notenum = 25;
+        m_notesNum = opsNum / 2;
+        m_fineTune = 0;
+        m_noteOffsets[0] = ins.noteOffset1;
+        m_noteOffsets[1] = ins.noteOffset2;
+        if(isPseudo4ops)
+            m_fineTune = ins.secondVoiceDetune;
+        if(is4ops)
+        {
+            m_chip->writeReg(0x105, 1);
+            m_chip->writeReg(0x104, 0xFF);
+        }
+
+        //For clearer measurement, disable tremolo and vibrato
+//        rawData[0].data[0] &= 0x3F;
+//        rawData[0].data[1] &= 0x3F;
+//        rawData[1].data[0] &= 0x3F;
+//        rawData[1].data[1] &= 0x3F;
+
+        for(unsigned n = 0; n < m_notesNum; ++n)
+        {
+            static const uint8_t data[4] = {0x20, 0x60, 0x80, 0xE0};
+            uint16_t o1 = g_operatorsMap[0];
+            uint16_t o2 = g_operatorsMap[1];
+            unsigned x = ops[0].d_E862, y = ops[1].d_E862;
+
+            for(size_t a = 0; a < 4; ++a, x >>= 8, y >>= 8)
+            {
+                if(o1 != 0xFFF)
+                    m_chip->writeReg(data[a] + o1, x & 0xFF);
+                if(o2 != 0xFFF)
+                    m_chip->writeReg(data[a] + o2, y & 0xFF);
+            }
+            m_chip->writeReg(0xC0 + n * 8, (ins.fbConn >> n * 8) & 0xFF);
+        }
+
+//        for(unsigned n = 0; n < m_notesNum; ++n)
+//        {
+//            static const unsigned char patchdata[11] =
+//            {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
+//            for(unsigned a = 0; a < 10; ++a)
+//            {
+//                m_chip->writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
+//            }
+//            m_chip->writeReg(patchdata[10] + n * 8, (ins.fbConn >> n * 8) & 0xFF);
+//        }
     }
 
     void noteOn()
