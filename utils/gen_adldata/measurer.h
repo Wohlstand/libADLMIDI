@@ -6,6 +6,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include <array>
 
 #include "progs_cache.h"
 
@@ -54,7 +55,9 @@ private:
 
 struct MeasureThreaded
 {
+    typedef std::array<int_fast32_t, 9> OperatorsKey;
     typedef std::map<ins, DurationInfo> DurationInfoCache;
+    typedef std::map<OperatorsKey, DurationInfo> DurationInfoCacheX;
 
     MeasureThreaded() :
         m_semaphore(int(std::thread::hardware_concurrency()) * 2),
@@ -65,6 +68,7 @@ struct MeasureThreaded
     Semaphore           m_semaphore;
     std::mutex          m_durationInfo_mx;
     DurationInfoCache   m_durationInfo;
+    DurationInfoCacheX  m_durationInfoX;
     std::atomic_bool    m_delete_tail;
     size_t              m_total = 0;
     std::atomic<size_t> m_done;

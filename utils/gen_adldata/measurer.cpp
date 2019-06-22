@@ -1044,10 +1044,24 @@ void MeasureThreaded::destData::callback(void *myself)
 
     if(s->bd)
     {
+        OperatorsKey ok = {s->bd_ins->ops[0], s->bd_ins->ops[1], s->bd_ins->ops[2], s->bd_ins->ops[3],
+                           static_cast<int_fast32_t>(s->bd_ins->fbConn),
+                           s->bd_ins->noteOffset1, s->bd_ins->noteOffset2,
+                           static_cast<int_fast32_t>(s->bd_ins->percussionKeyNumber),
+                           static_cast<int_fast32_t>(s->bd_ins->instFlags)};
+        DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfoX.find(ok);
+        if(cachedEntry != s->myself->m_durationInfoX.end())
+        {
+            const DurationInfo &di = cachedEntry->second;
+            s->bd_ins->delay_on_ms = di.ms_sound_kon;
+            s->bd_ins->delay_off_ms = di.ms_sound_koff;
+            s->myself->m_cache_matches++;
+            goto endWork;
+        }
         info = MeasureDurations(*s->bd, *s->bd_ins, &dosbox);
-        // s->myself->m_durationInfo_mx.lock();
-        // s->myself->m_durationInfo.insert({s->i->first, info});
-        // s->myself->m_durationInfo_mx.unlock();
+        s->myself->m_durationInfo_mx.lock();
+        s->myself->m_durationInfoX.insert({ok, info});
+        s->myself->m_durationInfo_mx.unlock();
     }
     else
     {
