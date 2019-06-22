@@ -556,6 +556,20 @@ int main(int argc, char**argv)
 
     std::fclose(outFile);
 
+    {
+        measureCounter.m_durationInfo.clear();
+        measureCounter.m_cache_matches = 0;
+        measureCounter.m_done = 0;
+        measureCounter.m_total = db.instruments.size();
+        std::printf("Beginning to generate measures data... (hardware concurrency of %d)\n", std::thread::hardware_concurrency());
+        std::fflush(stdout);
+        for(size_t b = 0; b < db.instruments.size(); ++b)
+        {
+            measureCounter.run(db, db.instruments[b]);
+        }
+        std::fflush(stdout);
+        measureCounter.waitAll();
+    }
     db.exportBanks(std::string(outFile_s) + "x");
 
     std::printf("Generation of ADLMIDI data has been completed!\n");

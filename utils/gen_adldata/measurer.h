@@ -85,6 +85,8 @@ struct MeasureThreaded
         }
         MeasureThreaded  *myself;
         std::map<ins, std::pair<size_t, std::set<std::string> > >::const_iterator i;
+        BanksDump *bd;
+        BanksDump::InstrumentEntry *bd_ins;
         std::thread       m_work;
         std::atomic_bool  m_works;
 
@@ -97,10 +99,12 @@ struct MeasureThreaded
     void printProgress();
     void printFinal();
     void run(InstrumentsData::const_iterator i);
+    void run(BanksDump &bd, BanksDump::InstrumentEntry &e);
     void waitAll();
 };
 
 class OPLChipBase;
 extern DurationInfo MeasureDurations(const ins &in, OPLChipBase *chip);
+extern DurationInfo MeasureDurations(const BanksDump &db, const BanksDump::InstrumentEntry &ins, OPLChipBase *chip);
 
 #endif // MEASURER_H

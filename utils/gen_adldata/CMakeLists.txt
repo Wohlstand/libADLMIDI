@@ -51,6 +51,11 @@ else()
     target_link_libraries(gen_adldata PRIVATE pthread m)
 endif()
 
+option(WITH_GENADLDATA_PROGRESS "Enable progress printing in gen_adldata" OFF)
+if(WITH_GENADLDATA_PROGRESS)
+    target_compile_options(gen_adldata PUBLIC "-DADL_GENDATA_PRINT_PROGRESS")
+endif()
+
 if(WITH_GENADLDATA_COMMENTS)
     target_compile_options(gen_adldata PUBLIC "-DADLDATA_WITH_COMMENTS")
 endif()

@@ -187,7 +187,7 @@ struct TinySynth
             m_chip->writeReg(0x104, 0xFF);
         }
 
-        //For clearer measurement, disable tremolo and vibrato
+        //For cleaner measurement, disable tremolo and vibrato
         rawData[0].data[0] &= 0x3F;
         rawData[0].data[1] &= 0x3F;
         rawData[1].data[0] &= 0x3F;
@@ -214,7 +214,7 @@ struct TinySynth
         assert(ins.ops[1] >= 0);
         ops[0] = db.operators[ins.ops[0]];
         ops[1] = db.operators[ins.ops[1]];
-        if(opsNum > 0)
+        if(opsNum > 2)
         {
             assert(ins.ops[2] >= 0);
             assert(ins.ops[3] >= 0);
@@ -238,7 +238,9 @@ struct TinySynth
             m_chip->writeReg(0x104, 0xFF);
         }
 
-        //For clearer measurement, disable tremolo and vibrato
+        //For cleaner measurement, disable tremolo and vibrato
+        ops[0].d_E862 &= 0xFFFF3F3F;
+        ops[1].d_E862 &= 0xFFFF3F3F;
 //        rawData[0].data[0] &= 0x3F;
 //        rawData[0].data[1] &= 0x3F;
 //        rawData[1].data[0] &= 0x3F;
@@ -503,6 +505,201 @@ DurationInfo MeasureDurations(const ins &in, OPLChipBase *chip)
 
     return result;
 }
+
+
+DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &ins, OPLChipBase *chip)
+{
+    AudioHistory<double> audioHistory;
+
+    const unsigned interval             = 150;
+    const unsigned samples_per_interval = g_outputRate / interval;
+
+    const double historyLength = 0.1;  // maximum duration to memorize (seconds)
+    audioHistory.reset(std::ceil(historyLength * g_outputRate));
+
+    std::unique_ptr<double[]> window;
+    window.reset(new double[audioHistory.capacity()]);
+    unsigned winsize = 0;
+
+    TinySynth synth;
+    synth.m_chip = chip;
+    synth.resetChip();
+    synth.setInstrument(db, ins);
+    synth.noteOn();
+
+    /* For capturing */
+    const unsigned max_silent = 6;
+    const unsigned max_on  = 40;
+    const unsigned max_off = 60;
+
+    unsigned max_period_on = max_on * interval;
+    unsigned max_period_off = max_off * interval;
+
+    const double min_coefficient_on = 0.008;
+    const double min_coefficient_off = 0.2;
+
+    unsigned windows_passed_on = 0;
+    unsigned windows_passed_off = 0;
+
+    /* For Analyze the results */
+    double begin_amplitude        = 0;
+    double peak_amplitude_value   = 0;
+    size_t peak_amplitude_time    = 0;
+    size_t quarter_amplitude_time = max_period_on;
+    bool   quarter_amplitude_time_found = false;
+    size_t keyoff_out_time        = 0;
+    bool   keyoff_out_time_found  = false;
+
+    const size_t audioBufferLength = 256;
+    const size_t audioBufferSize = 2 * audioBufferLength;
+    int16_t audioBuffer[audioBufferSize];
+
+    // For up to 40 seconds, measure mean amplitude.
+    double highest_sofar = 0;
+    short sound_min = 0, sound_max = 0;
+
+    for(unsigned period = 0; period < max_period_on; ++period, ++windows_passed_on)
+    {
+        for(unsigned i = 0; i < samples_per_interval;)
+        {
+            size_t blocksize = samples_per_interval - i;
+            blocksize = (blocksize < audioBufferLength) ? blocksize : audioBufferLength;
+            synth.generate(audioBuffer, blocksize);
+            for (unsigned j = 0; j < blocksize; ++j)
+            {
+                int16_t s = audioBuffer[2 * j];
+                audioHistory.add(s);
+                if(sound_min > s) sound_min = s;
+                if(sound_max < s) sound_max = s;
+            }
+            i += blocksize;
+        }
+
+        if(winsize != audioHistory.size())
+        {
+            winsize = audioHistory.size();
+            HannWindow(window.get(), winsize);
+        }
+
+        double rms = MeasureRMS(audioHistory.data(), window.get(), winsize);
+        /* ======== Peak time detection ======== */
+        if(period == 0)
+        {
+            begin_amplitude = rms;
+            peak_amplitude_value = rms;
+            peak_amplitude_time = 0;
+        }
+        else if(rms > peak_amplitude_value)
+        {
+            peak_amplitude_value = rms;
+            peak_amplitude_time  = period;
+            // In next step, update the quater amplitude time
+            quarter_amplitude_time_found = false;
+        }
+        else if(!quarter_amplitude_time_found && (rms <= peak_amplitude_value * min_coefficient_on))
+        {
+            quarter_amplitude_time = period;
+            quarter_amplitude_time_found = true;
+        }
+        /* ======== Peak time detection =END==== */
+        if(rms > highest_sofar)
+            highest_sofar = rms;
+
+        if((period > max_silent * interval) &&
+           ( (rms < highest_sofar * min_coefficient_on) || (sound_min >= -1 && sound_max <= 1) )
+        )
+            break;
+    }
+
+    if(!quarter_amplitude_time_found)
+        quarter_amplitude_time = windows_passed_on;
+
+    if(windows_passed_on >= max_period_on)
+    {
+        // Just Keyoff the note
+        synth.noteOff();
+    }
+    else
+    {
+        // Reset the emulator and re-run the "ON" simulation until reaching the peak time
+        synth.resetChip();
+        synth.setInstrument(db, ins);
+        synth.noteOn();
+
+        audioHistory.reset(std::ceil(historyLength * g_outputRate));
+        for(unsigned period = 0;
+            ((period < peak_amplitude_time) || (period == 0)) && (period < max_period_on);
+            ++period)
+        {
+            for(unsigned i = 0; i < samples_per_interval;)
+            {
+                size_t blocksize = samples_per_interval - i;
+                blocksize = (blocksize < audioBufferLength) ? blocksize : audioBufferLength;
+                synth.generate(audioBuffer, blocksize);
+                for (unsigned j = 0; j < blocksize; ++j)
+                    audioHistory.add(audioBuffer[2 * j]);
+                i += blocksize;
+            }
+        }
+        synth.noteOff();
+    }
+
+    // Now, for up to 60 seconds, measure mean amplitude.
+    for(unsigned period = 0; period < max_period_off; ++period, ++windows_passed_off)
+    {
+        for(unsigned i = 0; i < samples_per_interval;)
+        {
+            size_t blocksize = samples_per_interval - i;
+            blocksize = (blocksize < 256) ? blocksize : 256;
+            synth.generate(audioBuffer, blocksize);
+            for (unsigned j = 0; j < blocksize; ++j)
+            {
+                int16_t s = audioBuffer[2 * j];
+                audioHistory.add(s);
+                if(sound_min > s) sound_min = s;
+                if(sound_max < s) sound_max = s;
+            }
+            i += blocksize;
+        }
+
+        if(winsize != audioHistory.size())
+        {
+            winsize = audioHistory.size();
+            HannWindow(window.get(), winsize);
+        }
+
+        double rms = MeasureRMS(audioHistory.data(), window.get(), winsize);
+        /* ======== Find Key Off time ======== */
+        if(!keyoff_out_time_found && (rms <= peak_amplitude_value * min_coefficient_off))
+        {
+            keyoff_out_time = period;
+            keyoff_out_time_found = true;
+        }
+        /* ======== Find Key Off time ==END=== */
+        if(rms < highest_sofar * min_coefficient_off)
+            break;
+
+        if((period > max_silent * interval) && (sound_min >= -1 && sound_max <= 1))
+            break;
+    }
+
+    DurationInfo result;
+    result.peak_amplitude_time = peak_amplitude_time;
+    result.peak_amplitude_value = peak_amplitude_value;
+    result.begin_amplitude = begin_amplitude;
+    result.quarter_amplitude_time = (double)quarter_amplitude_time;
+    result.keyoff_out_time = (double)keyoff_out_time;
+
+    result.ms_sound_kon  = (int64_t)(quarter_amplitude_time * 1000.0 / interval);
+    result.ms_sound_koff = (int64_t)(keyoff_out_time        * 1000.0 / interval);
+    result.nosound = (peak_amplitude_value < 0.5) || ((sound_min >= -1) && (sound_max <= 1));
+
+    db.instruments[ins.instId].delay_on_ms = result.ms_sound_kon;
+    db.instruments[ins.instId].delay_off_ms = result.ms_sound_koff;
+
+    return result;
+}
+
 
 void MeasureThreaded::LoadCache(const char *fileName)
 {
@@ -783,6 +980,36 @@ void MeasureThreaded::run(InstrumentsData::const_iterator i)
 
     destData *dd = new destData;
     dd->i = i;
+    dd->bd = nullptr;
+    dd->bd_ins = nullptr;
+    dd->myself = this;
+    dd->start();
+    m_threads.push_back(dd);
+#ifdef ADL_GENDATA_PRINT_PROGRESS
+    printProgress();
+#endif
+}
+
+void MeasureThreaded::run(BanksDump &bd, BanksDump::InstrumentEntry &e)
+{
+    m_semaphore.wait();
+    if(m_threads.size() > 0)
+    {
+        for(std::vector<destData *>::iterator it = m_threads.begin(); it != m_threads.end();)
+        {
+            if(!(*it)->m_works)
+            {
+                delete(*it);
+                it = m_threads.erase(it);
+            }
+            else
+                it++;
+        }
+    }
+
+    destData *dd = new destData;
+    dd->bd = &bd;
+    dd->bd_ins = &e;
     dd->myself = this;
     dd->start();
     m_threads.push_back(dd);
@@ -814,18 +1041,29 @@ void MeasureThreaded::destData::callback(void *myself)
     destData *s = reinterpret_cast<destData *>(myself);
     DurationInfo info;
     DosBoxOPL3 dosbox;
-    DurationInfoCache::iterator cachedEntry = s->myself->m_durationInfo.find(s->i->first);
 
-    if(cachedEntry != s->myself->m_durationInfo.end())
+    if(s->bd)
     {
-        s->myself->m_cache_matches++;
-        goto endWork;
+        info = MeasureDurations(*s->bd, *s->bd_ins, &dosbox);
+        // s->myself->m_durationInfo_mx.lock();
+        // s->myself->m_durationInfo.insert({s->i->first, info});
+        // s->myself->m_durationInfo_mx.unlock();
     }
+    else
+    {
+        DurationInfoCache::iterator cachedEntry = s->myself->m_durationInfo.find(s->i->first);
 
-    info = MeasureDurations(s->i->first, &dosbox);
-    s->myself->m_durationInfo_mx.lock();
-    s->myself->m_durationInfo.insert({s->i->first, info});
-    s->myself->m_durationInfo_mx.unlock();
+        if(cachedEntry != s->myself->m_durationInfo.end())
+        {
+            s->myself->m_cache_matches++;
+            goto endWork;
+        }
+
+        info = MeasureDurations(s->i->first, &dosbox);
+        s->myself->m_durationInfo_mx.lock();
+        s->myself->m_durationInfo.insert({s->i->first, info});
+        s->myself->m_durationInfo_mx.unlock();
+    }
 
 endWork:
     s->myself->m_semaphore.notify();
