@@ -50,7 +50,7 @@ struct Operator
     uint8_t  d_40;
 } ATTRIB_PACKED;
 
-};
+} /* namespace BanksDump */
 
 extern const BanksDump::BankEntry g_embeddedBanks[];
 extern const size_t g_embeddedBanksMidiIndex[];
