@@ -557,6 +557,7 @@ int main(int argc, char**argv)
     std::fclose(outFile);
 
     {
+        measureCounter.LoadCacheX("fm_banks/adldata-cache-x.dat");
         measureCounter.m_durationInfo.clear();
         measureCounter.m_cache_matches = 0;
         measureCounter.m_done = 0;
@@ -569,6 +570,7 @@ int main(int argc, char**argv)
         }
         std::fflush(stdout);
         measureCounter.waitAll();
+        measureCounter.SaveCacheX("fm_banks/adldata-cache-x.dat");
     }
     db.exportBanks(std::string(outFile_s) + "x");
 

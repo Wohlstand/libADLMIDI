@@ -77,6 +77,9 @@ struct MeasureThreaded
     void LoadCache(const char *fileName);
     void SaveCache(const char *fileName);
 
+    void LoadCacheX(const char *fileName);
+    void SaveCacheX(const char *fileName);
+
     struct destData
     {
         destData()

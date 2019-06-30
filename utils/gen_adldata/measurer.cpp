@@ -1,4 +1,5 @@
 #include "measurer.h"
+#include "file_formats/common.h"
 #include <cmath>
 
 #ifndef M_PI
@@ -703,6 +704,8 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
 
 void MeasureThreaded::LoadCache(const char *fileName)
 {
+    m_durationInfo.clear();
+
     FILE *in = std::fopen(fileName, "rb");
     if(!in)
     {
@@ -926,6 +929,140 @@ void MeasureThreaded::SaveCache(const char *fileName)
         fwrite(&it->second.ms_sound_kon, 1, sizeof(int64_t), out);
         fwrite(&it->second.ms_sound_koff, 1, sizeof(int64_t), out);
         fwrite(&it->second.nosound, 1, sizeof(bool), out);
+    }
+    std::fclose(out);
+}
+
+void MeasureThreaded::LoadCacheX(const char *fileName)
+{
+    m_durationInfoX.clear();
+
+    FILE *in = std::fopen(fileName, "rb");
+    if(!in)
+    {
+        std::printf("Failed to load CacheX: file is not exists.\n"
+               "Complete data will be generated from scratch.\n");
+        std::fflush(stdout);
+        return;
+    }
+
+    char magic[32];
+    if(std::fread(magic, 1, 32, in) != 32)
+    {
+        std::fclose(in);
+        std::printf("Failed to load CacheX: can't read magic.\n"
+               "Complete data will be generated from scratch.\n");
+        std::fflush(stdout);
+        return;
+    }
+
+    if(std::memcmp(magic, "ADLMIDI-DURATION-CACHE-FILE-V2.0", 32) != 0)
+    {
+        std::fclose(in);
+        std::printf("Failed to load CacheX: magic missmatch.\n"
+               "Complete data will be generated from scratch.\n");
+        std::fflush(stdout);
+        return;
+    }
+
+    uint_fast32_t itemsCount;
+    uint8_t itemsCountA[4];
+    if(std::fread(itemsCountA, 1, 4, in) != 4)
+    {
+        std::fclose(in);
+        std::printf("Failed to load CacheX: can't read cache size value.\n"
+               "Complete data will be generated from scratch.\n");
+        std::fflush(stdout);
+        return;
+    }
+
+    itemsCount = static_cast<int_fast32_t>(toSint32LE(itemsCountA));
+
+    while(!std::feof(in) && itemsCount > 0)
+    {
+        OperatorsKey k;
+        DurationInfo v;
+
+        uint8_t data_k[4];
+
+        for(auto &kv : k)
+        {
+            uint8_t data[4];
+            auto ret = std::fread(data, 1, 4, in);
+            if(ret != 4)
+            {
+                std::fclose(in);
+                std::printf("Failed to load CacheX: unexpected end of file.\n"
+                       "Complete data will be generated from scratch.\n");
+                std::fflush(stdout);
+                return;
+            }
+            kv = static_cast<int_fast32_t>(toSint32LE(data));
+        }
+
+        auto ret = std::fread(data_k, 1, 4, in);
+        if(ret != 4)
+        {
+            std::fclose(in);
+            std::printf("Failed to load CacheX: unexpected end of file.\n"
+                   "Complete data will be generated from scratch.\n");
+            std::fflush(stdout);
+            return;
+        }
+
+        v.ms_sound_kon  = static_cast<int_fast64_t>(toUint16LE(data_k + 0));
+        v.ms_sound_koff = static_cast<int_fast64_t>(toUint16LE(data_k + 2));
+
+        m_durationInfoX.insert({k, v});
+        itemsCount--;
+    }
+
+    std::printf("CacheX loaded!\n");
+    std::fflush(stdout);
+
+    std::fclose(in);
+}
+
+void MeasureThreaded::SaveCacheX(const char *fileName)
+{
+    FILE *out = std::fopen(fileName, "wb");
+    std::fprintf(out, "ADLMIDI-DURATION-CACHE-FILE-V2.0");
+
+    uint_fast32_t itemsCount = static_cast<uint_fast32_t>(m_durationInfoX.size());
+    uint8_t itemsCountA[4] =
+    {
+        static_cast<uint8_t>((itemsCount >>  0) & 0xFF),
+        static_cast<uint8_t>((itemsCount >>  8) & 0xFF),
+        static_cast<uint8_t>((itemsCount >> 16) & 0xFF),
+        static_cast<uint8_t>((itemsCount >> 24) & 0xFF)
+    };
+    std::fwrite(itemsCountA, 1, 4, out);
+
+    for(DurationInfoCacheX::iterator it = m_durationInfoX.begin(); it != m_durationInfoX.end(); it++)
+    {
+        const OperatorsKey &k = it->first;
+        const DurationInfo &v = it->second;
+
+        uint8_t data_k[4] =
+        {
+            static_cast<uint8_t>((v.ms_sound_kon >>  0) & 0xFF),
+            static_cast<uint8_t>((v.ms_sound_kon >>  8) & 0xFF),
+            static_cast<uint8_t>((v.ms_sound_koff >> 0) & 0xFF),
+            static_cast<uint8_t>((v.ms_sound_koff >> 8) & 0xFF)
+        };
+
+        for(auto &kv : k)
+        {
+            uint8_t data[4] =
+            {
+                static_cast<uint8_t>((kv >>  0) & 0xFF),
+                static_cast<uint8_t>((kv >>  8) & 0xFF),
+                static_cast<uint8_t>((kv >> 16) & 0xFF),
+                static_cast<uint8_t>((kv >> 24) & 0xFF)
+            };
+            std::fwrite(data, 1, 4, out);
+        }
+        std::fwrite(data_k, 1, 4, out);
     }
     std::fclose(out);
 }
