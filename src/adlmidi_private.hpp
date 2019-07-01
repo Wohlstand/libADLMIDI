@@ -145,6 +145,7 @@ class OPLChipBase;
 typedef class OPL3 Synth;
 
 #include "adldata.hh"
+#include "adlmidi_db.h"
 
 #define ADLMIDI_BUILD
 #include "adlmidi.h"    //Main API

@@ -335,6 +335,13 @@ struct BanksDump
         uint_fast32_t opId = 0;
         uint_fast32_t d_E862 = 0;
         uint_fast32_t d_40 = 0;
+        explicit Operator() {}
+        Operator(const Operator &o)
+        {
+            opId = o.opId;
+            d_E862 = o.d_E862;
+            d_40 = o.d_40;
+        }
         bool operator==(const Operator &o)
         {
             return ((d_E862 == o.d_E862) && (d_40 == o.d_40));

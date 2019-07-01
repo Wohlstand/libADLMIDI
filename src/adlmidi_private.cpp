@@ -43,9 +43,9 @@ int adlCalculateFourOpChannels(MIDIplay *play, bool silent)
     bool rhythmModeNeeded = false;
 
     //Automatically calculate how much 4-operator channels is necessary
-#ifndef DISABLE_EMBEDDED_BANKS
-    if(synth.m_embeddedBank == Synth::CustomBankTag)
-#endif
+//#ifndef DISABLE_EMBEDDED_BANKS
+//    if(synth.m_embeddedBank == Synth::CustomBankTag)
+//#endif
     {
         //For custom bank
         Synth::BankMap::iterator it = synth.m_insBanks.begin();
@@ -67,25 +67,25 @@ int adlCalculateFourOpChannels(MIDIplay *play, bool silent)
             }
         }
     }
-#ifndef DISABLE_EMBEDDED_BANKS
-    else
-    {
-        //For embedded bank
-        for(size_t  a = 0; a < 256; ++a)
-        {
-            size_t insno = banks[play->m_setup.bankId][a];
-            size_t div = a / 128;
-            if(insno == 198)
-                continue;
-            ++n_total[div];
-            adlinsdata2 ins = adlinsdata2::from_adldata(::adlins[insno]);
-            if((ins.flags & adlinsdata::Flag_Real4op) != 0)
-                ++n_fourop[div];
-            if(div && ((ins.flags & adlinsdata::Mask_RhythmMode) != 0))
-                rhythmModeNeeded = true;
-        }
-    }
-#endif
+//#ifndef DISABLE_EMBEDDED_BANKS
+//    else
+//    {
+//        //For embedded bank
+//        for(size_t  a = 0; a < 256; ++a)
+//        {
+//            size_t insno = banks[play->m_setup.bankId][a];
+//            size_t div = a / 128;
+//            if(insno == 198)
+//                continue;
+//            ++n_total[div];
+//            adlinsdata2 ins = adlinsdata2::from_adldata(::adlins[insno]);
+//            if((ins.flags & adlinsdata::Flag_Real4op) != 0)
+//                ++n_fourop[div];
+//            if(div && ((ins.flags & adlinsdata::Mask_RhythmMode) != 0))
+//                rhythmModeNeeded = true;
+//        }
+//    }
+//#endif
 
     size_t numFourOps = 0;
 

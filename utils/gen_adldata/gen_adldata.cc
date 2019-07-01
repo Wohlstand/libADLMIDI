@@ -341,6 +341,7 @@ int main(int argc, char**argv)
     std::fprintf(outFile, "{\n");
 
     MeasureThreaded measureCounter;
+#ifndef GEN_ADLDATA_DEEP_DEBUG // Skip slowest place to work with a debug
     {
         std::printf("Beginning to generate measures data... (hardware concurrency of %d)\n", std::thread::hardware_concurrency());
         std::fflush(stdout);
@@ -358,6 +359,7 @@ int main(int argc, char**argv)
         measureCounter.waitAll();
         measureCounter.SaveCache("fm_banks/adldata-cache.dat");
     }
+#endif
 
     std::printf("Writing generated measure data...\n");
     std::fflush(stdout);
@@ -566,6 +568,7 @@ int main(int argc, char**argv)
         std::fflush(stdout);
         for(size_t b = 0; b < db.instruments.size(); ++b)
         {
+            assert(db.instruments[b].instId == b);
             measureCounter.run(db, db.instruments[b]);
         }
         std::fflush(stdout);

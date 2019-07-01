@@ -19,6 +19,11 @@ list(APPEND GEN_ADLDATA_SRC
     ini/ini_processing.cpp
 )
 
+#add_definitions(-DGEN_ADLDATA_DEEP_DEBUG)
+#list(APPEND GEN_ADLDATA_SRC
+#    ../midiplay/wave_writer.c
+#)
+
 if(USE_DOSBOX_EMULATOR)
     set(HAS_EMULATOR TRUE)
     list(APPEND GEN_ADLDATA_SRC

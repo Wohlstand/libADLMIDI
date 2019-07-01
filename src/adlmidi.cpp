@@ -164,7 +164,7 @@ ADLMIDI_EXPORT int adl_setBank(ADL_MIDIPlayer *device, int bank)
                          "adl_openBankData() functions instead of adl_setBank().");
     return -1;
 #else
-    const uint32_t NumBanks = static_cast<uint32_t>(maxAdlBanks());
+    const uint32_t NumBanks = static_cast<uint32_t>(g_embeddedBanksCount);
     int32_t bankno = bank;
 
     if(bankno < 0)
@@ -192,7 +192,7 @@ ADLMIDI_EXPORT int adl_setBank(ADL_MIDIPlayer *device, int bank)
 ADLMIDI_EXPORT int adl_getBanksCount()
 {
 #ifndef DISABLE_EMBEDDED_BANKS
-    return maxAdlBanks();
+    return static_cast<int>(g_embeddedBanksCount);
 #else
     return 0;
 #endif

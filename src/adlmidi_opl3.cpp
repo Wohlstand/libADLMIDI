@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <cassert>
 
+#ifndef DISABLE_EMBEDDED_BANKS
+#include "wopl/wopl_file.h"
+#endif
+
 #ifdef ADLMIDI_HW_OPL
 static const unsigned OPLBase = 0x388;
 #else
@@ -245,21 +249,83 @@ void OPL3::setEmbeddedBank(uint32_t bank)
     //Embedded banks are supports 128:128 GM set only
     m_insBanks.clear();
 
-    if(bank >= static_cast<unsigned int>(maxAdlBanks()))
+    if(bank >= static_cast<uint32_t>(g_embeddedBanksCount))
         return;
 
-    Bank *bank_pair[2] =
-    {
-        &m_insBanks[0],
-        &m_insBanks[PercussionTag]
-    };
+    const BanksDump::BankEntry &bankEntry = g_embeddedBanks[m_embeddedBank];
+    m_insBankSetup.deepTremolo = ((bankEntry.bankSetup >> 8) & 0x01) != 0;
+    m_insBankSetup.deepVibrato = ((bankEntry.bankSetup >> 8) & 0x02) != 0;
+    m_insBankSetup.volumeModel = (bankEntry.bankSetup & 0xFF);
+    m_insBankSetup.scaleModulators = false;
 
-    for(unsigned i = 0; i < 256; ++i)
+    for(int ss = 0; ss < 2; ss++)
     {
-        size_t meta = banks[bank][i];
-        adlinsdata2 &ins = bank_pair[i / 128]->ins[i % 128];
-        ins = adlinsdata2::from_adldata(::adlins[meta]);
+        bank_count_t maxBanks = ss ? bankEntry.banksPercussionCount : bankEntry.banksMelodicCount ;
+        bank_count_t banksOffset = ss ? bankEntry.banksOffsetPercussive : bankEntry.banksOffsetMelodic;
+
+        for(bank_count_t bankID = 0; bankID < maxBanks; bankID++)
+        {
+            size_t bankIndex = g_embeddedBanksMidiIndex[banksOffset + bankID];
+            const BanksDump::MidiBank &bankData = g_embeddedBanksMidi[bankIndex];
+            size_t bankMidiIndex = static_cast<size_t>((bankData.msb * 256) + bankData.lsb) + (ss ? PercussionTag : 0);
+            Bank &bankTarget = m_insBanks[bankMidiIndex];
+
+            for(size_t instId = 0; instId < 128; instId++)
+            {
+                BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[bankData.insts[instId]];
+                adlinsdata2 &instOut = bankTarget.ins[instId];
+
+                instOut.voice2_fine_tune = 0.0;
+                if(instIn.secondVoiceDetune != 0)
+                {
+                    if(instIn.secondVoiceDetune == 1)
+                        instOut.voice2_fine_tune = 0.000025;
+                    else if(instIn.secondVoiceDetune == -1)
+                        instOut.voice2_fine_tune = -0.000025;
+                    else
+                        instOut.voice2_fine_tune = instIn.secondVoiceDetune * (15.625 / 1000.0);
+                }
+
+                instOut.midi_velocity_offset = instIn.midiVelocityOffset;
+                instOut.tone = instIn.percussionKeyNumber;
+                instOut.flags = (instIn.instFlags & WOPL_Ins_4op) && (instIn.instFlags & WOPL_Ins_Pseudo4op) ? adlinsdata::Flag_Pseudo4op : 0;
+                instOut.flags|= (instIn.instFlags & WOPL_Ins_4op) && ((instIn.instFlags & WOPL_Ins_Pseudo4op) == 0) ? adlinsdata::Flag_Real4op : 0;
+                instOut.flags|= (instIn.instFlags & WOPL_Ins_IsBlank) ? adlinsdata::Flag_NoSound : 0;
+                instOut.flags|= instIn.instFlags & WOPL_RhythmModeMask;
+
+                for(size_t op = 0; op < 2; op++)
+                {
+                    if((instIn.ops[(op * 2) + 0] < 0) || (instIn.ops[(op * 2) + 1] < 0))
+                        break;
+                    const BanksDump::Operator &op1 = g_embeddedBanksOperators[instIn.ops[(op * 2) + 0]];
+                    const BanksDump::Operator &op2 = g_embeddedBanksOperators[instIn.ops[(op * 2) + 1]];
+                    instOut.adl[op].modulator_E862 = op1.d_E862;
+                    instOut.adl[op].modulator_40   = op1.d_40;
+                    instOut.adl[op].carrier_E862 = op2.d_E862;
+                    instOut.adl[op].carrier_40   = op2.d_40;
+                    instOut.adl[op].feedconn = (instIn.fbConn >> (op * 8)) & 0xFF;
+                    instOut.adl[op].finetune = op == 0 ? instIn.noteOffset1 : instIn.noteOffset2;
+                }
+                instOut.ms_sound_kon  = instIn.delay_on_ms;
+                instOut.ms_sound_koff = instIn.delay_off_ms;
+            }
+        }
     }
+
+//    Bank *bank_pair[2] =
+//    {
+//        &m_insBanks[0],
+//        &m_insBanks[PercussionTag]
+//    };
+
+//    for(unsigned i = 0; i < 256; ++i)
+//    {
+//        size_t meta = banks[bank][i];
+//        adlinsdata2 &ins = bank_pair[i / 128]->ins[i % 128];
+//        ins = adlinsdata2::from_adldata(::adlins[meta]);
+//    }
+
+
 #else
     ADL_UNUSED(bank);
 #endif

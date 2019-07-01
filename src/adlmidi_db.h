@@ -8,6 +8,8 @@
 #define ATTRIB_PACKED
 #endif
 
+typedef uint16_t bank_count_t;
+
 extern const size_t g_embeddedBanksCount;
 
 namespace BanksDump
@@ -16,11 +18,11 @@ namespace BanksDump
 struct BankEntry
 {
     uint16_t bankSetup;
-    uint16_t banksMelodicCount;
-    uint16_t banksPercussionCount;
+    bank_count_t banksMelodicCount;
+    bank_count_t banksPercussionCount;
     const char *title;
-    uint16_t banksOffsetMelodic;
-    uint16_t banksOffsetPercussive;
+    bank_count_t banksOffsetMelodic;
+    bank_count_t banksOffsetPercussive;
 } ATTRIB_PACKED;
 
 struct MidiBank

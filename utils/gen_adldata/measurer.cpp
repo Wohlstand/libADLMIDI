@@ -2,6 +2,10 @@
 #include "file_formats/common.h"
 #include <cmath>
 
+#ifdef GEN_ADLDATA_DEEP_DEBUG
+#include "../midiplay/wave_writer.h"
+#endif
+
 #ifndef M_PI
 #define M_PI    3.14159265358979323846
 #endif
@@ -56,6 +60,14 @@ static const uint16_t g_operatorsMap[(NUM_OF_CHANNELS + NUM_OF_RM_CHANNELS) * 2]
     0x015, 0xFFF,  // operator 17
     // Channel 19
     0x011, 0xFFF   // operator 13
+};
+
+//! Channel map to regoster offsets
+static const uint16_t g_channelsMap[NUM_OF_CHANNELS] =
+{
+    0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007, 0x008, // 0..8
+    0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x108, // 9..17 (secondary set)
+    0x006, 0x007, 0x008, 0x008, 0x008 // <- hw percussions, hihats and cymbals using tom-tom's channel as pitch source
 };
 
 
@@ -130,8 +142,11 @@ struct TinySynth
 {
     OPLChipBase *m_chip;
     unsigned m_notesNum;
-    int m_notenum;
-    int8_t m_fineTune;
+    unsigned m_actualNotesNum;
+    bool m_isReal4op;
+    bool m_isPseudo4op;
+    int m_playNoteNum;
+    int8_t m_voice1Detune;
     int16_t m_noteOffsets[2];
     unsigned m_x[2];
 
@@ -146,6 +161,8 @@ struct TinySynth
 
         m_chip->setRate(g_outputRate);
 
+        for(size_t a = 0; a < 18; ++a)
+            m_chip->writeReg(0xB0 + g_channelsMap[a], 0x00);
         for(unsigned a = 0; a < 18; a += 2)
             m_chip->writeReg((uint16_t)initdata[a], (uint8_t)initdata[a + 1]);
     }
@@ -173,20 +190,19 @@ struct TinySynth
         }
 
         std::memset(m_x, 0, sizeof(m_x));
-        m_notenum = in.notenum >= 128 ? (in.notenum - 128) : in.notenum;
-        if(m_notenum == 0)
-            m_notenum = 25;
+        m_playNoteNum = in.notenum >= 128 ? (in.notenum - 128) : in.notenum;
+        m_isReal4op = in.real4op && !in.pseudo4op;
+        m_isPseudo4op = in.pseudo4op;
+        if(m_playNoteNum == 0)
+            m_playNoteNum = 25;
         m_notesNum = in.insno1 == in.insno2 ? 1 : 2;
-        m_fineTune = 0;
+        m_actualNotesNum = (m_isReal4op ? 1 : m_notesNum);
+        m_voice1Detune = 0;
         m_noteOffsets[0] = rawData[0].finetune;
         m_noteOffsets[1] = rawData[1].finetune;
         if(in.pseudo4op)
-            m_fineTune = in.voice2_fine_tune;
-        if(in.real4op)
-        {
-            m_chip->writeReg(0x105, 1);
-            m_chip->writeReg(0x104, 0xFF);
-        }
+            m_voice1Detune = in.voice2_fine_tune;
+        m_chip->writeReg(0x104, in.real4op ? (1 << 6) - 1 : 0x00);
 
         //For cleaner measurement, disable tremolo and vibrato
         rawData[0].data[0] &= 0x3F;
@@ -206,9 +222,8 @@ struct TinySynth
 
     void setInstrument(const BanksDump &db, const BanksDump::InstrumentEntry &ins)
     {
-        // TODO: Implement this function correctly!
-        bool is4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_4op) != 0);
         bool isPseudo4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op) != 0);
+        bool is4ops =       ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_4op) != 0) && !isPseudo4ops;
         size_t opsNum = (is4ops || isPseudo4ops) ? 4 : 2;
         BanksDump::Operator ops[4];
         assert(ins.ops[0] >= 0);
@@ -224,24 +239,25 @@ struct TinySynth
         }
 
         std::memset(m_x, 0, sizeof(m_x));
-        m_notenum = ins.percussionKeyNumber >= 128 ? (ins.percussionKeyNumber - 128) : ins.percussionKeyNumber;
-        if(m_notenum == 0)
-            m_notenum = 25;
+        m_playNoteNum = ins.percussionKeyNumber >= 128 ? (ins.percussionKeyNumber - 128) : ins.percussionKeyNumber;
+        m_isReal4op = is4ops;
+        m_isPseudo4op = isPseudo4ops;
+        if(m_playNoteNum == 0)
+            m_playNoteNum = 60;
         m_notesNum = opsNum / 2;
-        m_fineTune = 0;
+        m_actualNotesNum = (m_isReal4op ? 1 : m_notesNum);
+        m_voice1Detune = 0;
         m_noteOffsets[0] = ins.noteOffset1;
         m_noteOffsets[1] = ins.noteOffset2;
         if(isPseudo4ops)
-            m_fineTune = ins.secondVoiceDetune;
-        if(is4ops)
-        {
-            m_chip->writeReg(0x105, 1);
-            m_chip->writeReg(0x104, 0xFF);
-        }
+            m_voice1Detune = ins.secondVoiceDetune;
+        m_chip->writeReg(0x104, is4ops ? (1 << 6) - 1 : 0x00);
 
         //For cleaner measurement, disable tremolo and vibrato
-        ops[0].d_E862 &= 0xFFFF3F3F;
-        ops[1].d_E862 &= 0xFFFF3F3F;
+        ops[0].d_E862 &= 0xFFFFFF3F;
+        ops[1].d_E862 &= 0xFFFFFF3F;
+        ops[2].d_E862 &= 0xFFFFFF3F;
+        ops[3].d_E862 &= 0xFFFFFF3F;
 //        rawData[0].data[0] &= 0x3F;
 //        rawData[0].data[1] &= 0x3F;
 //        rawData[1].data[0] &= 0x3F;
@@ -252,16 +268,19 @@ struct TinySynth
             static const uint8_t data[4] = {0x20, 0x60, 0x80, 0xE0};
             uint16_t o1 = g_operatorsMap[0];
             uint16_t o2 = g_operatorsMap[1];
-            unsigned x = ops[0].d_E862, y = ops[1].d_E862;
+            size_t opOffset = (n * 2);
+            uint_fast32_t x1 = ops[opOffset + 0].d_E862, y1 = ops[opOffset + 1].d_E862;
+            uint_fast8_t  x2 = ops[opOffset + 0].d_40,   y2 = ops[opOffset + 1].d_40;
+            uint_fast8_t  fbConn = (ins.fbConn >> (n * 8)) & 0xFF;
 
-            for(size_t a = 0; a < 4; ++a, x >>= 8, y >>= 8)
+            for(size_t a = 0; a < 4; ++a, x1 >>= 8, y1 >>= 8)
             {
-                if(o1 != 0xFFF)
-                    m_chip->writeReg(data[a] + o1, x & 0xFF);
-                if(o2 != 0xFFF)
-                    m_chip->writeReg(data[a] + o2, y & 0xFF);
+                m_chip->writeReg(data[a] + o1, x1 & 0xFF);
+                m_chip->writeReg(data[a] + o2, y1 & 0xFF);
             }
-            m_chip->writeReg(0xC0 + n * 8, (ins.fbConn >> n * 8) & 0xFF);
+            m_chip->writeReg(0xC0 + (n * 8), fbConn | 0x30);
+            m_chip->writeReg(0x40 + o1, x2 & 0xFF);
+            m_chip->writeReg(0x40 + o2, y2 & 0xFF);
         }
 
 //        for(unsigned n = 0; n < m_notesNum; ++n)
@@ -269,27 +288,25 @@ struct TinySynth
 //            static const unsigned char patchdata[11] =
 //            {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
 //            for(unsigned a = 0; a < 10; ++a)
-//            {
 //                m_chip->writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
-//            }
-//            m_chip->writeReg(patchdata[10] + n * 8, (ins.fbConn >> n * 8) & 0xFF);
+//            m_chip->writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
 //        }
     }
 
     void noteOn()
     {
         std::memset(m_x, 0, sizeof(m_x));
-        for(unsigned n = 0; n < m_notesNum; ++n)
+        for(unsigned n = 0; n < m_actualNotesNum; ++n)
         {
-            double hertz = 172.00093 * std::exp(0.057762265 * (m_notenum + m_noteOffsets[n]));
+            double hertz = 172.00093 * std::exp(0.057762265 * (m_playNoteNum + m_noteOffsets[n]));
             if(hertz > 131071)
             {
                 std::fprintf(stdout, "%s:%d:0: warning: Why does note %d + note-offset %d produce hertz %g?\n", __FILE__, __LINE__,
-                             m_notenum, m_noteOffsets[n], hertz);
+                             m_playNoteNum, m_noteOffsets[n], hertz);
                 std::fflush(stdout);
                 hertz = 131071;
             }
-            m_x[n] = 0x2000;
+            m_x[n] = 0x2000u;
             while(hertz >= 1023.5)
             {
                 hertz /= 2.0;    // Calculate octave
@@ -298,16 +315,16 @@ struct TinySynth
             m_x[n] += (unsigned int)(hertz + 0.5);
 
             // Keyon the note
-            m_chip->writeReg(0xA0 + n * 3, m_x[n] & 0xFF);
-            m_chip->writeReg(0xB0 + n * 3, m_x[n] >> 8);
+            m_chip->writeReg(0xA0 + (n * 3), m_x[n] & 0xFF);
+            m_chip->writeReg(0xB0 + (n * 3), (m_x[n] >> 8) & 0xFF);
         }
     }
 
     void noteOff()
     {
         // Keyoff the note
-        for(unsigned n = 0; n < m_notesNum; ++n)
-            m_chip->writeReg(0xB0 + n * 3, (m_x[n] >> 8) & 0xDF);
+        for(unsigned n = 0; n < m_actualNotesNum; ++n)
+            m_chip->writeReg(0xB0 + (n * 3), (m_x[n] >> 8) & 0xDF);
     }
 
     void generate(int16_t *output, size_t frames)
@@ -528,6 +545,19 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
     synth.setInstrument(db, ins);
     synth.noteOn();
 
+#ifdef GEN_ADLDATA_DEEP_DEBUG
+    /*****************DEBUG******************/
+    char waveFileOut[80] = "";
+    std::snprintf(waveFileOut, 80, "fm_banks/_deep_debug/%04lu_%s_%u_an_%u_no.wav",
+                  ins.instId, synth.m_isPseudo4op ? "pseudo4op" :
+                              synth.m_isReal4op ? "4op" : "2op",
+                  synth.m_actualNotesNum,
+                  synth.m_notesNum);
+    void *waveCtx = ctx_wave_open(g_outputRate, waveFileOut);
+    ctx_wave_enable_stereo(waveCtx);
+    /*****************DEBUG******************/
+#endif
+
     /* For capturing */
     const unsigned max_silent = 6;
     const unsigned max_on  = 40;
@@ -566,6 +596,11 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
             size_t blocksize = samples_per_interval - i;
             blocksize = (blocksize < audioBufferLength) ? blocksize : audioBufferLength;
             synth.generate(audioBuffer, blocksize);
+#ifdef GEN_ADLDATA_DEEP_DEBUG
+            /***************DEBUG******************/
+            ctx_wave_write(waveCtx, audioBuffer, blocksize * 2);
+            /***************DEBUG******************/
+#endif
             for (unsigned j = 0; j < blocksize; ++j)
             {
                 int16_t s = audioBuffer[2 * j];
@@ -697,10 +732,25 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
 
     db.instruments[ins.instId].delay_on_ms = result.ms_sound_kon;
     db.instruments[ins.instId].delay_off_ms = result.ms_sound_koff;
+    if(result.nosound)
+        db.instruments[ins.instId].instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
+#ifdef GEN_ADLDATA_DEEP_DEBUG
+    /***************DEBUG******************/
+    ctx_wave_close(waveCtx);
+    /***************DEBUG******************/
+#endif
 
     return result;
 }
 
+
+MeasureThreaded::MeasureThreaded() :
+    m_semaphore(int(std::thread::hardware_concurrency()) * 2),
+    m_done(0),
+    m_cache_matches(0)
+{
+    DosBoxOPL3::globalPreInit();
+}
 
 void MeasureThreaded::LoadCache(const char *fileName)
 {
@@ -983,7 +1033,7 @@ void MeasureThreaded::LoadCacheX(const char *fileName)
         OperatorsKey k;
         DurationInfo v;
 
-        uint8_t data_k[4];
+        uint8_t data_k[5];
 
         for(auto &kv : k)
         {
@@ -1000,8 +1050,8 @@ void MeasureThreaded::LoadCacheX(const char *fileName)
             kv = static_cast<int_fast32_t>(toSint32LE(data));
         }
 
-        auto ret = std::fread(data_k, 1, 4, in);
-        if(ret != 4)
+        auto ret = std::fread(data_k, 1, 5, in);
+        if(ret != 5)
         {
             std::fclose(in);
             std::printf("Failed to load CacheX: unexpected end of file.\n"
@@ -1012,6 +1062,7 @@ void MeasureThreaded::LoadCacheX(const char *fileName)
 
         v.ms_sound_kon  = static_cast<int_fast64_t>(toUint16LE(data_k + 0));
         v.ms_sound_koff = static_cast<int_fast64_t>(toUint16LE(data_k + 2));
+        v.nosound = (data_k[4] == 0x01);
 
         m_durationInfoX.insert({k, v});
         itemsCount--;
@@ -1043,12 +1094,13 @@ void MeasureThreaded::SaveCacheX(const char *fileName)
         const OperatorsKey &k = it->first;
         const DurationInfo &v = it->second;
 
-        uint8_t data_k[4] =
+        uint8_t data_k[5] =
         {
             static_cast<uint8_t>((v.ms_sound_kon >>  0) & 0xFF),
             static_cast<uint8_t>((v.ms_sound_kon >>  8) & 0xFF),
             static_cast<uint8_t>((v.ms_sound_koff >> 0) & 0xFF),
-            static_cast<uint8_t>((v.ms_sound_koff >> 8) & 0xFF)
+            static_cast<uint8_t>((v.ms_sound_koff >> 8) & 0xFF),
+            static_cast<uint8_t>(v.nosound ? 0x01 : 0x00)
         };
 
         for(auto &kv : k)
@@ -1062,7 +1114,7 @@ void MeasureThreaded::SaveCacheX(const char *fileName)
             };
             std::fwrite(data, 1, 4, out);
         }
-        std::fwrite(data_k, 1, 4, out);
+        std::fwrite(data_k, 1, 5, out);
     }
     std::fclose(out);
 }
@@ -1178,6 +1230,7 @@ void MeasureThreaded::destData::callback(void *myself)
     destData *s = reinterpret_cast<destData *>(myself);
     DurationInfo info;
     DosBoxOPL3 dosbox;
+    // NukedOPL3 dosbox;
 
     if(s->bd)
     {
@@ -1192,6 +1245,8 @@ void MeasureThreaded::destData::callback(void *myself)
             const DurationInfo &di = cachedEntry->second;
             s->bd_ins->delay_on_ms = di.ms_sound_kon;
             s->bd_ins->delay_off_ms = di.ms_sound_koff;
+            if(di.nosound)
+                s->bd_ins->instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
             s->myself->m_cache_matches++;
             goto endWork;
         }
