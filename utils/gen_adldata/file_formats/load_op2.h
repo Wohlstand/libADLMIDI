@@ -133,6 +133,9 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
             tmp[1].finetune -= 12;
         }
 
+        inst.noteOffset1 = int8_t(tmp[0].finetune);
+        inst.noteOffset2 = int8_t(tmp[1].finetune);
+
         if((ins.flags & FL_DOUBLE_VOICE) != 0)
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op;
         inst.percussionKeyNumber = tmp2.notenum;
