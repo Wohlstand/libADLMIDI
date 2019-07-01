@@ -63,12 +63,12 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
         {
             patchId = stdstoi(name.substr(perc_filter.size()));
             gmno = patchId + 128;
-            isPercussion = false;
+            isPercussion = true;
         }
         else
             continue;
 
-        BanksDump::MidiBank &bnk = isPercussion ? bnkMelodic : bnkPercussion;
+        BanksDump::MidiBank &bnk = isPercussion ? bnkPercussion : bnkMelodic;
 
         const unsigned char *insdata = &data[size_t(offset2)];
         const unsigned char *ops[4] = { insdata + 0, insdata + 6, insdata + 12, insdata + 18 };
