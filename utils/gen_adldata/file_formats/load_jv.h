@@ -42,7 +42,7 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
                          : gmno < 128 + 88 ? int(gmno - 35)
                          : -1;
 
-        bool isPercussion = ins_count >= 128;
+        bool isPercussion = a >= ins_count;
         size_t patchId = (a < ins_count) ? (a + first_ins) : ((a - ins_count) + first_drum);
         BanksDump::MidiBank &bnk = isPercussion ? bnkPercussion : bnkMelodique;
         BanksDump::InstrumentEntry inst;
