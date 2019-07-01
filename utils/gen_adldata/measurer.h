@@ -55,7 +55,7 @@ private:
 
 struct MeasureThreaded
 {
-    typedef std::array<int_fast32_t, 9> OperatorsKey;
+    typedef std::array<int_fast32_t, 10> OperatorsKey;
     typedef std::map<ins, DurationInfo> DurationInfoCache;
     typedef std::map<OperatorsKey, DurationInfo> DurationInfoCacheX;
 

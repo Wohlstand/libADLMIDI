@@ -112,10 +112,6 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
             tmp[index].data[10] = src.feedback;
             tmp[index].finetune = int8_t(src.basenote + 12);
             inst.fbConn |= (uint_fast16_t(src.feedback) << (a == 1 ? 8 : 0));
-            if(a == 0)
-                inst.noteOffset1 = int8_t(src.basenote + 12);
-            else
-                inst.noteOffset2 = int8_t(src.basenote + 12);
             db.toOps(tmp[index], ops, index * 2);
         }
         struct ins tmp2;
@@ -137,9 +133,9 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
         inst.noteOffset2 = int8_t(tmp[1].finetune);
 
         if((ins.flags & FL_DOUBLE_VOICE) != 0)
-            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op;
+            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op | BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op;
         inst.percussionKeyNumber = tmp2.notenum;
-        inst.secondVoiceDetune = ins.finetune;
+        inst.secondVoiceDetune = static_cast<char>(static_cast<int>(ins.finetune) - 128);
 
         if(!(ins.flags & FL_DOUBLE_VOICE))
         {

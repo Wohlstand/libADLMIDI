@@ -1238,7 +1238,8 @@ void MeasureThreaded::destData::callback(void *myself)
                            static_cast<int_fast32_t>(s->bd_ins->fbConn),
                            s->bd_ins->noteOffset1, s->bd_ins->noteOffset2,
                            static_cast<int_fast32_t>(s->bd_ins->percussionKeyNumber),
-                           static_cast<int_fast32_t>(s->bd_ins->instFlags)};
+                           static_cast<int_fast32_t>(s->bd_ins->instFlags),
+                           static_cast<int_fast32_t>(s->bd_ins->secondVoiceDetune)};
         DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfoX.find(ok);
         if(cachedEntry != s->myself->m_durationInfoX.end())
         {

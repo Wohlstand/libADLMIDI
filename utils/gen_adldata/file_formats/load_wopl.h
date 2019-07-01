@@ -208,7 +208,7 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
                 inst.instFlags = flags;
                 inst.percussionKeyNumber = is_percussion ? data[offset + 38] : 0;
                 inst.noteOffset1 = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 32));
-                inst.noteOffset2 = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 32));
+                inst.noteOffset2 = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 34));
                 inst.secondVoiceDetune = static_cast<int_fast8_t>(data[offset + 37]);
                 inst.midiVelocityOffset = static_cast<int_fast8_t>(data[offset + 36]);
                 inst.fbConn = (static_cast<uint_fast16_t>(data[offset + 40])) |
