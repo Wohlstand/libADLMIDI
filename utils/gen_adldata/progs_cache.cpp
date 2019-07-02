@@ -256,7 +256,7 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
 
     for(const BankEntry &be : banks)
     {
-        std::fprintf(out, "    {0x%04lX, %zu, %zu, \"%s\", ",
+        std::fprintf(out, "\t{0x%04lX, %zu, %zu, \"%s\", ",
                                    be.bankSetup,
                                    be.melodic.size(),
                                    be.percussion.size(),
@@ -275,40 +275,63 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
 
     std::fprintf(out, "};\n\n");
 
-
-    std::fprintf(out, "const size_t g_embeddedBanksMidiIndex[] =\n"
-                      "{ ");
+    std::fprintf(out, "const char* const g_embeddedBankNames[] =\n"
+                      "{\n\t");
     {
         bool commaNeeded = false;
-        for(const size_t &me : bankNumberLists)
+        size_t operatorEntryCounter = 0;
+        for(const BankEntry &be : banks)
         {
             if(commaNeeded)
                 std::fprintf(out, ", ");
             else
                 commaNeeded = true;
+            operatorEntryCounter++;
+            if(operatorEntryCounter >= 25)
+            {
+                std::fprintf(out, "\n");
+                operatorEntryCounter = 0;
+            }
+            if(operatorEntryCounter == 0)
+                std::fprintf(out, "\t");
+            std::fprintf(out, "g_embeddedBanks[%zu].title", be.bankId);
+        }
+    }
+    std::fprintf(out, "\n};\n\n");
+
+    std::fprintf(out, "const size_t g_embeddedBanksMidiIndex[] =\n"
+                      "{");
+    {
+        bool commaNeeded = false;
+        for(const size_t &me : bankNumberLists)
+        {
+            if(commaNeeded)
+                std::fprintf(out, ",");
+            else
+                commaNeeded = true;
             std::fprintf(out, "%zu", me);
         }
     }
-    std::fprintf(out, " };\n\n");
+    std::fprintf(out, "};\n\n");
 
     std::fprintf(out, "const BanksDump::MidiBank g_embeddedBanksMidi[] =\n"
                       "{\n");
     for(const MidiBank &be : midiBanks)
     {
         bool commaNeeded = true;
-        std::fprintf(out, "    { %u, %u, ", be.msb, be.lsb);
+        std::fprintf(out, "\t{%u,%u,", be.msb, be.lsb);
 
         std::fprintf(out, "{");
         commaNeeded = false;
         for(size_t i = 0; i < 128; i++)
         {
             if(commaNeeded)
-                std::fprintf(out, ", ");
+                std::fprintf(out, ",");
             else
                 commaNeeded = true;
             std::fprintf(out, "%ld", be.instruments[i]);
         }
-        std::fprintf(out, "} ");
+        std::fprintf(out, "}");
 
         std::fprintf(out, "},\n");
     }
@@ -321,7 +344,7 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
     {
         size_t opsCount = ((be.instFlags & InstrumentEntry::WOPL_Ins_4op) != 0 ||
                            (be.instFlags & InstrumentEntry::WOPL_Ins_Pseudo4op) != 0) ? 4 : 2;
-        std::fprintf(out, "    { %d, %d, %d, %u, %s%lX, %d, %s%lX, %s%lX, %s%lX, ",
+        std::fprintf(out, "\t{%d,%d,%d,%u,%s%lX,%d,%s%lX,%s%lX,%s%lX,",
                      be.noteOffset1,
                      be.noteOffset2,
                      be.midiVelocityOffset,
@@ -333,10 +356,10 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                      (be.delay_off_ms == 0 ? "" : "0x"), be.delay_off_ms);
 
         if(opsCount == 4)
-            std::fprintf(out, "{%ld, %ld, %ld, %ld} ",
+            std::fprintf(out, "{%ld,%ld,%ld,%ld} ",
                          be.ops[0], be.ops[1], be.ops[2], be.ops[3]);
         else
-            std::fprintf(out, "{%ld, %ld} ",
+            std::fprintf(out, "{%ld,%ld}",
                          be.ops[0], be.ops[1]);
 
         std::fprintf(out, "},\n");
@@ -349,8 +372,8 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
     for(const Operator &be : operators)
     {
         if(operatorEntryCounter == 0)
-            std::fprintf(out, "    ");
-        std::fprintf(out, "{0x%07lX, %s%02lX},",
+            std::fprintf(out, "\t");
+        std::fprintf(out, "{0x%07lX,%s%02lX},",
                      be.d_E862,
                      (be.d_40 == 0 ? "" : "0x"), be.d_40);
         operatorEntryCounter++;

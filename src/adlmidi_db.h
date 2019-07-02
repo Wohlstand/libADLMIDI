@@ -54,6 +54,7 @@ struct Operator
 
 } /* namespace BanksDump */
 
+extern const char* const g_embeddedBankNames[];
 extern const BanksDump::BankEntry g_embeddedBanks[];
 extern const size_t g_embeddedBanksMidiIndex[];
 extern const BanksDump::MidiBank g_embeddedBanksMidi[];
