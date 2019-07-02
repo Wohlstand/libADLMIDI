@@ -810,14 +810,29 @@ void MeasureThreaded::LoadCache(const char *fileName)
         if(std::fread(&inval, 1, sizeof(uint64_t), in) != sizeof(uint64_t))
             break;
         inst.insno2 = inval;
+        if(std::fread(&inst.instCache1.data, 1, 11, in) != 11)
+            break;
+        if(std::fread(&inst.instCache1.finetune, 1, 1, in) != 1)
+            break;
+        if(std::fread(&inst.instCache1.diff, 1, sizeof(bool), in) != sizeof(bool))
+            break;
+        if(std::fread(&inst.instCache2.data, 1, 11, in) != 11)
+            break;
+        if(std::fread(&inst.instCache2.finetune, 1, 1, in) != 1)
+            break;
+        if(std::fread(&inst.instCache2.diff, 1, sizeof(bool), in) != sizeof(bool))
+            break;
+
         if(std::fread(&inst.notenum, 1, 1, in) != 1)
             break;
         if(std::fread(&inst.real4op, 1, 1, in) != 1)
             break;
         if(std::fread(&inst.pseudo4op, 1, 1, in) != 1)
             break;
-        if(std::fread(&inst.voice2_fine_tune, sizeof(double), 1, in) != 1)
+        int64_t voice2detune = 0;
+        if(std::fread(&voice2detune, sizeof(int64_t), 1, in) != 1)
             break;
+        inst.voice2_fine_tune = static_cast<double>(voice2detune) / 1000000.0;
 
         //Instrument data
         if(fread(found_f, 1, 2 * sizeof(bool), in) != sizeof(bool) * 2)
@@ -896,18 +911,6 @@ void MeasureThreaded::LoadCache(const char *fileName)
         }
 
         //Duration data
-        if(std::fread(&info.peak_amplitude_time, 1, sizeof(uint64_t), in) != sizeof(uint64_t))
-            break;
-        if(std::fread(&info.peak_amplitude_value, 1, sizeof(double), in) != sizeof(double))
-            break;
-        if(std::fread(&info.quarter_amplitude_time, 1, sizeof(double), in) != sizeof(double))
-            break;
-        if(std::fread(&info.begin_amplitude, 1, sizeof(double), in) != sizeof(double))
-            break;
-        if(std::fread(&info.interval, 1, sizeof(double), in) != sizeof(double))
-            break;
-        if(std::fread(&info.keyoff_out_time, 1, sizeof(double), in) != sizeof(double))
-            break;
         if(std::fread(&info.ms_sound_kon, 1, sizeof(int64_t), in) != sizeof(int64_t))
             break;
         if(std::fread(&info.ms_sound_koff, 1, sizeof(int64_t), in) != sizeof(int64_t))
@@ -941,10 +944,17 @@ void MeasureThreaded::SaveCache(const char *fileName)
         fwrite(&outval, 1, sizeof(uint64_t), out);
         outval = in.insno2;
         fwrite(&outval, 1, sizeof(uint64_t), out);
+        fwrite(&in.instCache1.data, 1, 11, out);
+        fwrite(&in.instCache1.finetune, 1, 1, out);
+        fwrite(&in.instCache1.diff, 1, sizeof(bool), out);
+        fwrite(&in.instCache2.data, 1, 11, out);
+        fwrite(&in.instCache2.finetune, 1, 1, out);
+        fwrite(&in.instCache2.diff, 1, sizeof(bool), out);
         fwrite(&in.notenum, 1, 1, out);
         fwrite(&in.real4op, 1, 1, out);
         fwrite(&in.pseudo4op, 1, 1, out);
-        fwrite(&in.voice2_fine_tune, sizeof(double), 1, out);
+        int64_t voice2detune = static_cast<int64_t>(in.voice2_fine_tune * 1000000.0);
+        fwrite(&voice2detune, sizeof(int64_t), 1, out);
 
         for(InstrumentDataTab::const_iterator j = insdatatab.begin(); j != insdatatab.end(); ++j)
         {
@@ -970,12 +980,6 @@ void MeasureThreaded::SaveCache(const char *fileName)
             fwrite(&id[i].diff, 1, sizeof(bool), out);
         }
 
-        fwrite(&it->second.peak_amplitude_time, 1, sizeof(uint64_t), out);
-        fwrite(&it->second.peak_amplitude_value, 1, sizeof(double), out);
-        fwrite(&it->second.quarter_amplitude_time, 1, sizeof(double), out);
-        fwrite(&it->second.begin_amplitude, 1, sizeof(double), out);
-        fwrite(&it->second.interval, 1, sizeof(double), out);
-        fwrite(&it->second.keyoff_out_time, 1, sizeof(double), out);
         fwrite(&it->second.ms_sound_kon, 1, sizeof(int64_t), out);
         fwrite(&it->second.ms_sound_koff, 1, sizeof(int64_t), out);
         fwrite(&it->second.nosound, 1, sizeof(bool), out);
@@ -1026,7 +1030,7 @@ void MeasureThreaded::LoadCacheX(const char *fileName)
         return;
     }
 
-    itemsCount = static_cast<int_fast32_t>(toSint32LE(itemsCountA));
+    itemsCount = static_cast<uint_fast32_t>(toUint32LE(itemsCountA));
 
     while(!std::feof(in) && itemsCount > 0)
     {
@@ -1240,8 +1244,12 @@ void MeasureThreaded::destData::callback(void *myself)
                            static_cast<int_fast32_t>(s->bd_ins->percussionKeyNumber),
                            static_cast<int_fast32_t>(s->bd_ins->instFlags),
                            static_cast<int_fast32_t>(s->bd_ins->secondVoiceDetune)};
+        s->myself->m_durationInfo_mx.lock();
         DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfoX.find(ok);
-        if(cachedEntry != s->myself->m_durationInfoX.end())
+        bool atEnd = cachedEntry == s->myself->m_durationInfoX.end();
+        s->myself->m_durationInfo_mx.unlock();
+
+        if(!atEnd)
         {
             const DurationInfo &di = cachedEntry->second;
             s->bd_ins->delay_on_ms = di.ms_sound_kon;
@@ -1258,17 +1266,21 @@ void MeasureThreaded::destData::callback(void *myself)
     }
     else
     {
-        DurationInfoCache::iterator cachedEntry = s->myself->m_durationInfo.find(s->i->first);
+        const ins &ok = s->i->first;
+        s->myself->m_durationInfo_mx.lock();
+        DurationInfoCache::iterator cachedEntry = s->myself->m_durationInfo.find(ok);
+        bool atEnd = cachedEntry == s->myself->m_durationInfo.end();
+        s->myself->m_durationInfo_mx.unlock();
 
-        if(cachedEntry != s->myself->m_durationInfo.end())
+        if(!atEnd)
         {
             s->myself->m_cache_matches++;
             goto endWork;
         }
 
-        info = MeasureDurations(s->i->first, &dosbox);
+        info = MeasureDurations(ok, &dosbox);
         s->myself->m_durationInfo_mx.lock();
-        s->myself->m_durationInfo.insert({s->i->first, info});
+        s->myself->m_durationInfo.insert({ok, info});
         s->myself->m_durationInfo_mx.unlock();
     }
 

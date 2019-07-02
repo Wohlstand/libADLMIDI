@@ -90,7 +90,7 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
         tmp.data[6] = 0;        // reg 0xE0: modulator, never seems to be set
         tmp.data[7] = 0;        // reg 0xE0: carrier,   never seems to be set
 
-        ins tmp2{};
+        ins tmp2;
         tmp2.notenum   = 0;
         tmp2.pseudo4op = false;
         tmp2.real4op = false;

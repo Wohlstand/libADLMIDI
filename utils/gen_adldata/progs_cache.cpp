@@ -66,10 +66,14 @@ size_t InsertIns(
         }
 
         in.insno1 = insno;
+        in.instCache1 = id;
     }
 
     if(oneVoice || (id == id2))
+    {
         in.insno2 = in.insno1;
+        in.instCache2 = in.instCache1;
+    }
     else
     {
         InstrumentDataTab::iterator i = insdatatab.lower_bound(id2);
@@ -92,6 +96,7 @@ size_t InsertIns(
             insno2 = i->second.first;
         }
         in.insno2 = insno2;
+        in.instCache2 = id2;
     }
 
     {
@@ -123,13 +128,18 @@ size_t InsertNoSoundIns()
 {
     // { 0x0F70700,0x0F70710, 0xFF,0xFF, 0x0,+0 },
     insdata tmp1 = MakeNoSoundIns();
-    struct ins tmp2 = { 0, 0, 0, false, false, 0u, 0.0, 0};
+    struct ins tmp2;
     return InsertIns(tmp1, tmp1, tmp2, "nosound", "");
 }
 
 insdata MakeNoSoundIns()
 {
-    return { {0x00, 0x10, 0x07, 0x07, 0xF7, 0xF7, 0x00, 0x00, 0xFF, 0xFF, 0x00}, 0, false};
+    insdata nosnd;
+    uint8_t d[] = {0x00, 0x10, 0x07, 0x07, 0xF7, 0xF7, 0x00, 0x00, 0xFF, 0xFF, 0x00};
+    std::memcpy(nosnd.data, d, 11);
+    nosnd.finetune = 0;
+    nosnd.diff = false;
+    return nosnd;
 }
 
 

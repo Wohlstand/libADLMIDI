@@ -22,6 +22,18 @@ struct insdata
     uint8_t         data[11];
     int8_t          finetune;
     bool            diff;
+    explicit insdata()
+    {
+        std::memset(data, 0, 11);
+        finetune = 0;
+        diff = false;
+    }
+    insdata(const insdata &b)
+    {
+        std::memcpy(data, b.data, 11);
+        finetune = b.finetune;
+        diff = b.diff;
+    }
     bool operator==(const insdata &b) const
     {
         return (std::memcmp(data, b.data, 11) == 0) && (finetune == b.finetune) && (diff == b.diff);
@@ -46,9 +58,9 @@ struct insdata
 
 inline bool equal_approx(double const a, double const b)
 {
-    double const epsilon(std::numeric_limits<double>::epsilon() * 100);
-    double const scale(1.0);
-    return std::fabs(a - b) < epsilon * (scale + (std::max)(std::fabs(a), std::fabs(b)));
+    int_fast64_t ai = static_cast<int_fast64_t>(a * 1000000.0);
+    int_fast64_t bi = static_cast<int_fast64_t>(b * 1000000.0);
+    return ai == bi;
 }
 
 struct ins
@@ -59,18 +71,44 @@ struct ins
            Flag_RM_Cymbal = 0x20, Flag_RM_HiHat = 0x28, Mask_RhythmMode = 0x38 };
 
     size_t insno1, insno2;
+    insdata instCache1, instCache2;
     unsigned char notenum;
     bool pseudo4op;
     bool real4op;
     uint32_t rhythmModeDrum;
     double voice2_fine_tune;
     int8_t midi_velocity_offset;
+    explicit ins() :
+        insno1(0),
+        insno2(0),
+        notenum(0),
+        pseudo4op(false),
+        real4op(false),
+        rhythmModeDrum(false),
+        voice2_fine_tune(0.0),
+        midi_velocity_offset(0)
+    {}
+
+    ins(const ins &o) :
+        insno1(o.insno1),
+        insno2(o.insno2),
+        instCache1(o.instCache1),
+        instCache2(o.instCache2),
+        notenum(o.notenum),
+        pseudo4op(o.pseudo4op),
+        real4op(o.real4op),
+        rhythmModeDrum(o.rhythmModeDrum),
+        voice2_fine_tune(o.voice2_fine_tune),
+        midi_velocity_offset(o.midi_velocity_offset)
+    {}
 
     bool operator==(const ins &b) const
     {
         return notenum == b.notenum
                && insno1 == b.insno1
                && insno2 == b.insno2
+               && instCache1 == b.instCache2
+               && instCache2 == b.instCache2
                && pseudo4op == b.pseudo4op
                && real4op == b.real4op
                && rhythmModeDrum == b.rhythmModeDrum
@@ -81,6 +119,8 @@ struct ins
     {
         if(insno1 != b.insno1) return insno1 < b.insno1;
         if(insno2 != b.insno2) return insno2 < b.insno2;
+        if(instCache1 != b.instCache1) return instCache1 < b.instCache1;
+        if(instCache2 != b.instCache2) return instCache2 < b.instCache2;
         if(notenum != b.notenum) return notenum < b.notenum;
         if(pseudo4op != b.pseudo4op) return pseudo4op < b.pseudo4op;
         if(real4op != b.real4op) return real4op < b.real4op;
