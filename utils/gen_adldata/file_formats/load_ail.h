@@ -116,16 +116,25 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
             unsigned o = offset + 3 + i * 11;
             tmp[i].finetune = (gmno < 128 && i == 0) ? notenum : 0;
             tmp[i].diff = (i == 1);
-            tmp[i].data[0] = data[o + 0]; // 20
-            tmp[i].data[8] = data[o + 1]; // 40 (vol)
-            tmp[i].data[2] = data[o + 2]; // 60
-            tmp[i].data[4] = data[o + 3]; // 80
-            tmp[i].data[6] = data[o + 4]; // E0
-            tmp[i].data[1] = data[o + 6]; // 23
-            tmp[i].data[9] = data[o + 7]; // 43 (vol)
-            tmp[i].data[3] = data[o + 8]; // 63
-            tmp[i].data[5] = data[o + 9]; // 83
-            tmp[i].data[7] = data[o + 10]; // E3
+
+            uint8_t temp[11] = {0};
+            if(o < data.size())
+            {
+                size_t count = data.size() - o;
+                count = (count > sizeof(temp)) ? sizeof(temp) : count;
+                std::memcpy(temp, &data[o], count);
+            }
+
+            tmp[i].data[0] = temp[0]; // 20
+            tmp[i].data[8] = temp[1]; // 40 (vol)
+            tmp[i].data[2] = temp[2]; // 60
+            tmp[i].data[4] = temp[3]; // 80
+            tmp[i].data[6] = temp[4]; // E0
+            tmp[i].data[1] = temp[6]; // 23
+            tmp[i].data[9] = temp[7]; // 43 (vol)
+            tmp[i].data[3] = temp[8]; // 63
+            tmp[i].data[5] = temp[9]; // 83
+            tmp[i].data[7] = temp[10]; // E3
 
             unsigned fb_c = data[offset + 3 + 5];
             tmp[i].data[10] = uint8_t(fb_c);
