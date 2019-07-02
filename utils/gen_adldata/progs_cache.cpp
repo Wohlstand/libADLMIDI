@@ -365,6 +365,116 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
     std::fclose(out);
 }
 
+bool BanksDump::isSilent(const BanksDump::Operator *ops, uint_fast16_t fbConn, size_t countOps, bool pseudo4op)
+{
+    // TODO: Implement this completely!!!
+    const uint_fast8_t conn1 = (fbConn) & 0x01;
+    const uint_fast8_t conn2 = (fbConn >> 8) & 0x01;
+    const uint_fast8_t egEn[4] =
+    {
+        static_cast<uint_fast8_t>(((ops[0].d_E862 & 0xFF) >> 5) & 0x01),
+        static_cast<uint_fast8_t>(((ops[1].d_E862 & 0xFF) >> 5) & 0x01),
+        static_cast<uint_fast8_t>(((ops[2].d_E862 & 0xFF) >> 5) & 0x01),
+        static_cast<uint_fast8_t>(((ops[3].d_E862 & 0xFF) >> 5) & 0x01)
+    };
+    const uint_fast8_t attack[4] =
+    {
+        static_cast<uint_fast8_t>((((ops[0].d_E862 >> 8) & 0xFF) >> 4) & 0x0F),
+        static_cast<uint_fast8_t>((((ops[1].d_E862 >> 8) & 0xFF) >> 4) & 0x0F),
+        static_cast<uint_fast8_t>((((ops[2].d_E862 >> 8) & 0xFF) >> 4) & 0x0F),
+        static_cast<uint_fast8_t>((((ops[3].d_E862 >> 8) & 0xFF) >> 4) & 0x0F)
+    };
+    const uint_fast8_t decay[4] =
+    {
+        static_cast<uint_fast8_t>((ops[0].d_E862 >> 8) & 0x0F),
+        static_cast<uint_fast8_t>((ops[1].d_E862 >> 8) & 0x0F),
+        static_cast<uint_fast8_t>((ops[2].d_E862 >> 8) & 0x0F),
+        static_cast<uint_fast8_t>((ops[3].d_E862 >> 8) & 0x0F)
+    };
+    const uint_fast8_t sustain[4] =
+    {
+        static_cast<uint_fast8_t>((((ops[0].d_E862 >> 16) & 0xFF) >> 4) & 0x0F),
+        static_cast<uint_fast8_t>((((ops[1].d_E862 >> 16) & 0xFF) >> 4) & 0x0F),
+        static_cast<uint_fast8_t>((((ops[2].d_E862 >> 16) & 0xFF) >> 4) & 0x0F),
+        static_cast<uint_fast8_t>((((ops[3].d_E862 >> 16) & 0xFF) >> 4) & 0x0F)
+    };
+    const uint_fast8_t level[4] =
+    {
+        static_cast<uint_fast8_t>(ops[0].d_40),
+        static_cast<uint_fast8_t>(ops[1].d_40),
+        static_cast<uint_fast8_t>(ops[2].d_40),
+        static_cast<uint_fast8_t>(ops[3].d_40)
+    };
+
+    // level=0x3f - silence
+    // attack=0x00 - silence
+    // attack=0x0F & sustain=0 & decay=0x0F & egOff - silence
+
+    if(countOps == 2)
+    {
+        if(conn1 == 0)
+        {
+            if(level[1] == 0x3F)
+                return true;
+            if(attack[1] == 0x00)
+                return true;
+            if(attack[1] == 0x0F && sustain[1] == 0x00 && decay[1] == 0x0F && !egEn[1])
+                return true;
+        }
+        if(conn1 == 1)
+        {
+            if(level[0] == 0x3F && level[1] == 0x3F)
+                return true;
+            if(attack[0] == 0x00 && attack[1] == 0x00)
+                return true;
+            if(attack[0] == 0x0F && sustain[0] == 0x00 && decay[0] == 0x0F && !egEn[0] &&
+               attack[1] == 0x0F && sustain[1] == 0x00 && decay[1] == 0x0F && !egEn[1])
+                return true;
+        }
+    }
+    else if(countOps == 4 && pseudo4op)
+    {
+        bool silent1 = false;
+        bool silent2 = false;
+        if(conn1 == 0 && (level[1] == 0x3F))
+            silent1 = true;
+        if(conn1 == 1 && (level[0] == 0x3F) && (level[1] == 0x3F))
+            silent1 = true;
+        if(conn2 == 0 && (level[3] == 0x3F))
+            silent2 = true;
+        if(conn2 == 1 && (level[2] == 0x3F) && (level[3] == 0x3F))
+            silent2 = true;
+        if(silent1 && silent2)
+            return true;
+    }
+    else if(countOps == 4 && !pseudo4op)
+    {
+        if(conn1 == 0 && conn1 == 0) // FM-FM [0, 0, 0, 1]
+        {
+            if(level[3] == 0x3F )
+                return true;
+        }
+
+        if(conn1 == 1 && conn1 == 0) // AM-FM [1, 0, 0, 1]
+        {
+            if(level[0] == 0x3F && level[3] == 0x3F)
+                return true;
+        }
+        if(conn1 == 0 && conn1 == 1) // FM-AM [0, 1, 0, 1]
+        {
+            if(level[1] == 0x3F && level[3] == 0x3F)
+                return true;
+        }
+        if(conn1 == 1 && conn1 == 1) // FM-AM [1, 0, 1, 1]
+        {
+            if(level[0] == 0x3F && level[2] == 0x3F && level[3] == 0x3F)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 void BanksDump::InstrumentEntry::setFbConn(uint_fast16_t fbConn1, uint_fast16_t fbConn2)
 {
     fbConn = (static_cast<uint_fast16_t>(fbConn1 & 0x0F)) |
