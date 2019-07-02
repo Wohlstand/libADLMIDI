@@ -152,7 +152,7 @@ struct TinySynth
 
     void resetChip()
     {
-        static const short initdata[(2 + 3 + 2 + 2) * 2] =
+        static const short initdata[] =
         {
             0x004, 96, 0x004, 128,      // Pulse timer
             0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable, leave disabled
@@ -163,7 +163,7 @@ struct TinySynth
 
         for(size_t a = 0; a < 18; ++a)
             m_chip->writeReg(0xB0 + g_channelsMap[a], 0x00);
-        for(unsigned a = 0; a < 18; a += 2)
+        for(unsigned a = 0; a < sizeof(initdata) / sizeof(*initdata); a += 2)
             m_chip->writeReg((uint16_t)initdata[a], (uint8_t)initdata[a + 1]);
     }
 
