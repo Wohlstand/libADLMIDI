@@ -266,9 +266,9 @@ struct TinySynth
         for(unsigned n = 0; n < m_notesNum; ++n)
         {
             static const uint8_t data[4] = {0x20, 0x60, 0x80, 0xE0};
-            uint16_t o1 = g_operatorsMap[0];
-            uint16_t o2 = g_operatorsMap[1];
             size_t opOffset = (n * 2);
+            uint16_t o1 = g_operatorsMap[opOffset + 0];
+            uint16_t o2 = g_operatorsMap[opOffset + 1];
             uint_fast32_t x1 = ops[opOffset + 0].d_E862, y1 = ops[opOffset + 1].d_E862;
             uint_fast8_t  x2 = ops[opOffset + 0].d_40,   y2 = ops[opOffset + 1].d_40;
             uint_fast8_t  fbConn = (ins.fbConn >> (n * 8)) & 0xFF;
