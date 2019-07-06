@@ -169,7 +169,12 @@ void MIDIplay::applySetup()
 
 #ifndef DISABLE_EMBEDDED_BANKS
     if(synth.m_embeddedBank != Synth::CustomBankTag)
-        synth.m_insBankSetup = adlbanksetup[m_setup.bankId];
+    {
+        const BanksDump::BankEntry &b = g_embeddedBanks[m_setup.bankId];
+        synth.m_insBankSetup.volumeModel = (b.bankSetup & 0x00FF);
+        synth.m_insBankSetup.deepTremolo = (b.bankSetup >> 8 & 0x0001) != 0;
+        synth.m_insBankSetup.deepVibrato = (b.bankSetup >> 8 & 0x0002) != 0;
+    }
 #endif
 
     synth.m_deepTremoloMode     = m_setup.deepTremoloMode < 0 ?

@@ -201,7 +201,7 @@ ADLMIDI_EXPORT int adl_getBanksCount()
 ADLMIDI_EXPORT const char *const *adl_getBankNames()
 {
 #ifndef DISABLE_EMBEDDED_BANKS
-    return banknames;
+    return g_embeddedBankNames;
 #else
     return NULL;
 #endif
@@ -363,7 +363,7 @@ ADLMIDI_EXPORT int adl_loadEmbeddedBank(struct ADL_MIDIPlayer *device, ADL_Bank 
                          "adl_openBankData() functions instead of adl_loadEmbeddedBank().");
     return -1;
 #else
-    if(num < 0 || num >= maxAdlBanks())
+    if(num < 0 || num >= static_cast<int>(g_embeddedBanksCount))
         return -1;
 
     Synth::BankMap::iterator it = Synth::BankMap::iterator::from_ptrs(bank->pointer);
