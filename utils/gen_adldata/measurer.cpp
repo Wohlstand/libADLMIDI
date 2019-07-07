@@ -150,6 +150,8 @@ struct TinySynth
     int16_t m_noteOffsets[2];
     unsigned m_x[2];
 
+    bool m_isSilentGuess;
+
     void resetChip()
     {
         static const short initdata[] =
@@ -283,6 +285,7 @@ struct TinySynth
             m_chip->writeReg(0x40 + o2, y2 & 0xFF);
         }
 
+        m_isSilentGuess = BanksDump::isSilent(ops, ins.fbConn, opsNum, isPseudo4ops);
 //        for(unsigned n = 0; n < m_notesNum; ++n)
 //        {
 //            static const unsigned char patchdata[11] =
@@ -734,6 +737,11 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
     db.instruments[ins.instId].delay_off_ms = result.ms_sound_koff;
     if(result.nosound)
         db.instruments[ins.instId].instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
+//    {
+//        bool silent1 = result.nosound;
+//        bool silent2 = synth.m_isSilentGuess;
+//        assert(silent1 == silent2);
+//    }
 #ifdef GEN_ADLDATA_DEEP_DEBUG
     /***************DEBUG******************/
     ctx_wave_close(waveCtx);
