@@ -124,7 +124,7 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
             SetBank(bank, (unsigned int)gmno, resno);
 
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
-            db.addInstrument(bnk, patchId, inst, opsD);
+            db.addInstrument(bnk, patchId, inst, opsD, fn);
         }
         else
         {
@@ -132,7 +132,7 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
             size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
             SetBank(bank, (unsigned int)gmno, resno);
 
-            db.addInstrument(bnk, patchId, inst, opsD);
+            db.addInstrument(bnk, patchId, inst, opsD, fn);
         }
     }
 

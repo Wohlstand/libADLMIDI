@@ -80,7 +80,7 @@ bool BankFormats::LoadTMB(BanksDump &db, const char *fn, unsigned bank, const st
         size_t resno = InsertIns(tmp, tmp2, name, name2);
         SetBank(bank, gmno, resno);
 
-        db.addInstrument(bnk, patchId, inst, ops);
+        db.addInstrument(bnk, patchId, inst, ops, fn);
     }
 
     db.addMidiBank(bankDb, false, bnkMelodique);

@@ -271,7 +271,7 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
                         SetBank(bank, gmno, resno);
                     }
                 }
-                db.addInstrument(bnk, i, inst, ops);
+                db.addInstrument(bnk, i, inst, ops, fn);
             }
             db.addMidiBank(bankDb, is_percussion, bnk);
         }

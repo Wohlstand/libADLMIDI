@@ -204,7 +204,10 @@ void BanksDump::addMidiBank(size_t bankId, bool percussion, BanksDump::MidiBank 
         be.melodic.push_back(b.midiBankId);
 }
 
-void BanksDump::addInstrument(BanksDump::MidiBank &bank, size_t patchId, BanksDump::InstrumentEntry e, BanksDump::Operator *ops)
+void BanksDump::addInstrument(BanksDump::MidiBank &bank, size_t patchId,
+                              BanksDump::InstrumentEntry e,
+                              BanksDump::Operator *ops,
+                              const std::string &meta)
 {
     assert(patchId < 128);
     size_t opsCount = ((e.instFlags & InstrumentEntry::WOPL_Ins_4op) != 0 ||
@@ -237,11 +240,14 @@ void BanksDump::addInstrument(BanksDump::MidiBank &bank, size_t patchId, BanksDu
     if(it == instruments.end())
     {
         e.instId = instruments.size();
+        e.instMetas.push_back(meta + "_" + std::to_string(patchId));
         instruments.push_back(e);
     }
     else
     {
         e.instId = it->instId;
+        e.instMetas.push_back(meta + "_" + std::to_string(patchId));
+        it->instMetas.push_back(meta + "_" + std::to_string(patchId));
     }
     bank.instruments[patchId] = static_cast<int_fast32_t>(e.instId);
 }
@@ -398,70 +404,98 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
     std::fclose(out);
 }
 
-bool BanksDump::isSilent(const BanksDump::Operator *ops, uint_fast16_t fbConn, size_t countOps, bool pseudo4op)
+struct OpCheckData
+{
+    uint_fast8_t egEn;
+    uint_fast8_t attack;
+    uint_fast8_t decay;
+    uint_fast8_t sustain;
+    uint_fast8_t release;
+    uint_fast8_t level;
+
+    void setData(uint_fast32_t d_E862, uint_fast32_t d_40)
+    {
+        egEn    = static_cast<uint_fast8_t>(((d_E862 & 0xFF) >> 5) & 0x01);
+        decay   = static_cast<uint_fast8_t>((d_E862 >> 8)  & 0x0F);
+        attack  = static_cast<uint_fast8_t>((d_E862 >> 12) & 0x0F);
+        release = static_cast<uint_fast8_t>((d_E862 >> 16) & 0x0F);
+        sustain = static_cast<uint_fast8_t>((d_E862 >> 20) & 0x0F);
+        level   = static_cast<uint_fast8_t>(d_40);
+    }
+
+    bool isOpSilent(bool moreInfo)
+    {
+        // level=0x3f - silence
+        // attack=0x00 - silence
+        // attack=0x0F & sustain=0x0F & decay=0x0F - silence
+        // attack=0x0F & decay=0x0F & release=0x00 & egOff - silence
+        if(level == 0x3F)
+        {
+            if(moreInfo)
+                std::fprintf(stdout, "== volume=0x3F ==\n");
+            return true;
+        }
+        if(attack == 0x00)
+        {
+            if(moreInfo)
+                std::fprintf(stdout, "== attack=0x00 ==\n");
+            return true;
+        }
+        if(attack == 0x0F && sustain == 0x0F && decay == 0x0F)
+        {
+            if(moreInfo)
+                std::fprintf(stdout, "== attack=0x0F, sustain=0x0F, decay=0x0F ==\n");
+            return true;
+        }
+        if(attack == 0x0F && decay == 0x0F && release == 0x00 && !egEn)
+        {
+            if(moreInfo)
+                std::fprintf(stdout, "== attack=0x0F, decay=0x0F, release=0x00, !egEn ==\n");
+            return true;
+        }
+        return false;
+    }
+};
+
+bool BanksDump::isSilent(const BanksDump &db, const BanksDump::InstrumentEntry &ins, bool moreInfo)
+{
+    bool isPseudo4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op) != 0);
+    bool is4ops =       ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_4op) != 0) && !isPseudo4ops;
+    size_t opsNum = (is4ops || isPseudo4ops) ? 4 : 2;
+    BanksDump::Operator ops[4];
+    assert(ins.ops[0] >= 0);
+    assert(ins.ops[1] >= 0);
+    ops[0] = db.operators[ins.ops[0]];
+    ops[1] = db.operators[ins.ops[1]];
+    if(opsNum > 2)
+    {
+        assert(ins.ops[2] >= 0);
+        assert(ins.ops[3] >= 0);
+        ops[2] = db.operators[ins.ops[2]];
+        ops[3] = db.operators[ins.ops[3]];
+    }
+    return isSilent(ops, ins.fbConn, opsNum, isPseudo4ops, moreInfo);
+}
+
+bool BanksDump::isSilent(const BanksDump::Operator *ops, uint_fast16_t fbConn, size_t countOps, bool pseudo4op, bool moreInfo)
 {
     // TODO: Implement this completely!!!
     const uint_fast8_t conn1 = (fbConn) & 0x01;
     const uint_fast8_t conn2 = (fbConn >> 8) & 0x01;
-    const uint_fast8_t egEn[4] =
-    {
-        static_cast<uint_fast8_t>(((ops[0].d_E862 & 0xFF) >> 5) & 0x01),
-        static_cast<uint_fast8_t>(((ops[1].d_E862 & 0xFF) >> 5) & 0x01),
-        static_cast<uint_fast8_t>(((ops[2].d_E862 & 0xFF) >> 5) & 0x01),
-        static_cast<uint_fast8_t>(((ops[3].d_E862 & 0xFF) >> 5) & 0x01)
-    };
-    const uint_fast8_t attack[4] =
-    {
-        static_cast<uint_fast8_t>((((ops[0].d_E862 >> 8) & 0xFF) >> 4) & 0x0F),
-        static_cast<uint_fast8_t>((((ops[1].d_E862 >> 8) & 0xFF) >> 4) & 0x0F),
-        static_cast<uint_fast8_t>((((ops[2].d_E862 >> 8) & 0xFF) >> 4) & 0x0F),
-        static_cast<uint_fast8_t>((((ops[3].d_E862 >> 8) & 0xFF) >> 4) & 0x0F)
-    };
-    const uint_fast8_t decay[4] =
-    {
-        static_cast<uint_fast8_t>((ops[0].d_E862 >> 8) & 0x0F),
-        static_cast<uint_fast8_t>((ops[1].d_E862 >> 8) & 0x0F),
-        static_cast<uint_fast8_t>((ops[2].d_E862 >> 8) & 0x0F),
-        static_cast<uint_fast8_t>((ops[3].d_E862 >> 8) & 0x0F)
-    };
-    const uint_fast8_t sustain[4] =
-    {
-        static_cast<uint_fast8_t>((((ops[0].d_E862 >> 16) & 0xFF) >> 4) & 0x0F),
-        static_cast<uint_fast8_t>((((ops[1].d_E862 >> 16) & 0xFF) >> 4) & 0x0F),
-        static_cast<uint_fast8_t>((((ops[2].d_E862 >> 16) & 0xFF) >> 4) & 0x0F),
-        static_cast<uint_fast8_t>((((ops[3].d_E862 >> 16) & 0xFF) >> 4) & 0x0F)
-    };
-    const uint_fast8_t level[4] =
-    {
-        static_cast<uint_fast8_t>(ops[0].d_40),
-        static_cast<uint_fast8_t>(ops[1].d_40),
-        static_cast<uint_fast8_t>(ops[2].d_40),
-        static_cast<uint_fast8_t>(ops[3].d_40)
-    };
-
-    // level=0x3f - silence
-    // attack=0x00 - silence
-    // attack=0x0F & sustain=0 & decay=0x0F & egOff - silence
+    OpCheckData opd[4];
+    for(size_t i = 0; i < 4; i++)
+        opd[i].setData(ops[i].d_E862, ops[i].d_40);
 
     if(countOps == 2)
     {
         if(conn1 == 0)
         {
-            if(level[1] == 0x3F)
-                return true;
-            if(attack[1] == 0x00)
-                return true;
-            if(attack[1] == 0x0F && sustain[1] == 0x00 && decay[1] == 0x0F && !egEn[1])
+            if(opd[1].isOpSilent(moreInfo))
                 return true;
         }
         if(conn1 == 1)
         {
-            if(level[0] == 0x3F && level[1] == 0x3F)
-                return true;
-            if(attack[0] == 0x00 && attack[1] == 0x00)
-                return true;
-            if(attack[0] == 0x0F && sustain[0] == 0x00 && decay[0] == 0x0F && !egEn[0] &&
-               attack[1] == 0x0F && sustain[1] == 0x00 && decay[1] == 0x0F && !egEn[1])
+            if(opd[0].isOpSilent(moreInfo) && opd[1].isOpSilent(moreInfo))
                 return true;
         }
     }
@@ -469,38 +503,38 @@ bool BanksDump::isSilent(const BanksDump::Operator *ops, uint_fast16_t fbConn, s
     {
         bool silent1 = false;
         bool silent2 = false;
-        if(conn1 == 0 && (level[1] == 0x3F))
+        if(conn1 == 0 && opd[1].isOpSilent(moreInfo))
             silent1 = true;
-        if(conn1 == 1 && (level[0] == 0x3F) && (level[1] == 0x3F))
+        if(conn1 == 1 && opd[0].isOpSilent(moreInfo) && opd[1].isOpSilent(moreInfo))
             silent1 = true;
-        if(conn2 == 0 && (level[3] == 0x3F))
+        if(conn2 == 0 && opd[3].isOpSilent(moreInfo))
             silent2 = true;
-        if(conn2 == 1 && (level[2] == 0x3F) && (level[3] == 0x3F))
+        if(conn2 == 1 && opd[2].isOpSilent(moreInfo) && opd[3].isOpSilent(moreInfo))
             silent2 = true;
         if(silent1 && silent2)
             return true;
     }
     else if(countOps == 4 && !pseudo4op)
     {
-        if(conn1 == 0 && conn1 == 0) // FM-FM [0, 0, 0, 1]
+        if(conn1 == 0 && conn2 == 0) // FM-FM [0, 0, 0, 1]
         {
-            if(level[3] == 0x3F )
+            if(opd[3].isOpSilent(moreInfo))
                 return true;
         }
 
-        if(conn1 == 1 && conn1 == 0) // AM-FM [1, 0, 0, 1]
+        if(conn1 == 1 && conn2 == 0) // AM-FM [1, 0, 0, 1]
         {
-            if(level[0] == 0x3F && level[3] == 0x3F)
+            if(opd[0].isOpSilent(moreInfo) && opd[3].isOpSilent(moreInfo))
                 return true;
         }
-        if(conn1 == 0 && conn1 == 1) // FM-AM [0, 1, 0, 1]
+        if(conn1 == 0 && conn2 == 1) // FM-AM [0, 1, 0, 1]
         {
-            if(level[1] == 0x3F && level[3] == 0x3F)
+            if(opd[1].isOpSilent(moreInfo) && opd[3].isOpSilent(moreInfo))
                 return true;
         }
-        if(conn1 == 1 && conn1 == 1) // FM-AM [1, 0, 1, 1]
+        if(conn1 == 1 && conn2 == 1) // FM-AM [1, 0, 1, 1]
         {
-            if(level[0] == 0x3F && level[2] == 0x3F && level[3] == 0x3F)
+            if(opd[0].isOpSilent(moreInfo) && opd[2].isOpSilent(moreInfo) && opd[3].isOpSilent(moreInfo))
                 return true;
         }
     }

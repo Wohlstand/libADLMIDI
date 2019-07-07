@@ -297,6 +297,7 @@ struct BanksDump
     struct InstrumentEntry
     {
         uint_fast32_t instId = 0;
+        std::vector<std::string> instMetas;
 
         typedef enum WOPL_InstrumentFlags
         {
@@ -399,11 +400,12 @@ struct BanksDump
 
     static void toOps(const insdata &inData, Operator *outData, size_t begin = 0);
     //! WIP
-    static bool isSilent(const Operator *ops, uint_fast16_t fbConn, size_t countOps = 2, bool pseudo4op = false);
+    static bool isSilent(const BanksDump &db, const BanksDump::InstrumentEntry &ins, bool moreInfo = false);
+    static bool isSilent(const Operator *ops, uint_fast16_t fbConn, size_t countOps = 2, bool pseudo4op = false, bool moreInfo = false);
 
     size_t initBank(size_t bankId, const std::string &title, uint_fast16_t bankSetup);
     void addMidiBank(size_t bankId, bool percussion, MidiBank b);
-    void addInstrument(MidiBank &bank, size_t patchId, InstrumentEntry e, Operator *ops);
+    void addInstrument(MidiBank &bank, size_t patchId, InstrumentEntry e, Operator *ops, const std::string &meta = std::string());
     void exportBanks(const std::string &outPath, const std::string &headerName = "adlmidi_db.h");
 };
 

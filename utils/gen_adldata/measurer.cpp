@@ -285,7 +285,6 @@ struct TinySynth
             m_chip->writeReg(0x40 + o2, y2 & 0xFF);
         }
 
-        m_isSilentGuess = BanksDump::isSilent(ops, ins.fbConn, opsNum, isPseudo4ops);
 //        for(unsigned n = 0; n < m_notesNum; ++n)
 //        {
 //            static const unsigned char patchdata[11] =
@@ -737,16 +736,36 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
     db.instruments[ins.instId].delay_off_ms = result.ms_sound_koff;
     if(result.nosound)
         db.instruments[ins.instId].instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
-//    {
-//        bool silent1 = result.nosound;
-//        bool silent2 = synth.m_isSilentGuess;
-//        assert(silent1 == silent2);
-//    }
+
 #ifdef GEN_ADLDATA_DEEP_DEBUG
     /***************DEBUG******************/
     ctx_wave_close(waveCtx);
     /***************DEBUG******************/
 #endif
+    {
+        bool silent1 = result.nosound;
+        bool silent2 = BanksDump::isSilent(db, ins);
+        if(silent1 != silent2)
+        {
+            std::fprintf(stdout,
+                         "\n\n%04lu - %s  AN=%u NN=%u -- con1=%lu, con2=%lu\n%s computed - %s actual (%g peak)\n\n",
+                         ins.instId, synth.m_isPseudo4op ? "pseudo4op" :
+                                     synth.m_isReal4op ? "4op" : "2op",
+                         synth.m_actualNotesNum,
+                         synth.m_notesNum,
+                         (ins.fbConn) & 0x01,
+                         (ins.fbConn >> 8) & 0x01,
+                         silent2 ? "silent" : "sound",
+                         silent1 ? "silent" : "sound",
+                         peak_amplitude_value);
+            for(auto &sss : ins.instMetas)
+                std::fprintf(stdout, "%s\n", sss.c_str());
+            BanksDump::isSilent(db, ins, true);
+            std::fprintf(stdout, "\n\n");
+            std::fflush(stdout);
+            assert(silent1 == silent2);
+        }
+    }
 
     return result;
 }

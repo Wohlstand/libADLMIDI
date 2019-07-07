@@ -155,7 +155,7 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
             SetBank(bank, (unsigned int)gmno, resno);
         }
 
-        db.addInstrument(bnk, patchId, inst, ops);
+        db.addInstrument(bnk, patchId, inst, ops, fn);
 
         /*const Doom_OPL2instrument& A = ins.patchdata[0];
         const Doom_OPL2instrument& B = ins.patchdata[1];

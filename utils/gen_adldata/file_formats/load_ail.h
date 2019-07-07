@@ -169,7 +169,7 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
             unsigned fb_c = data[offset + 3 + 5];
             inst.fbConn = (static_cast<uint_fast16_t>(fb_c & 0x0F)) |
                           (static_cast<uint_fast16_t>((fb_c & 0x0E) | (fb_c >> 7)) << 8);
-            db.addInstrument(bnk, h.patch, inst, ops);
+            db.addInstrument(bnk, h.patch, inst, ops, fn);
         }
     }
 

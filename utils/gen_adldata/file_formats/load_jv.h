@@ -117,7 +117,7 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
             size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
             SetBank(bank, gmno, resno);
         }
-        db.addInstrument(bnk, patchId, inst, ops);
+        db.addInstrument(bnk, patchId, inst, ops, fn);
     }
 
     db.addMidiBank(bankDb, false, bnkMelodique);

@@ -71,7 +71,7 @@ bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, cons
         inst.fbConn = uint_fast16_t(tmp[0].data[10]) | (uint_fast16_t(tmp[1].data[10]) << 8);
         inst.percussionKeyNumber = a >= 128 ? tmp2.notenum : 0;
         inst.noteOffset1 = a < 128 ? tmp2.notenum : 0;
-        db.addInstrument(bnk, patchId, inst, ops);
+        db.addInstrument(bnk, patchId, inst, ops, fn);
     }
     std::fclose(fp);
 

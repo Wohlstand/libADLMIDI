@@ -132,7 +132,7 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
         if(!is_fat)
         {
             SetBank(bank, (unsigned int)gmno, resno);
-            db.addInstrument(bnk, n & 127, inst, ops);
+            db.addInstrument(bnk, n & 127, inst, ops, fn);
         }
         else
         {
