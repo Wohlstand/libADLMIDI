@@ -420,7 +420,7 @@ struct OpCheckData
         attack  = static_cast<uint_fast8_t>((d_E862 >> 12) & 0x0F);
         release = static_cast<uint_fast8_t>((d_E862 >> 16) & 0x0F);
         sustain = static_cast<uint_fast8_t>((d_E862 >> 20) & 0x0F);
-        level   = static_cast<uint_fast8_t>(d_40);
+        level   = static_cast<uint_fast8_t>(d_40 & 0x3F);
     }
 
     bool isOpSilent(bool moreInfo)

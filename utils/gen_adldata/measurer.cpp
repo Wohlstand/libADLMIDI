@@ -253,7 +253,7 @@ struct TinySynth
         m_noteOffsets[1] = ins.noteOffset2;
         if(isPseudo4ops)
             m_voice1Detune = ins.secondVoiceDetune;
-        m_chip->writeReg(0x104, is4ops ? (1 << 6) - 1 : 0x00);
+        m_chip->writeReg(0x104, is4ops ? 0x3F : 0x00);
 
         //For cleaner measurement, disable tremolo and vibrato
         ops[0].d_E862 &= 0xFFFFFF3F;
@@ -730,7 +730,7 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
 
     result.ms_sound_kon  = (int64_t)(quarter_amplitude_time * 1000.0 / interval);
     result.ms_sound_koff = (int64_t)(keyoff_out_time        * 1000.0 / interval);
-    result.nosound = (peak_amplitude_value < 0.5) || ((sound_min >= -1) && (sound_max <= 1));
+    result.nosound = (peak_amplitude_value < 0.5) || ((sound_min >= -19) && (sound_max <= 18));
 
     db.instruments[ins.instId].delay_on_ms = result.ms_sound_kon;
     db.instruments[ins.instId].delay_off_ms = result.ms_sound_koff;
@@ -748,7 +748,7 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
         if(silent1 != silent2)
         {
             std::fprintf(stdout,
-                         "\n\n%04lu - %s  AN=%u NN=%u -- con1=%lu, con2=%lu\n%s computed - %s actual (%g peak)\n\n",
+                         "\n\n%04lu - %s  AN=%u NN=%u -- con1=%lu, con2=%lu\n%s computed - %s actual (%g peak, %d<%d)\n\n",
                          ins.instId, synth.m_isPseudo4op ? "pseudo4op" :
                                      synth.m_isReal4op ? "4op" : "2op",
                          synth.m_actualNotesNum,
@@ -757,13 +757,16 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
                          (ins.fbConn >> 8) & 0x01,
                          silent2 ? "silent" : "sound",
                          silent1 ? "silent" : "sound",
-                         peak_amplitude_value);
+                         peak_amplitude_value,
+                         sound_min,
+                         sound_max);
             for(auto &sss : ins.instMetas)
                 std::fprintf(stdout, "%s\n", sss.c_str());
             BanksDump::isSilent(db, ins, true);
             std::fprintf(stdout, "\n\n");
             std::fflush(stdout);
             assert(silent1 == silent2);
+            exit(1);
         }
     }
 
