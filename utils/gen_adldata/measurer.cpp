@@ -152,21 +152,26 @@ struct TinySynth
 
     bool m_isSilentGuess;
 
+    void writeReg(uint16_t addr, uint8_t data)
+    {
+        m_chip->writeReg(addr, data);
+    }
+
     void resetChip()
     {
         static const short initdata[] =
         {
-            0x004, 96, 0x004, 128,      // Pulse timer
-            0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable, leave disabled
-            0x001, 32, 0x0BD, 0         // Enable wave & melodic
+            0x004, 96, 0x004, 128,        // Pulse timer
+            0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable
+            0x001, 32, 0x105, 1           // Enable wave, OPL3 extensions
         };
 
         m_chip->setRate(g_outputRate);
 
         for(size_t a = 0; a < 18; ++a)
-            m_chip->writeReg(0xB0 + g_channelsMap[a], 0x00);
-        for(unsigned a = 0; a < sizeof(initdata) / sizeof(*initdata); a += 2)
-            m_chip->writeReg((uint16_t)initdata[a], (uint8_t)initdata[a + 1]);
+            writeReg(0xB0 + g_channelsMap[a], 0x00);
+        for(unsigned a = 0; a < 14; a += 2)
+            writeReg((uint16_t)initdata[a], (uint8_t)initdata[a + 1]);
     }
 
     void setInstrument(const ins &in)
@@ -204,7 +209,7 @@ struct TinySynth
         m_noteOffsets[1] = rawData[1].finetune;
         if(in.pseudo4op)
             m_voice1Detune = in.voice2_fine_tune;
-        m_chip->writeReg(0x104, in.real4op ? (1 << 6) - 1 : 0x00);
+        writeReg(0x104, in.real4op ? (1 << 6) - 1 : 0x00);
 
         //For cleaner measurement, disable tremolo and vibrato
         rawData[0].data[0] &= 0x3F;
@@ -217,8 +222,8 @@ struct TinySynth
             static const unsigned char patchdata[11] =
             {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
             for(unsigned a = 0; a < 10; ++a)
-                m_chip->writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
-            m_chip->writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
+                writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
+            writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
         }
     }
 
@@ -253,46 +258,35 @@ struct TinySynth
         m_noteOffsets[1] = ins.noteOffset2;
         if(isPseudo4ops)
             m_voice1Detune = ins.secondVoiceDetune;
-        m_chip->writeReg(0x104, is4ops ? 0x3F : 0x00);
+        writeReg(0x104, m_isReal4op ? 0x3F : 0x00);
 
         //For cleaner measurement, disable tremolo and vibrato
         ops[0].d_E862 &= 0xFFFFFF3F;
         ops[1].d_E862 &= 0xFFFFFF3F;
         ops[2].d_E862 &= 0xFFFFFF3F;
         ops[3].d_E862 &= 0xFFFFFF3F;
-//        rawData[0].data[0] &= 0x3F;
-//        rawData[0].data[1] &= 0x3F;
-//        rawData[1].data[0] &= 0x3F;
-//        rawData[1].data[1] &= 0x3F;
 
         for(unsigned n = 0; n < m_notesNum; ++n)
         {
             static const uint8_t data[4] = {0x20, 0x60, 0x80, 0xE0};
             size_t opOffset = (n * 2);
-            uint16_t o1 = g_operatorsMap[opOffset + 0];
-            uint16_t o2 = g_operatorsMap[opOffset + 1];
+            size_t opMapOffset = m_isReal4op ? (n * 6) : opOffset;
+            uint16_t op1off = g_operatorsMap[opMapOffset + 0];
+            uint16_t op2off = g_operatorsMap[opMapOffset + 1];
             uint_fast32_t x1 = ops[opOffset + 0].d_E862, y1 = ops[opOffset + 1].d_E862;
             uint_fast8_t  x2 = ops[opOffset + 0].d_40,   y2 = ops[opOffset + 1].d_40;
             uint_fast8_t  fbConn = (ins.fbConn >> (n * 8)) & 0xFF;
 
             for(size_t a = 0; a < 4; ++a, x1 >>= 8, y1 >>= 8)
             {
-                m_chip->writeReg(data[a] + o1, x1 & 0xFF);
-                m_chip->writeReg(data[a] + o2, y1 & 0xFF);
+                writeReg(data[a] + op1off, x1 & 0xFF);
+                writeReg(data[a] + op2off, y1 & 0xFF);
             }
-            m_chip->writeReg(0xC0 + (n * 8), fbConn | 0x30);
-            m_chip->writeReg(0x40 + o1, x2 & 0xFF);
-            m_chip->writeReg(0x40 + o2, y2 & 0xFF);
-        }
+            writeReg(0xC0 + g_channelsMap[m_isReal4op ? (n * 3) : n], fbConn | 0x30);
 
-//        for(unsigned n = 0; n < m_notesNum; ++n)
-//        {
-//            static const unsigned char patchdata[11] =
-//            {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
-//            for(unsigned a = 0; a < 10; ++a)
-//                m_chip->writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
-//            m_chip->writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
-//        }
+            writeReg(0x40 + op1off, x2 & 0xFF);
+            writeReg(0x40 + op2off, y2 & 0xFF);
+        }
     }
 
     void noteOn()
@@ -317,8 +311,8 @@ struct TinySynth
             m_x[n] += (unsigned int)(hertz + 0.5);
 
             // Keyon the note
-            m_chip->writeReg(0xA0 + (n * 3), m_x[n] & 0xFF);
-            m_chip->writeReg(0xB0 + (n * 3), (m_x[n] >> 8) & 0xFF);
+            writeReg(0xA0 + g_channelsMap[n], m_x[n] & 0xFF);
+            writeReg(0xB0 + g_channelsMap[n], (m_x[n] >> 8) & 0xFF);
         }
     }
 
@@ -326,7 +320,7 @@ struct TinySynth
     {
         // Keyoff the note
         for(unsigned n = 0; n < m_actualNotesNum; ++n)
-            m_chip->writeReg(0xB0 + (n * 3), (m_x[n] >> 8) & 0xDF);
+            writeReg(0xB0 + g_channelsMap[n], (m_x[n] >> 8) & 0xDF);
     }
 
     void generate(int16_t *output, size_t frames)
