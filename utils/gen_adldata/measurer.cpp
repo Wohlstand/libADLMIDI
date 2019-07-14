@@ -145,6 +145,7 @@ struct TinySynth
     unsigned m_actualNotesNum;
     bool m_isReal4op;
     bool m_isPseudo4op;
+    bool m_isRhythmMode;
     int m_playNoteNum;
     int8_t m_voice1Detune;
     int16_t m_noteOffsets[2];
@@ -197,6 +198,7 @@ struct TinySynth
         }
 
         std::memset(m_x, 0, sizeof(m_x));
+        m_isRhythmMode = false;
         m_playNoteNum = in.notenum >= 128 ? (in.notenum - 128) : in.notenum;
         m_isReal4op = in.real4op && !in.pseudo4op;
         m_isPseudo4op = in.pseudo4op;
@@ -231,6 +233,7 @@ struct TinySynth
     {
         bool isPseudo4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op) != 0);
         bool is4ops =       ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_4op) != 0) && !isPseudo4ops;
+        m_isRhythmMode = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_RhythmModeMask) != 0);
         size_t opsNum = (is4ops || isPseudo4ops) ? 4 : 2;
         BanksDump::Operator ops[4];
         assert(ins.ops[0] >= 0);
@@ -540,6 +543,18 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
     synth.resetChip();
     synth.setInstrument(db, ins);
     synth.noteOn();
+
+    if(synth.m_isRhythmMode) // Skip rhythm-mode check
+    {
+        DurationInfo result;
+        std::memset(&result, 0, sizeof(DurationInfo));
+        result.ms_sound_kon = 1000;
+        result.ms_sound_koff = 10;
+        result.nosound = false;
+        db.instruments[ins.instId].delay_on_ms = result.ms_sound_kon;
+        db.instruments[ins.instId].delay_off_ms = result.ms_sound_koff;
+        return result;
+    }
 
 #ifdef GEN_ADLDATA_DEEP_DEBUG
     /*****************DEBUG******************/
