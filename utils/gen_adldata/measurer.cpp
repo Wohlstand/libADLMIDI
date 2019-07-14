@@ -759,8 +759,8 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
             BanksDump::isSilent(db, ins, true);
             std::fprintf(stdout, "\n\n");
             std::fflush(stdout);
-            assert(silent1 == silent2);
-            exit(1);
+//            assert(silent1 == silent2);
+//            exit(1);
         }
     }
 

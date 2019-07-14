@@ -428,8 +428,8 @@ struct OpCheckData
     {
         // level=0x3f - silence
         // attack=0x00 - silence
-        // attack=0x0F & sustain=0x0F & decay=0x0F - silence
-        // attack=0x0F & decay=0x0F & release=0x00 & egOff - silence
+        // attack=0x0F & sustain=0x0F & decay=0x0F - half-silence
+        // attack=0x0F & decay=0x0F & release=0x00 & egOff - half-silence
         if(level == 0x3F)
         {
             if(moreInfo)
