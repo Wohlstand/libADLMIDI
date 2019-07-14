@@ -253,7 +253,7 @@ struct TinySynth
         m_isReal4op = is4ops;
         m_isPseudo4op = isPseudo4ops;
         if(m_playNoteNum == 0)
-            m_playNoteNum = 60;
+            m_playNoteNum = 25;//60;
         m_notesNum = opsNum / 2;
         m_actualNotesNum = (m_isReal4op ? 1 : m_notesNum);
         m_voice1Detune = 0;
