@@ -312,6 +312,7 @@ void BanksDump::exportBanks(const std::string &outPath, const std::string &heade
                 std::fprintf(out, "\t");
             std::fprintf(out, "g_embeddedBanks[%zu].title", be.bankId);
         }
+        std::fprintf(out, ",\n\tNULL"); // Make a null entry as finalizer
     }
     std::fprintf(out, "\n};\n\n");
 
