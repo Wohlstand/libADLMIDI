@@ -26,6 +26,7 @@ Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 e
 * DJGPP GCC 7.2 cross compiler from Linux to MS-DOS 32-bit
 * OpenBSD
 * Haiku
+* Emscripten
 
 # Key features
 * OPL3 emulation with four-operator mode support
