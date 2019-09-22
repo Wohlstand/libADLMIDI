@@ -307,7 +307,7 @@ void OPL3::setEmbeddedBank(uint32_t bank)
                     instOut.adl[op].carrier_E862 = op2.d_E862;
                     instOut.adl[op].carrier_40   = op2.d_40;
                     instOut.adl[op].feedconn = (instIn.fbConn >> (op * 8)) & 0xFF;
-                    instOut.adl[op].finetune = op == 0 ? instIn.noteOffset1 : instIn.noteOffset2;
+                    instOut.adl[op].finetune = static_cast<int8_t>(op == 0 ? instIn.noteOffset1 : instIn.noteOffset2);
                 }
                 instOut.ms_sound_kon  = instIn.delay_on_ms;
                 instOut.ms_sound_koff = instIn.delay_off_ms;
