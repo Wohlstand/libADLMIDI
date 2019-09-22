@@ -226,7 +226,11 @@ set(libADLMIDI_SOURCES
 # === Static library ====
 if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(ADLMIDI_static STATIC ${libADLMIDI_SOURCES})
-    set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
+    if(libADLMIDI_SHARED)
+        set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI-static)
+    else()
+        set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
+    endif()
     target_include_directories(ADLMIDI_static PUBLIC ${libADLMIDI_SOURCE_DIR}/include)
     set_legacy_standard(ADLMIDI_static)
     set_visibility_hidden(ADLMIDI_static)
