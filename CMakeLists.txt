@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.2)
 project (libADLMIDI VERSION 1.4.1 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
+include(CheckCCompilerFlag)
 
 # Prefer C90 standard
 set(CMAKE_C_STANDARD 90)
@@ -63,16 +64,20 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# -fPIC thing
-if(NOT WIN32 AND NOT ADLMIDI_DOS)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 if(OPENBSD_LOCALBASE)
     message("OpenBSD Detected!")
     include_directories(${OPENBSD_LOCALBASE}/include)
 endif()
+
+if(NOT WIN32 AND CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    check_c_compiler_flag("-no-pie" HAS_NO_PIE)
+endif()
+
+function(set_nopie _target)
+    if(NOT WIN32 AND HAS_NO_PIE AND CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+        set_property(TARGET ${_target} APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
+    endif()
+endfunction()
 
 function(set_legacy_standard destTarget)
     if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
@@ -226,11 +231,21 @@ set(libADLMIDI_SOURCES
 # === Static library ====
 if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(ADLMIDI_static STATIC ${libADLMIDI_SOURCES})
-    set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
+    if(libADLMIDI_SHARED)
+        set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI-static)
+    else()
+        set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
+    endif()
     target_include_directories(ADLMIDI_static PUBLIC ${libADLMIDI_SOURCE_DIR}/include)
     set_legacy_standard(ADLMIDI_static)
     set_visibility_hidden(ADLMIDI_static)
     handle_options(ADLMIDI_static)
+
+    # -fPIC thing
+    if(NOT WIN32 AND NOT ADLMIDI_DOS)
+        set_target_properties(ADLMIDI_static PROPERTIES COMPILE_FLAGS "-fPIC")
+    endif()
+
     if(NOT libADLMIDI_STATIC)
         set_target_properties(ADLMIDI_static PROPERTIES EXCLUDE_FROM_ALL TRUE)
     endif()
@@ -254,6 +269,12 @@ if(libADLMIDI_SHARED)
     if(OPENBSD_LOCALBASE)
         set_property(TARGET ADLMIDI_shared APPEND_STRING PROPERTY LINK_FLAGS " -lc")
     endif()
+
+    # -fPIC thing
+    if(NOT WIN32 AND NOT ADLMIDI_DOS)
+        set_target_properties(ADLMIDI_shared PROPERTIES COMPILE_FLAGS "-fPIC")
+    endif()
+
     set_target_properties(ADLMIDI_shared PROPERTIES SOVERSION "1")
 endif()
 

@@ -67,6 +67,8 @@ else()
     target_link_libraries(gen_adldata PRIVATE pthread m)
 endif()
 
+set_nopie(gen_adldata)
+
 if(WITH_GENADLDATA_DEEPDEBUG)
     add_dependencies(gen_adldata gen_adldata_deepdebug_prepare)
 endif()
