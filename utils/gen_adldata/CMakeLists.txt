@@ -51,6 +51,10 @@ else()
     target_link_libraries(gen_adldata PRIVATE pthread m)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    set_property(TARGET gen_adldata APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
+endif()
+
 if(WITH_GENADLDATA_COMMENTS)
     target_compile_options(gen_adldata PUBLIC "-DADLDATA_WITH_COMMENTS")
 endif()

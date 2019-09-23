@@ -63,12 +63,6 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# -fPIC thing
-if(NOT WIN32 AND NOT ADLMIDI_DOS)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif()
-
 if(OPENBSD_LOCALBASE)
     message("OpenBSD Detected!")
     include_directories(${OPENBSD_LOCALBASE}/include)
@@ -232,6 +226,12 @@ if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     set_legacy_standard(ADLMIDI_static)
     set_visibility_hidden(ADLMIDI_static)
     handle_options(ADLMIDI_static)
+
+    # -fPIC thing
+    if(NOT WIN32 AND NOT ADLMIDI_DOS)
+        set_target_properties(ADLMIDI_static PROPERTIES COMPILE_FLAGS "-fPIC")
+    endif()
+
     if(NOT libADLMIDI_STATIC)
         set_target_properties(ADLMIDI_static PROPERTIES EXCLUDE_FROM_ALL TRUE)
     endif()
@@ -255,6 +255,12 @@ if(libADLMIDI_SHARED)
     if(OPENBSD_LOCALBASE)
         set_property(TARGET ADLMIDI_shared APPEND_STRING PROPERTY LINK_FLAGS " -lc")
     endif()
+
+    # -fPIC thing
+    if(NOT WIN32 AND NOT ADLMIDI_DOS)
+        set_target_properties(ADLMIDI_shared PROPERTIES COMPILE_FLAGS "-fPIC")
+    endif()
+
     set_target_properties(ADLMIDI_shared PROPERTIES SOVERSION "1")
 endif()
 

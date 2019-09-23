@@ -3,6 +3,10 @@ add_executable(adlmidiplay
     wave_writer.c
 )
 
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    set_property(TARGET adlmidiplay APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
+endif()
+
 if(NOT ADLMIDI_DOS AND NOT MIDIPLAY_WAVE_ONLY)
     libADLMIDI_find_SDL2()
     target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL2)
@@ -41,3 +45,4 @@ endif()
 
 install(TARGETS adlmidiplay
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
