@@ -90,32 +90,32 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     return ret;
 }
 
-void audio_close()
+void audio_close(void)
 {
     SDL_CloseAudio();
 }
 
-const char* audio_get_error()
+const char* audio_get_error(void)
 {
     return SDL_GetError();
 }
 
-void audio_start()
+void audio_start(void)
 {
     SDL_PauseAudio(0);
 }
 
-void audio_stop()
+void audio_stop(void)
 {
     SDL_PauseAudio(1);
 }
 
-void audio_lock()
+void audio_lock(void)
 {
     SDL_LockAudio();
 }
 
-void audio_unlock()
+void audio_unlock(void)
 {
     SDL_UnlockAudio();
 }
@@ -125,24 +125,24 @@ void audio_delay(unsigned int ms)
     SDL_Delay(ms);
 }
 
-void* audio_mutex_create()
+void* audio_mutex_create(void)
 {
     return SDL_CreateMutex();
 }
 
-void  audio_mutex_destroy(void*m)
+void  audio_mutex_destroy(void *m)
 {
     SDL_mutex *mut = (SDL_mutex *)m;
     SDL_DestroyMutex(mut);
 }
 
-void  audio_mutex_lock(void*m)
+void  audio_mutex_lock(void *m)
 {
     SDL_mutex *mut = (SDL_mutex *)m;
     SDL_mutexP(mut);
 }
 
-void  audio_mutex_unlock(void*m)
+void  audio_mutex_unlock(void *m)
 {
     SDL_mutex *mut = (SDL_mutex *)m;
     SDL_mutexV(mut);

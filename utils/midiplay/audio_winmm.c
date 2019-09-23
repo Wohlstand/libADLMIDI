@@ -46,7 +46,7 @@ static HANDLE       g_thread;
 
 static AudioOutputCallback g_audioCallback = NULL;
 
-DWORD WINAPI s_audioThread(PVOID pDataInput)
+static DWORD WINAPI s_audioThread(PVOID pDataInput)
 {
     DWORD ret = 0;
     UINT i;
@@ -150,7 +150,7 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     return 0;
 }
 
-void audio_close()
+void audio_close(void)
 {
     audio_stop();
     audio_mutex_lock(g_audioLock);
@@ -163,12 +163,12 @@ void audio_close()
     audio_mutex_destroy(g_audioLock);
 }
 
-const char *audio_get_error()
+const char *audio_get_error(void)
 {
     return g_lastErrorMessage;
 }
 
-void audio_start()
+void audio_start(void)
 {
     DWORD dwThreadId;
     size_t i = 0;
@@ -200,7 +200,7 @@ void audio_start()
     g_thread = CreateThread(NULL, 0, s_audioThread, 0, 0, &dwThreadId);
 }
 
-void audio_stop()
+void audio_stop(void)
 {
     audio_lock();
     g_started = 0;
@@ -214,12 +214,12 @@ void audio_stop()
     audio_unlock();
 }
 
-void audio_lock()
+void audio_lock(void)
 {
     audio_mutex_lock(g_audioLock);
 }
 
-void audio_unlock()
+void audio_unlock(void)
 {
     audio_mutex_unlock(g_audioLock);
 }
@@ -229,7 +229,7 @@ void audio_delay(unsigned int ms)
     Sleep(ms);
 }
 
-void* audio_mutex_create()
+void* audio_mutex_create(void)
 {
     CRITICAL_SECTION *mutex = (CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
     InitializeCriticalSection(mutex);

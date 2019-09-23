@@ -103,7 +103,7 @@ void mch_delay(int32_t msec)
 #ifndef HARDWARE_OPL3
 
 #ifndef OUTPUT_WAVE_ONLY
-#include "audio.h"
+#   include "audio.h"
 #endif
 
 #include "wave_writer.h"
@@ -204,7 +204,7 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
     char buffer[4096];
     std::va_list args;
     va_start(args, fmt);
-    int rc = std::vsnprintf(buffer, sizeof(buffer), fmt, args);
+    int rc = vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     if(rc > 0)
     {
@@ -312,8 +312,8 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    long sampleRate = 44100;
-    #ifndef HARDWARE_OPL3
+    unsigned int sampleRate = 44100;
+#ifndef HARDWARE_OPL3
     //const unsigned MaxSamplesAtTime = 512; // 512=dbopl limitation
     // How long is SDL buffer, in seconds?
     // The smaller the value, the more often SDL_AudioCallBack()
@@ -324,17 +324,19 @@ int main(int argc, char **argv)
     const double OurHeadRoomLength = 0.1;
     // The lag between visual content and audio content equals
     // the sum of these two buffers.
-    #ifndef OUTPUT_WAVE_ONLY
+
+#   ifndef OUTPUT_WAVE_ONLY
     AudioOutputSpec spec;
     AudioOutputSpec obtained;
 
-    spec.freq     = (int)sampleRate;
+    spec.freq     = sampleRate;
     spec.format   = ADLMIDI_SampleType_S16;
     spec.is_msb   = 0;
     spec.channels = 2;
     spec.samples  = uint16_t((double)spec.freq * AudioBufferLength);
-    #endif //OUTPUT_WAVE_ONLY
-    #endif //HARDWARE_OPL3
+#   endif //OUTPUT_WAVE_ONLY
+
+#endif //HARDWARE_OPL3
 
     ADL_MIDIPlayer *myDevice;
 
@@ -659,11 +661,11 @@ int main(int argc, char **argv)
 
     std::fprintf(stdout, " - Number of chips %d\n", adl_getNumChipsObtained(myDevice));
     std::fprintf(stdout, " - Number of four-ops %d\n", adl_getNumFourOpsChnObtained(myDevice));
-    std::fprintf(stdout, " - Track count: %lu\n", (unsigned long)adl_trackCount(myDevice));
+    std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
 
-    if(soloTrack != ~(size_t)0)
+    if(soloTrack != ~static_cast<size_t>(0))
     {
-        std::fprintf(stdout, " - Solo track: %lu\n", (unsigned long)soloTrack);
+        std::fprintf(stdout, " - Solo track: %lu\n", static_cast<unsigned long>(soloTrack));
         adl_setTrackOptions(myDevice, soloTrack, ADLMIDI_TrackOption_Solo);
     }
 
@@ -677,7 +679,7 @@ int main(int argc, char **argv)
         {
             size_t track = onlyTracks[i];
             adl_setTrackOptions(myDevice, track, ADLMIDI_TrackOption_On);
-            std::fprintf(stdout, " %lu", (unsigned long)track);
+            std::fprintf(stdout, " %lu", static_cast<unsigned long>(track));
         }
         std::fprintf(stdout, "\n");
     }
@@ -865,17 +867,17 @@ int main(int argc, char **argv)
         std::fprintf(stdout, "\n==========================================\n");
         flushout(stdout);
 
-        if(wave_open(sampleRate, wave_out.c_str()) == 0)
+        if(wave_open(static_cast<long>(sampleRate), wave_out.c_str()) == 0)
         {
             wave_enable_stereo();
             short buff[4096];
             int complete_prev = -1;
             while(!stop)
             {
-                size_t got = (size_t)adl_play(myDevice, 4096, buff);
+                size_t got = static_cast<size_t>(adl_play(myDevice, 4096, buff));
                 if(got <= 0)
                     break;
-                wave_write(buff, (long)got);
+                wave_write(buff, static_cast<long>(got));
 
                 int complete = static_cast<int>(std::floor(100.0 * adl_positionTell(myDevice) / total));
                 flushout(stdout);
