@@ -3,9 +3,7 @@ add_executable(adlmidiplay
     wave_writer.c
 )
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    set_property(TARGET adlmidiplay APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
-endif()
+set_nopie(adlmidiplay)
 
 if(NOT ADLMIDI_DOS AND NOT MIDIPLAY_WAVE_ONLY)
     libADLMIDI_find_SDL2()

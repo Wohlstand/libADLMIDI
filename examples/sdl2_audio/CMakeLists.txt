@@ -5,9 +5,7 @@ add_executable(adlmidi_sdl2_demo sdl2_sample.c)
 target_include_directories(adlmidi_sdl2_demo PRIVATE ${SDL2_INCLUDE_DIRS})
 target_link_libraries(adlmidi_sdl2_demo PRIVATE ADLMIDI ${SDL2_LIBRARIES})
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    set_property(TARGET adlmidi_sdl2_demo APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
-endif()
+set_nopie(adlmidi_sdl2_demo)
 
 if(NOT MSVC)
     target_link_libraries(adlmidi_sdl2_demo PRIVATE pthread)

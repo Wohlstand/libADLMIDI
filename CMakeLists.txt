@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.2)
 project (libADLMIDI VERSION 1.4.1 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
+include(CheckCXXCompilerFlag)
 
 # Prefer C90 standard
 set(CMAKE_C_STANDARD 90)
@@ -67,6 +68,16 @@ if(OPENBSD_LOCALBASE)
     message("OpenBSD Detected!")
     include_directories(${OPENBSD_LOCALBASE}/include)
 endif()
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    check_cxx_compiler_flag("-no-pie" HAS_NO_PIE)
+endif()
+
+function(set_nopie _target)
+    if(HAS_NO_PIE AND CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+        set_property(TARGET ${_target} APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
+    endif()
+endfunction()
 
 function(set_legacy_standard destTarget)
     if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)

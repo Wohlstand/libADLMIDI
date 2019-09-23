@@ -29,9 +29,7 @@ if(NOT WIN32 AND NOT ADLMIDI_DOS)
     target_link_libraries(adlmidi2 PRIVATE ADLMIDI_SDL2)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    set_property(TARGET adlmidi2 APPEND_STRING PROPERTY LINK_FLAGS " -no-pie")
-endif()
+set_nopie(adlmidi2)
 
 if(ADLMIDI2_HAS_PUZZLE_GAME)
     target_compile_definitions(adlmidi2 PUBLIC SUPPORT_PUZZLE_GAME)
