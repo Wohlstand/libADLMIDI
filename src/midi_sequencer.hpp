@@ -343,6 +343,8 @@ private:
 
     //! Is looping enabled or not
     bool    m_loopEnabled;
+    //! Don't process loop: trigger hooks only if they are set
+    bool    m_loopHooksOnly;
 
     //! Full song length in seconds
     double m_fullSongTimeLength;
@@ -575,6 +577,12 @@ public:
      * @param enabled Enable loop
      */
     void setLoopEnabled(bool enabled);
+
+    /**
+     * @brief Switch loop hooks-only mode on/off
+     * @param enabled Don't loop: trigger hooks only without loop
+     */
+    void setLoopHooksOnly(bool enabled);
 
     /**
      * @brief Get music title
