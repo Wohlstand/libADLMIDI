@@ -40,24 +40,24 @@ struct AudioOutputSpec
 
 extern int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback);
 
-extern void audio_close();
+extern void audio_close(void);
 
-extern const char* audio_get_error();
+extern const char* audio_get_error(void);
 
-extern void audio_start();
+extern void audio_start(void);
 
-extern void audio_stop();
+extern void audio_stop(void);
 
-extern void audio_lock();
+extern void audio_lock(void);
 
-extern void audio_unlock();
+extern void audio_unlock(void);
 
 extern void audio_delay(unsigned int ms);
 
-extern void* audio_mutex_create();
-extern void  audio_mutex_destroy(void*m);
-extern void  audio_mutex_lock(void*m);
-extern void  audio_mutex_unlock(void*m);
+extern void* audio_mutex_create(void);
+extern void  audio_mutex_destroy(void *m);
+extern void  audio_mutex_lock(void *m);
+extern void  audio_mutex_unlock(void *m);
 
 #ifdef __cplusplus
 }

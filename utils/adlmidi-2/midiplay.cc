@@ -1558,7 +1558,7 @@ static bool is_number(const std::string &s)
 
 int main(int argc, char **argv)
 {
-#ifndef HARDWARE_OPL3
+#if !defined(HARDWARE_OPL3) && !defined(_WIN32)
     // How long is SDL buffer, in seconds?
     // The smaller the value, the more often AdlAudioCallBack()
     // is called.
