@@ -263,7 +263,7 @@ void OPL3::setEmbeddedBank(uint32_t bank)
 
     for(int ss = 0; ss < 2; ss++)
     {
-        bank_count_t maxBanks = ss ? bankEntry.banksPercussionCount : bankEntry.banksMelodicCount ;
+        bank_count_t maxBanks = ss ? bankEntry.banksPercussionCount : bankEntry.banksMelodicCount;
         bank_count_t banksOffset = ss ? bankEntry.banksOffsetPercussive : bankEntry.banksOffsetMelodic;
 
         for(bank_count_t bankID = 0; bankID < maxBanks; bankID++)
