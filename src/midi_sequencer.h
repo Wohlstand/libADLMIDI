@@ -52,6 +52,20 @@ typedef struct BW_MidiRtInterface
     /*! User data which will be passed through Debug Message hook */
     void *onDebugMessage_userData;
 
+    /*! Loop Start event hook */
+    typedef void (*LoopStartHook)(void *userdata);
+    /*! Loop start hook which catches passing of loop start point */
+    LoopStartHook onloopStart;
+    /*! User data which will be passed through On-LoopStart hook */
+    void         *onloopStart_userData;
+
+    /*! Loop Start event hook */
+    typedef void (*LoopEndHook)(void *userdata);
+    /*! Loop start hook which catches passing of loop start point */
+    LoopEndHook   onloopEnd;
+    /*! User data which will be passed through On-LoopStart hook */
+    void         *onloopEnd_userData;
+
     /*! MIDI Run Time event calls user data */
     void *rtUserData;
 
