@@ -1999,14 +1999,14 @@ static bool detectIMF(const char *head, FileAndMemReader &fr)
     uint8_t raw[4];
     size_t end = static_cast<size_t>(head[0]) + 256 * static_cast<size_t>(head[1]);
 
-    if(!end || (end & 3))
+    if(end & 3)
         return false;
 
     size_t backup_pos = fr.tell();
     int64_t sum1 = 0, sum2 = 0;
-    fr.seek(2, FileAndMemReader::SET);
+    fr.seek((end > 0 ? 2 : 0), FileAndMemReader::SET);
 
-    for(unsigned n = 0; n < 42; ++n)
+    for(size_t n = 0; n < 16383; ++n)
     {
         if(fr.read(raw, 1, 4) != 4)
             break;
@@ -2165,7 +2165,11 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     event.absPosition = 0;
     event.data.resize(2);
 
-    fr.seek(2, FileAndMemReader::SET);
+    fr.seek((imfEnd > 0) ? 2 : 0, FileAndMemReader::SET);
+
+    if(imfEnd == 0) // IMF Type 0 with unlimited file length
+        imfEnd = fr.fileSize();
+
     while(fr.tell() < imfEnd && !fr.eof())
     {
         if(fr.read(imfRaw, 1, 4) != 4)
