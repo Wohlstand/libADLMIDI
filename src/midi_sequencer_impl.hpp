@@ -1265,12 +1265,14 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             if(m_musCopyright.empty())
             {
                 m_musCopyright = std::string((const char *)evt.data.data(), evt.data.size());
+                m_musCopyright.push_back('\0'); /* ending fix for UTF16 strings */
                 if(m_interface->onDebugMessage)
                     m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Music copyright: %s", m_musCopyright.c_str());
             }
             else if(m_interface->onDebugMessage)
             {
                 std::string str((const char *)evt.data.data(), evt.data.size());
+                str.push_back('\0'); /* ending fix for UTF16 strings */
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Extra copyright event: %s", str.c_str());
             }
         }
@@ -1279,12 +1281,14 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             if(m_musTitle.empty())
             {
                 m_musTitle = std::string((const char *)evt.data.data(), evt.data.size());
+                m_musTitle.push_back('\0'); /* ending fix for UTF16 strings */
                 if(m_interface->onDebugMessage)
                     m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Music title: %s", m_musTitle.c_str());
             }
             else
             {
                 std::string str((const char *)evt.data.data(), evt.data.size());
+                str.push_back('\0'); /* ending fix for UTF16 strings */
                 m_musTrackTitles.push_back(str);
                 if(m_interface->onDebugMessage)
                     m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Track title: %s", str.c_str());
@@ -1295,6 +1299,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             if(m_interface->onDebugMessage)
             {
                 std::string str((const char *)evt.data.data(), evt.data.size());
+                str.push_back('\0'); /* ending fix for UTF16 strings */
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Instrument: %s", str.c_str());
             }
         }
