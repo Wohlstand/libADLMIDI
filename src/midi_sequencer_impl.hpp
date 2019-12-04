@@ -315,6 +315,7 @@ BW_MidiSequencer::BW_MidiSequencer() :
 {
     m_loop.reset();
     m_loop.invalidLoop = false;
+    m_time.init();
 }
 
 BW_MidiSequencer::~BW_MidiSequencer()
@@ -342,7 +343,54 @@ void BW_MidiSequencer::setInterface(const BW_MidiRtInterface *intrf)
     //System Exclusive hook is REQUIRED
     assert(intrf->rt_systemExclusive);
 
+    if(intrf->pcmSampleRate != 0 && intrf->pcmFrameSize != 0)
+    {
+        m_time.sampleRate = intrf->pcmSampleRate;
+        m_time.frameSize = intrf->pcmFrameSize;
+        m_time.reset();
+    }
+
     m_interface = intrf;
+}
+
+int BW_MidiSequencer::playStream(uint8_t *stream, size_t length)
+{
+    int count = 0;
+    size_t samples = static_cast<size_t>(length / static_cast<size_t>(m_time.frameSize));
+    size_t left = samples;
+    size_t periodSize = 0;
+    uint8_t *stream_pos = stream;
+
+    assert(m_interface->onPcmRender);
+
+    while(left > 0)
+    {
+        const double leftDelay = left / double(m_time.sampleRate);
+        const double maxDelay = m_time.timeRest < leftDelay ? m_time.timeRest : leftDelay;
+        if((positionAtEnd()) && (m_time.delay <= 0.0))
+            break;//Stop to fetch samples at reaching the song end with disabled loop
+
+        m_time.timeRest -= maxDelay;
+        periodSize = static_cast<size_t>(static_cast<double>(m_time.sampleRate) * maxDelay);
+
+        if(stream)
+        {
+            size_t generateSize = periodSize > left ? static_cast<size_t>(left) : static_cast<size_t>(periodSize);
+            m_interface->onPcmRender(m_interface->onPcmRender_userData, stream_pos, generateSize * m_time.frameSize);
+            stream_pos += generateSize * m_time.frameSize;
+            count += generateSize;
+            left -= generateSize;
+            assert(left <= samples);
+        }
+
+        if(m_time.timeRest <= 0.0)
+        {
+            m_time.delay = Tick(m_time.delay, m_time.minDelay);
+            m_time.timeRest += m_time.delay;
+        }
+    }
+
+    return count * static_cast<int>(m_time.frameSize);
 }
 
 BW_MidiSequencer::FileFormat BW_MidiSequencer::getFormat()
@@ -449,6 +497,7 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 
     m_loop.reset();
     m_loop.invalidLoop = false;
+    m_time.reset();
 
     m_currentPosition.began = false;
     m_currentPosition.absTimePosition = 0.0;
@@ -1894,6 +1943,9 @@ double BW_MidiSequencer::seek(double seconds, const double granularity)
     if(m_currentPosition.wait < 0.0)
         m_currentPosition.wait = 0.0;
 
+    m_time.reset();
+    m_time.delay = m_currentPosition.wait;
+
     m_loopEnabled = loopFlagState;
     return m_currentPosition.wait;
 }
@@ -1925,6 +1977,7 @@ void BW_MidiSequencer::rewind()
 
     m_loop.reset();
     m_loop.caughtStart  = true;
+    m_time.reset();
 }
 
 void BW_MidiSequencer::setTempo(double tempo)
