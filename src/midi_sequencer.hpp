@@ -511,6 +511,34 @@ private:
     //! Common error string
     std::string m_errorString;
 
+    struct SequencerTime
+    {
+        //! Time buffer
+        double   timeRest;
+        //! Sample rate
+        uint32_t sampleRate;
+        //! Size of one frame in bytes
+        uint32_t frameSize;
+        //! Minimum possible delay, granuality
+        double minDelay;
+        //! Last delay
+        double delay;
+
+        void init()
+        {
+            sampleRate = 44100;
+            frameSize = 2;
+            reset();
+        }
+
+        void reset()
+        {
+            timeRest = 0.0;
+            minDelay = 1.0 / static_cast<double>(sampleRate);
+            delay = 0.0;
+        }
+    } m_time;
+
 public:
     BW_MidiSequencer();
     virtual ~BW_MidiSequencer();
@@ -520,6 +548,14 @@ public:
      * @param intrf Pre-Initialized interface structure (pointer will be taken)
      */
     void setInterface(const BW_MidiRtInterface *intrf);
+
+    /**
+     * @brief Runs ticking in a sync with audio streaming. Use this together with onPcmRender hook to easily play MIDI.
+     * @param stream pointer to the output PCM stream
+     * @param length length of the buffer in bytes
+     * @return Count of recorded data in bytes
+     */
+    int playStream(uint8_t *stream, size_t length);
 
     /**
      * @brief Returns file format type of currently loaded file

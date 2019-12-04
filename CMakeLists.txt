@@ -9,9 +9,16 @@ set(CMAKE_C_STANDARD 90)
 # Prefer C++98 standard
 set(CMAKE_CXX_STANDARD 98)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 if(DJGPP OR MSDOS)
@@ -231,7 +238,7 @@ set(libADLMIDI_SOURCES
 # === Static library ====
 if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(ADLMIDI_static STATIC ${libADLMIDI_SOURCES})
-    if(libADLMIDI_SHARED)
+    if(WIN32 AND libADLMIDI_SHARED)
         set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI-static)
     else()
         set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
@@ -255,6 +262,10 @@ endif()
 if(libADLMIDI_SHARED)
     add_library(ADLMIDI_shared SHARED ${libADLMIDI_SOURCES})
     set_target_properties(ADLMIDI_shared PROPERTIES OUTPUT_NAME ADLMIDI)
+    set_target_properties(ADLMIDI_shared PROPERTIES
+        VERSION ${libADLMIDI_VERSION}
+        SOVERSION ${libADLMIDI_VERSION_MAJOR}
+    )
     target_include_directories(ADLMIDI_shared PUBLIC ${libADLMIDI_SOURCE_DIR}/include)
     set_legacy_standard(ADLMIDI_shared)
     set_visibility_hidden(ADLMIDI_shared)
