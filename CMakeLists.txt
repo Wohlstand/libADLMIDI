@@ -252,6 +252,10 @@ endif()
 if(libADLMIDI_SHARED)
     add_library(ADLMIDI_shared SHARED ${libADLMIDI_SOURCES})
     set_target_properties(ADLMIDI_shared PROPERTIES OUTPUT_NAME ADLMIDI)
+    set_target_properties(ADLMIDI_shared PROPERTIES
+        VERSION ${libADLMIDI_VERSION}
+        SOVERSION ${libADLMIDI_VERSION_MAJOR}
+    )
     target_include_directories(ADLMIDI_shared PUBLIC ${libADLMIDI_SOURCE_DIR}/include)
     set_legacy_standard(ADLMIDI_shared)
     set_visibility_hidden(ADLMIDI_shared)
