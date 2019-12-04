@@ -235,7 +235,7 @@ set(libADLMIDI_SOURCES
 # === Static library ====
 if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(ADLMIDI_static STATIC ${libADLMIDI_SOURCES})
-    if(libADLMIDI_SHARED)
+    if(WIN32 AND libADLMIDI_SHARED)
         set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI-static)
     else()
         set_target_properties(ADLMIDI_static PROPERTIES OUTPUT_NAME ADLMIDI)
