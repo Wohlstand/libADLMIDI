@@ -360,6 +360,13 @@ install(FILES
         include/adlmidi.hpp
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
+file(GLOB DOCTXT_FILES
+    "${libADLMIDI_SOURCE_DIR}/LICENSE*.txt"
+    README.md AUTHORS
+)
+install(FILES ${DOCTXT_FILES}
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/libADLMIDI")
+
 if(NOT ANDROID)
     configure_file(libADLMIDI.pc.in libADLMIDI.pc @ONLY)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libADLMIDI.pc"
