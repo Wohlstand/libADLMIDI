@@ -49,7 +49,7 @@ class MidiPlayer:
         return True
 
     def set_bank_file(self, bank_file):
-        if adl.adl_openBankFile(self._opl, bank_file) < 0:
+        if adl.adl_openBankFile(self._opl, bank_file.encode()) < 0:
             print("%s" % c_char_p(adl.adl_errorInfo(self._opl)).value)
             return False
         return True
