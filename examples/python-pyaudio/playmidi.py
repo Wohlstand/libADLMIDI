@@ -55,7 +55,6 @@ class MidiPlayer:
         return True
 
     def set_loop_enabled(self, loop_en):
-        print(loop_en)
         adl.adl_setLoopEnabled(self._opl, 1 if loop_en else 0)
 
     def _create_stream(self, start=True):
