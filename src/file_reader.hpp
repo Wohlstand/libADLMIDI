@@ -110,15 +110,15 @@ public:
     /**
      * @brief Open file from memory block
      * @param mem Pointer to the memory block
-     * @param lenght Size of given block
+     * @param length Size of given block
      */
-    void openData(const void *mem, size_t lenght)
+    void openData(const void *mem, size_t length)
     {
         if(m_fp)
             this->close();//Close previously opened file first!
         m_fp = NULL;
         m_mp = mem;
-        m_mp_size = lenght;
+        m_mp_size = length;
         m_mp_tell = 0;
     }
 
