@@ -278,7 +278,7 @@ ADLMIDI_EXPORT int adl_getBank(ADL_MIDIPlayer *device, const ADL_BankId *idp, in
             value.second.ins[i].flags = adlinsdata::Flag_NoSound;
 
         std::pair<Synth::BankMap::iterator, bool> ir;
-        if(flags & ADLMIDI_Bank_CreateRt)
+        if((flags & ADLMIDI_Bank_CreateRt) == ADLMIDI_Bank_CreateRt)
         {
             ir = map.insert(value, Synth::BankMap::do_not_expand_t());
             if(ir.first == map.end())
