@@ -1,7 +1,7 @@
 /*
  * BW_Midi_Sequencer - MIDI Sequencer for C++
  *
- * Copyright (c) 2015-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2015-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -23,8 +23,8 @@
  */
 
 #pragma once
-#ifndef BISQUIT_AND_WOHLSTANDS_MIDI_SEQUENCER_HHHHPPP
-#define BISQUIT_AND_WOHLSTANDS_MIDI_SEQUENCER_HHHHPPP
+#ifndef BW_MIDI_SEQUENCER_HHHHPPP
+#define BW_MIDI_SEQUENCER_HHHHPPP
 
 #include <list>
 #include <vector>
@@ -454,7 +454,7 @@ private:
         {
             if(caughtStackEnd && (stackLevel >= 0) && (stackLevel < static_cast<int>(stack.size())))
             {
-                const LoopStackEntry &e = stack[stackLevel];
+                const LoopStackEntry &e = stack[static_cast<size_t>(stackLevel)];
                 if(e.infinity || (!e.infinity && e.loops > 0))
                     return true;
             }
@@ -474,7 +474,7 @@ private:
         LoopStackEntry &getCurStack()
         {
             if((stackLevel >= 0) && (stackLevel < static_cast<int>(stack.size())))
-                return stack[stackLevel];
+                return stack[static_cast<size_t>(stackLevel)];
             if(stack.empty())
             {
                 LoopStackEntry d;
@@ -792,4 +792,4 @@ private:
 
 };
 
-#endif /* BISQUIT_AND_WOHLSTANDS_MIDI_SEQUENCER_HHHHPPP */
+#endif /* BW_MIDI_SEQUENCER_HHHHPPP */

@@ -1,7 +1,7 @@
 /*
  * BW_Midi_Sequencer - MIDI Sequencer for C++
  *
- * Copyright (c) 2015-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2015-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -23,8 +23,8 @@
  */
 
 #pragma once
-#ifndef BISQUIT_AND_WOHLSTANDS_MIDI_SEQUENCER_HHHH
-#define BISQUIT_AND_WOHLSTANDS_MIDI_SEQUENCER_HHHH
+#ifndef BW_MIDI_SEQUENCER_HHHH
+#define BW_MIDI_SEQUENCER_HHHH
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,10 +52,10 @@ typedef struct BW_MidiRtInterface
     /*! User data which will be passed through On-PCM-render hook */
     void         *onPcmRender_userData;
 
-    //! Sample rate
+    /*! Sample rate */
     uint32_t pcmSampleRate;
 
-    //! Size of one sample in bytes
+    /*! Size of one sample in bytes */
     uint32_t pcmFrameSize;
 
     /*! Library internal debug messages */
@@ -97,6 +97,11 @@ typedef struct BW_MidiRtInterface
     /*! Note-Off MIDI event hook */
     RtNoteOff           rt_noteOff;
 
+    /*! Note-Off MIDI event with a velocity */
+    typedef void (*RtNoteOffVel)(void *userdata, uint8_t channel, uint8_t note, uint8_t velocity);
+    /*! Note-Off MIDI event hook with a velocity */
+    RtNoteOffVel        rt_noteOffVel;
+
     /*! Note aftertouch MIDI event */
     typedef void (*RtNoteAfterTouch)(void *userdata, uint8_t channel, uint8_t note, uint8_t atVal);
     /*! Note aftertouch MIDI event hook */
@@ -108,9 +113,9 @@ typedef struct BW_MidiRtInterface
     RtChannelAfterTouch rt_channelAfterTouch;
 
     /*! Controller change MIDI event */
-    typedef void (*RtControlerChange)(void *userdata, uint8_t channel, uint8_t type, uint8_t value);
+    typedef void (*RtControllerChange)(void *userdata, uint8_t channel, uint8_t type, uint8_t value);
     /*! Controller change MIDI event hook */
-    RtControlerChange   rt_controllerChange;
+    RtControllerChange   rt_controllerChange;
 
     /*! Patch change MIDI event */
     typedef void (*RtPatchChange)(void *userdata, uint8_t channel, uint8_t patch);
@@ -131,6 +136,11 @@ typedef struct BW_MidiRtInterface
     /*******************
      * Optional events *
      *******************/
+
+    /*! Meta event hook */
+    typedef void (*MetaEventHook)(void *userdata, uint8_t type, const uint8_t *data, size_t len);
+    /*! Meta event hook which catches all meta events */
+    MetaEventHook       rt_metaEvent;
 
     /*! Device Switch MIDI event */
     typedef void (*RtDeviceSwitch)(void *userdata, size_t track, const char *data, size_t length);
@@ -158,4 +168,4 @@ typedef struct BW_MidiRtInterface
 }
 #endif
 
-#endif /* BISQUIT_AND_WOHLSTANDS_MIDI_SEQUENCER_HHHH */
+#endif /* BW_MIDI_SEQUENCER_HHHH */

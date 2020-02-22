@@ -132,6 +132,7 @@ option(WITH_ADLMIDI2        "Build also classic ADLMIDI player [EXPERIMENTAL]" O
 option(WITH_VLC_PLUGIN      "Build also a plugin for VLC Media Player" OFF)
 option(VLC_PLUGIN_NOINSTALL "Don't install VLC plugin into VLC directory" OFF)
 option(WITH_OLD_UTILS       "Build also old utilities" OFF)
+option(WITH_MUS2MID         "Build a MUS to MIDI converter" OFF)
 option(WITH_XMI2MID         "Build a XMI to MIDI converter" OFF)
 option(EXAMPLE_SDL2_AUDIO   "Build also a simple SDL2 demo MIDI player" OFF)
 
@@ -333,6 +334,10 @@ if(WITH_ADLMIDI2)
     add_subdirectory(utils/adlmidi-2)
 endif()
 
+if(WITH_MUS2MID)
+    add_subdirectory(utils/mus2mid)
+endif()
+
 if(WITH_XMI2MID)
     add_subdirectory(utils/xmi2mid)
 endif()
@@ -362,6 +367,13 @@ install(FILES
         include/adlmidi.h
         include/adlmidi.hpp
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+file(GLOB DOCTXT_FILES
+    "${libADLMIDI_SOURCE_DIR}/LICENSE*.txt"
+    README.md AUTHORS
+)
+install(FILES ${DOCTXT_FILES}
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/libADLMIDI")
 
 if(NOT ANDROID)
     configure_file(libADLMIDI.pc.in libADLMIDI.pc @ONLY)
@@ -414,5 +426,6 @@ message("MIDIPLAY_WAVE_ONLY       = ${MIDIPLAY_WAVE_ONLY}")
 message("WITH_ADLMIDI2            = ${WITH_ADLMIDI2}")
 message("WITH_VLC_PLUGIN          = ${WITH_VLC_PLUGIN}")
 message("WITH_OLD_UTILS           = ${WITH_OLD_UTILS}")
+message("WITH_MUS2MID             = ${WITH_MUS2MID}")
 message("WITH_XMI2MID             = ${WITH_XMI2MID}")
 message("EXAMPLE_SDL2_AUDIO       = ${EXAMPLE_SDL2_AUDIO}")

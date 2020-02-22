@@ -2,7 +2,7 @@
  * libADLMIDI is a free Software MIDI synthesizer library with OPL3 emulation
  *
  * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2015-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * ADLMIDI Library API:   Copyright (c) 2015-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -278,7 +278,7 @@ ADLMIDI_EXPORT int adl_getBank(ADL_MIDIPlayer *device, const ADL_BankId *idp, in
             value.second.ins[i].flags = adlinsdata::Flag_NoSound;
 
         std::pair<Synth::BankMap::iterator, bool> ir;
-        if(flags & ADLMIDI_Bank_CreateRt)
+        if((flags & ADLMIDI_Bank_CreateRt) == ADLMIDI_Bank_CreateRt)
         {
             ir = map.insert(value, Synth::BankMap::do_not_expand_t());
             if(ir.first == map.end())

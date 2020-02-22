@@ -11,7 +11,6 @@ matrix:
   include:
     - os: linux
       dist: xenial
-      sudo: none
       compiler: gcc
       addons:
         apt:
@@ -22,7 +21,7 @@ matrix:
             - libvlc-dev
             - libvlccore-dev
     - os: osx
-      osx_image: xcode10.2
+      osx_image: xcode11.3
       compiler: clang++
       addons:
         homebrew:
@@ -34,5 +33,5 @@ script:
   - mkdir build; cd build;
     if [ $TRAVIS_OS_NAME == linux ]; then cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DEXAMPLE_SDL2_AUDIO=ON -DWITH_VLC_PLUGIN=ON -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..; fi;
     if [ $TRAVIS_OS_NAME == osx ]; then cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=OFF -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=OFF -DEXAMPLE_SDL2_AUDIO=OFF -DWITH_VLC_PLUGIN=OFF -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..; fi;
-  - cmake --build . --config Release -- -j 2
+  - cmake --build . --config Release
 
