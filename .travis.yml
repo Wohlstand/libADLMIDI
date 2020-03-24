@@ -28,6 +28,7 @@ matrix:
           packages:
             - sdl2
             - ninja
+          update: true
 
 script:
   - mkdir build; cd build;
