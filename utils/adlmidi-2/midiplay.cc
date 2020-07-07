@@ -1645,6 +1645,7 @@ int main(int argc, char **argv)
             "     -p and -v options if it sounds wrong otherwise.\n"
             "\n"
         );
+        UI.ShowCursor();
         return 0;
     }
 
