@@ -60,16 +60,17 @@ typedef int32_t ssize_t;
 #endif
 
 #if defined(__DJGPP__) || (defined(__WATCOMC__) && (defined(__DOS__) || defined(__DOS4G__) || defined(__DOS4GNZ__)))
-#define ADLMIDI_HW_OPL
-#include <conio.h>
-#ifdef __DJGPP__
-#include <pc.h>
-#include <dpmi.h>
-#include <go32.h>
-#include <sys/farptr.h>
-#include <dos.h>
-#endif
-
+#   ifndef ADLMIDI_HW_OPL
+#       define ADLMIDI_HW_OPL
+#   endif
+#   include <conio.h>
+#   ifdef __DJGPP__
+#       include <pc.h>
+#       include <dpmi.h>
+#       include <go32.h>
+#       include <sys/farptr.h>
+#       include <dos.h>
+#   endif
 #endif
 
 #include <vector>

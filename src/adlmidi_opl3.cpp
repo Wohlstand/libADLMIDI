@@ -236,6 +236,13 @@ OPL3::OPL3() :
 
 OPL3::~OPL3()
 {
+#ifdef ADLMIDI_HW_OPL
+    silenceAll();
+    writeRegI(0, 0x0BD, 0);
+    writeRegI(0, 0x104, 0);
+    writeRegI(0, 0x105, 0);
+    silenceAll();
+#endif
 }
 
 bool OPL3::setupLocked()
@@ -341,19 +348,19 @@ void OPL3::writeReg(size_t chip, uint16_t address, uint8_t value)
     unsigned o = address >> 8;
     unsigned port = OPLBase + o * 2;
 
-    #ifdef __DJGPP__
+#   ifdef __DJGPP__
     outportb(port, address);
     for(unsigned c = 0; c < 6; ++c) inportb(port);
     outportb(port + 1, value);
     for(unsigned c = 0; c < 35; ++c) inportb(port);
-    #endif
+#   endif
 
-    #ifdef __WATCOMC__
+#   ifdef __WATCOMC__
     outp(port, address);
     for(uint16_t c = 0; c < 6; ++c)  inp(port);
     outp(port + 1, value);
     for(uint16_t c = 0; c < 35; ++c) inp(port);
-    #endif//__WATCOMC__
+#   endif//__WATCOMC__
 
 #else//ADLMIDI_HW_OPL
     m_chips[chip]->writeReg(address, value);
