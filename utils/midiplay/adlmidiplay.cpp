@@ -243,6 +243,42 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
     }
 }
 
+static void printBanks()
+{
+    // Get count of embedded banks (no initialization needed)
+    int banksCount = adl_getBanksCount();
+    //Get pointer to list of embedded bank names
+    const char *const *banknames = adl_getBankNames();
+
+    if(banksCount > 0)
+    {
+        std::printf("    Available embedded banks by number:\n\n");
+
+        for(int a = 0; a < banksCount; ++a)
+            std::printf("%10s%2u = %s\n", a ? "" : "Banks:", a, banknames[a]);
+
+        std::printf(
+            "\n"
+            "     Use banks 2-5 to play Descent \"q\" soundtracks.\n"
+            "     Look up the relevant bank number from descent.sng.\n"
+            "\n"
+            "     The fourth parameter can be used to specify the number\n"
+            "     of four-op channels to use. Each four-op channel eats\n"
+            "     the room of two regular channels. Use as many as required.\n"
+            "     The Doom & Hexen sets require one or two, while\n"
+            "     Miles four-op set requires the maximum of numcards*6.\n"
+            "\n"
+        );
+    }
+    else
+    {
+        std::printf("    This build of libADLMIDI has no embedded banks!\n\n");
+    }
+
+    flushout(stdout);
+}
+
+
 #ifdef DEBUG_TRACE_ALL_EVENTS
 static void debugPrintEvent(void * /*userdata*/, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 channel, const ADL_UInt8 * /*data*/, size_t len)
 {
@@ -277,10 +313,17 @@ int main(int argc, char **argv)
                          "==========================================\n\n");
     flushout(stdout);
 
+    if(argc >= 2 && std::string(argv[1]) == "--list-banks")
+    {
+        printBanks();
+        return 0;
+    }
+
     if(argc < 2 || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")
     {
         std::printf(
-            "Usage: adlmidi <midifilename> [ <options> ] [ <bank> [ <numchips> [ <numfourops>] ] ]\n"
+            "Usage: adlmidi <midifilename> [ <options> ] \n"
+            "                              [ <bank> [ <numchips> [ <numfourops>] ] ]\n"
             // " -p Enables adlib percussion instrument mode\n"
             " -t Enables tremolo amplification mode\n"
             " -v Enables vibrato amplification mode\n"
@@ -288,17 +331,23 @@ int main(int argc, char **argv)
             " -frb Enables full-ranged CC74 XG Brightness controller\n"
             " -nl Quit without looping\n"
             " -w Write WAV file rather than playing\n"
-            " -mb Run the test of multibank over embedded. 62, 14, 68, and 74'th banks will be combined into one\n"
+            " -mb  Run the test of multibank over embedded. 62, 14, 68, and 74'th banks\n"
+            "      will be combined into one\n"
             " --solo <track>             Selects a solo track to play\n"
             " --only <track1,...,trackN> Selects a subset of tracks to play\n"
-            #ifndef HARDWARE_OPL3
+#ifndef HARDWARE_OPL3
             " -fp Enables full-panning stereo support\n"
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
             " --emu-nuked7 Uses Nuked OPL3 v 1.7.4 emulator\n"
             " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
             " --emu-opal   Uses Opal OPL3 emulator\n"
             " --emu-java   Uses Java OPL3 emulator\n"
-            #endif
+#endif
+#ifdef HARDWARE_OPL3
+            "\n"
+            " --time-freq <hz>  Uses a different time value, DEFAULT 209\n"
+            " --list-banks  Print a lost of all built-in FM banks\n"
+#endif
             "\n"
             "Where <bank> - number of embeeded bank or filepath to custom WOPL bank file\n"
             "\n"
@@ -307,38 +356,9 @@ int main(int argc, char **argv)
             "\n"
         );
 
-        // Get count of embedded banks (no initialization needed)
-        int banksCount = adl_getBanksCount();
-        //Get pointer to list of embedded bank names
-        const char *const *banknames = adl_getBankNames();
-
-        if(banksCount > 0)
-        {
-            std::printf("    Available embedded banks by number:\n\n");
-
-            for(int a = 0; a < banksCount; ++a)
-                std::printf("%10s%2u = %s\n", a ? "" : "Banks:", a, banknames[a]);
-
-            std::printf(
-                "\n"
-                "     Use banks 2-5 to play Descent \"q\" soundtracks.\n"
-                "     Look up the relevant bank number from descent.sng.\n"
-                "\n"
-                "     The fourth parameter can be used to specify the number\n"
-                "     of four-op channels to use. Each four-op channel eats\n"
-                "     the room of two regular channels. Use as many as required.\n"
-                "     The Doom & Hexen sets require one or two, while\n"
-                "     Miles four-op set requires the maximum of numcards*6.\n"
-                "\n"
-            );
-        }
-        else
-        {
-            std::printf("    This build of libADLMIDI has no embedded banks!\n\n");
-        }
-
-        flushout(stdout);
-
+#ifndef HARDWARE_OPL3
+        printBanks();
+#endif
         return 0;
     }
 
@@ -365,8 +385,13 @@ int main(int argc, char **argv)
     spec.channels = 2;
     spec.samples  = uint16_t((double)spec.freq * AudioBufferLength);
 #   endif //OUTPUT_WAVE_ONLY
-
 #endif //HARDWARE_OPL3
+
+#ifdef HARDWARE_OPL3
+    static unsigned newTimerFreq = 209;
+    unsigned timerPeriod = 0x1234DDul / newTimerFreq;
+#endif
+
 
     ADL_MIDIPlayer *myDevice;
 
@@ -465,6 +490,27 @@ int main(int argc, char **argv)
             multibankFromEnbededTest = true;
         else if(!std::strcmp("-s", argv[2]))
             adl_setScaleModulators(myDevice, 1);//Turn on modulators scaling by volume
+
+#ifdef HARDWARE_OPL3
+        else if(!std::strcmp("--time-freq", argv[2]))
+        {
+            if(argc <= 3)
+            {
+                printError("The option --time-freq requires an argument!\n");
+                return 1;
+            }
+            newTimerFreq = std::strtoul(argv[3], NULL, 0);
+            if(newTimerFreq == 0)
+            {
+                printError("The option --time-freq requires a non-zero integer argument!\n");
+                return 1;
+            }
+
+            timerPeriod = 0x1234DDul / newTimerFreq;
+
+            had_option = true;
+        }
+#endif
 
         else if(!std::strcmp("--solo", argv[2]))
         {
@@ -724,19 +770,17 @@ int main(int argc, char **argv)
     signal(SIGHUP, sighandler);
 #   endif
 
-#else//HARDWARE_OPL3
-    static const unsigned NewTimerFreq = 209;
-    unsigned TimerPeriod = 0x1234DDul / NewTimerFreq;
+#else // HARDWARE_OPL3
 
-    #ifdef __DJGPP__
+#   ifdef __DJGPP__
     //disable();
     outportb(0x43, 0x34);
-    outportb(0x40, TimerPeriod & 0xFF);
-    outportb(0x40, TimerPeriod >>   8);
+    outportb(0x40, timerPeriod & 0xFF);
+    outportb(0x40, timerPeriod >>   8);
     //enable();
-    #endif//__DJGPP__
+#   endif//__DJGPP__
 
-    #ifdef __WATCOMC__
+#   ifdef __WATCOMC__
     std::fprintf(stdout, " - Initializing BIOS timer...\n");
     flushout(stdout);
     //disable();
@@ -746,7 +790,7 @@ int main(int argc, char **argv)
     //enable();
     std::fprintf(stdout, " - Ok!\n");
     flushout(stdout);
-    #endif//__WATCOMC__
+#   endif//__WATCOMC__
 
     unsigned long BIOStimer_begin = BIOStimer;
     double tick_delay = 0.0;
@@ -792,6 +836,14 @@ int main(int argc, char **argv)
 #   endif
         char posHMS[25];
         uint64_t milliseconds_prev = ~0u;
+        int printsCounter = 0;
+        int printsCounterPeriod = 100;
+#   ifdef HARDWARE_OPL3
+        printsCounterPeriod = 1000;
+#   endif
+
+        std::fprintf(stdout, "                                               \r");
+
         while(!stop)
         {
 #   ifndef HARDWARE_OPL3
@@ -814,15 +866,20 @@ int main(int argc, char **argv)
 
 #   ifndef DEBUG_TRACE_ALL_EVENTS
             double time_pos = adl_positionTell(myDevice);
-            std::fprintf(stdout, "                                               \r");
             uint64_t milliseconds = static_cast<uint64_t>(time_pos * 1000.0);
+
             if(milliseconds != milliseconds_prev)
             {
-                secondsToHMSM(time_pos, posHMS, 25);
-                std::fprintf(stdout, "                                               \r");
-                std::fprintf(stdout, "Time position: %s / %s\r", posHMS, totalHMS);
-                flushout(stdout);
-                milliseconds_prev = milliseconds;
+                if(printsCounter >= printsCounterPeriod)
+                {
+                    printsCounter = -1;
+                    secondsToHMSM(time_pos, posHMS, 25);
+                    std::fprintf(stdout, "                                               \r");
+                    std::fprintf(stdout, "Time position: %s / %s\r", posHMS, totalHMS);
+                    flushout(stdout);
+                    milliseconds_prev = milliseconds;
+                }
+                printsCounter++;
             }
 #   endif
 
@@ -850,20 +907,20 @@ int main(int argc, char **argv)
 #       endif
 
 #   else//HARDWARE_OPL3
-            const double mindelay = 1.0 / NewTimerFreq;
+            const double mindelay = 1.0 / newTimerFreq;
 
             //__asm__ volatile("sti\nhlt");
             //usleep(10000);
-            #ifdef __DJGPP__
+#       ifdef __DJGPP__
             __dpmi_yield();
-            #endif
-            #ifdef __WATCOMC__
+#       endif
+#       ifdef __WATCOMC__
             //dpmi_dos_yield();
             mch_delay((unsigned int)(tick_delay * 1000.0));
-            #endif
+#       endif
             static unsigned long PrevTimer = BIOStimer;
             const unsigned long CurTimer = BIOStimer;
-            const double eat_delay = (CurTimer - PrevTimer) / (double)NewTimerFreq;
+            const double eat_delay = (CurTimer - PrevTimer) / (double)newTimerFreq;
             PrevTimer = CurTimer;
             tick_delay = adl_tickEvents(myDevice, eat_delay, mindelay);
             if(adl_atEnd(myDevice) && tick_delay <= 0)
@@ -938,24 +995,24 @@ int main(int argc, char **argv)
 
 #ifdef HARDWARE_OPL3
 
-    #ifdef __DJGPP__
+#   ifdef __DJGPP__
     // Fix the skewed clock and reset BIOS tick rate
     _farpokel(_dos_ds, 0x46C, BIOStimer_begin +
               (BIOStimer - BIOStimer_begin)
-              * (0x1234DD / 65536.0) / NewTimerFreq);
+              * (0x1234DD / 65536.0) / newTimerFreq);
 
     //disable();
     outportb(0x43, 0x34);
     outportb(0x40, 0);
     outportb(0x40, 0);
     //enable();
-    #endif
+#   endif
 
-    #ifdef __WATCOMC__
+#   ifdef __WATCOMC__
     outp(0x43, 0x34);
     outp(0x40, 0);
     outp(0x40, 0);
-    #endif
+#   endif
 
     adl_panic(myDevice); //Shut up all sustaining notes
 

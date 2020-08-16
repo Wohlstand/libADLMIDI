@@ -23,6 +23,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 if(DJGPP OR MSDOS)
     set(ADLMIDI_DOS 1)
+    add_definitions(-DADLMIDI_HW_OPL)
 endif()
 
 #===========================================================================================
