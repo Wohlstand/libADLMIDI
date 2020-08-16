@@ -1284,7 +1284,7 @@ ADLMIDI_EXPORT int adl_playFormat(ADL_MIDIPlayer *device, int sampleCount,
 
     MidiPlayer *player = GET_MIDI_PLAYER(device);
     assert(player);
-    MidiPlayer::Setup &setup = player->m_setup;
+    MIDIsetup &setup = player->m_setup;
 
     ssize_t gotten_len = 0;
     ssize_t n_periodCountStereo = 512;
@@ -1392,7 +1392,7 @@ ADLMIDI_EXPORT int adl_generateFormat(struct ADL_MIDIPlayer *device, int sampleC
 
     MidiPlayer *player = GET_MIDI_PLAYER(device);
     assert(player);
-    MidiPlayer::Setup &setup = player->m_setup;
+    MIDIsetup &setup = player->m_setup;
 
     ssize_t gotten_len = 0;
     ssize_t n_periodCountStereo = 512;
