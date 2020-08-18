@@ -285,39 +285,41 @@ void OPL3::setEmbeddedBank(uint32_t bank)
                 BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[bankData.insts[instId]];
                 adlinsdata2 &instOut = bankTarget.ins[instId];
 
-                instOut.voice2_fine_tune = 0.0;
-                if(instIn.secondVoiceDetune != 0)
-                {
-                    if(instIn.secondVoiceDetune == 1)
-                        instOut.voice2_fine_tune = 0.000025;
-                    else if(instIn.secondVoiceDetune == -1)
-                        instOut.voice2_fine_tune = -0.000025;
-                    else
-                        instOut.voice2_fine_tune = instIn.secondVoiceDetune * (15.625 / 1000.0);
-                }
+                adlFromInstrument(instIn, instOut);
 
-                instOut.midi_velocity_offset = instIn.midiVelocityOffset;
-                instOut.tone = instIn.percussionKeyNumber;
-                instOut.flags = (instIn.instFlags & WOPL_Ins_4op) && (instIn.instFlags & WOPL_Ins_Pseudo4op) ? adlinsdata::Flag_Pseudo4op : 0;
-                instOut.flags|= (instIn.instFlags & WOPL_Ins_4op) && ((instIn.instFlags & WOPL_Ins_Pseudo4op) == 0) ? adlinsdata::Flag_Real4op : 0;
-                instOut.flags|= (instIn.instFlags & WOPL_Ins_IsBlank) ? adlinsdata::Flag_NoSound : 0;
-                instOut.flags|= instIn.instFlags & WOPL_RhythmModeMask;
+//                instOut.voice2_fine_tune = 0.0;
+//                if(instIn.secondVoiceDetune != 0)
+//                {
+//                    if(instIn.secondVoiceDetune == 1)
+//                        instOut.voice2_fine_tune = 0.000025;
+//                    else if(instIn.secondVoiceDetune == -1)
+//                        instOut.voice2_fine_tune = -0.000025;
+//                    else
+//                        instOut.voice2_fine_tune = instIn.secondVoiceDetune * (15.625 / 1000.0);
+//                }
 
-                for(size_t op = 0; op < 2; op++)
-                {
-                    if((instIn.ops[(op * 2) + 0] < 0) || (instIn.ops[(op * 2) + 1] < 0))
-                        break;
-                    const BanksDump::Operator &op1 = g_embeddedBanksOperators[instIn.ops[(op * 2) + 0]];
-                    const BanksDump::Operator &op2 = g_embeddedBanksOperators[instIn.ops[(op * 2) + 1]];
-                    instOut.adl[op].modulator_E862 = op1.d_E862;
-                    instOut.adl[op].modulator_40   = op1.d_40;
-                    instOut.adl[op].carrier_E862 = op2.d_E862;
-                    instOut.adl[op].carrier_40   = op2.d_40;
-                    instOut.adl[op].feedconn = (instIn.fbConn >> (op * 8)) & 0xFF;
-                    instOut.adl[op].finetune = static_cast<int8_t>(op == 0 ? instIn.noteOffset1 : instIn.noteOffset2);
-                }
-                instOut.ms_sound_kon  = instIn.delay_on_ms;
-                instOut.ms_sound_koff = instIn.delay_off_ms;
+//                instOut.midi_velocity_offset = instIn.midiVelocityOffset;
+//                instOut.tone = instIn.percussionKeyNumber;
+//                instOut.flags = (instIn.instFlags & WOPL_Ins_4op) && (instIn.instFlags & WOPL_Ins_Pseudo4op) ? adlinsdata::Flag_Pseudo4op : 0;
+//                instOut.flags|= (instIn.instFlags & WOPL_Ins_4op) && ((instIn.instFlags & WOPL_Ins_Pseudo4op) == 0) ? adlinsdata::Flag_Real4op : 0;
+//                instOut.flags|= (instIn.instFlags & WOPL_Ins_IsBlank) ? adlinsdata::Flag_NoSound : 0;
+//                instOut.flags|= instIn.instFlags & WOPL_RhythmModeMask;
+
+//                for(size_t op = 0; op < 2; op++)
+//                {
+//                    if((instIn.ops[(op * 2) + 0] < 0) || (instIn.ops[(op * 2) + 1] < 0))
+//                        break;
+//                    const BanksDump::Operator &op1 = g_embeddedBanksOperators[instIn.ops[(op * 2) + 0]];
+//                    const BanksDump::Operator &op2 = g_embeddedBanksOperators[instIn.ops[(op * 2) + 1]];
+//                    instOut.adl[op].modulator_E862 = op1.d_E862;
+//                    instOut.adl[op].modulator_40   = op1.d_40;
+//                    instOut.adl[op].carrier_E862 = op2.d_E862;
+//                    instOut.adl[op].carrier_40   = op2.d_40;
+//                    instOut.adl[op].feedconn = (instIn.fbConn >> (op * 8)) & 0xFF;
+//                    instOut.adl[op].finetune = static_cast<int8_t>(op == 0 ? instIn.noteOffset1 : instIn.noteOffset2);
+//                }
+//                instOut.ms_sound_kon  = instIn.delay_on_ms;
+//                instOut.ms_sound_koff = instIn.delay_off_ms;
             }
         }
     }

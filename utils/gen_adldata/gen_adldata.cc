@@ -575,7 +575,8 @@ int main(int argc, char**argv)
         measureCounter.waitAll();
         measureCounter.SaveCacheX("fm_banks/adldata-cache-x.dat");
     }
-    db.exportBanks(std::string(outFile_s) + "x");
+
+    db.exportBanks(std::string(outFile_s));
 
     std::printf("Generation of ADLMIDI data has been completed!\n");
     std::fflush(stdout);

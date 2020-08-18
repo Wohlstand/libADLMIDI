@@ -399,10 +399,23 @@ ADLMIDI_EXPORT int adl_loadEmbeddedBank(struct ADL_MIDIPlayer *device, ADL_Bank 
     Synth::BankMap::iterator it = Synth::BankMap::iterator::from_ptrs(bank->pointer);
     size_t id = it->first;
 
-    for (unsigned i = 0; i < 128; ++i) {
-        size_t insno = i + ((id & Synth::PercussionTag) ? 128 : 0);
-        size_t adlmeta = ::banks[num][insno];
-        it->second.ins[i] = adlinsdata2::from_adldata(::adlins[adlmeta]);
+    const BanksDump::BankEntry &bankEntry = g_embeddedBanks[num];
+
+    bool ss = (id & Synth::PercussionTag);
+    const size_t bankID = 0;
+
+//    bank_count_t maxBanks = ss ? bankEntry.banksPercussionCount : bankEntry.banksMelodicCount;
+    bank_count_t banksOffset = ss ? bankEntry.banksOffsetPercussive : bankEntry.banksOffsetMelodic;
+    size_t bankIndex = g_embeddedBanksMidiIndex[banksOffset + bankID];
+    const BanksDump::MidiBank &bankData = g_embeddedBanksMidi[bankIndex];
+
+    for (unsigned i = 0; i < 128; ++i)
+    {
+//        size_t insno = i + ((id & Synth::PercussionTag) ? 128 : 0);
+//        size_t adlmeta = ::banks[num][insno];
+//        it->second.ins[i] = adlinsdata2::from_adldata(::adlins[adlmeta]);
+        BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[bankData.insts[i]];
+        adlFromInstrument(instIn, it->second.ins[i]);
     }
     return 0;
 #endif

@@ -1994,6 +1994,8 @@ ADLMIDI_EXPORT void AdlInstrumentTester::DoNote(int note)
     DoNoteOff();
     p->play->realTime_NoteOn(0, note, 127);
     p->cur_note = note;
+#else
+    ADL_UNUSED(note);
 #endif
 }
 
