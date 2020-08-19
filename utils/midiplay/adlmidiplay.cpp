@@ -837,7 +837,7 @@ int main(int argc, char **argv)
         char posHMS[25];
         uint64_t milliseconds_prev = ~0u;
         int printsCounter = 0;
-        int printsCounterPeriod = 100;
+        int printsCounterPeriod = 2;
 #   ifdef HARDWARE_OPL3
         printsCounterPeriod = 1000;
 #   endif
