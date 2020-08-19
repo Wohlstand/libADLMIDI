@@ -58,11 +58,11 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
     uint16_t mbanks_count = toUint16BE((const uint8_t *)data.data() + 0x0d);
     uint16_t pbanks_count = toUint16BE((const uint8_t *)data.data() + 0x0f);
 
-    AdlBankSetup setup;
-    setup.deepTremolo = (data[0x11] & 0x01) != 0;
-    setup.deepVibrato = (data[0x11] & 0x02) != 0;
-    setup.volumeModel = (int)data[0x12];
-    setup.scaleModulators  = false;
+//    AdlBankSetup setup;
+//    setup.deepTremolo = (data[0x11] & 0x01) != 0;
+//    setup.deepVibrato = (data[0x11] & 0x02) != 0;
+//    setup.volumeModel = (int)data[0x12];
+//    setup.scaleModulators  = false;
 
     size_t bankDb = db.initBank(bank, bankTitle, static_cast<uint_fast16_t>((static_cast<unsigned>(data[0x11]) << 8) | static_cast<unsigned>(data[0x12])));
 
@@ -258,26 +258,26 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
                 else
                     snprintf(name2, 512, "%sM%u", prefix, i);
 
-                if(bankno == 0)
-                {
-                    if(!real4op && !tmp2.pseudo4op)
-                    {
-                        size_t resno = InsertIns(tmp[0], tmp2, name, name2);
-                        SetBank(bank, gmno, resno);
-                    }
-                    else
-                    {
-                        size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
-                        SetBank(bank, gmno, resno);
-                    }
-                }
+//                if(bankno == 0)
+//                {
+//                    if(!real4op && !tmp2.pseudo4op)
+//                    {
+//                        size_t resno = InsertIns(tmp[0], tmp2, name, name2);
+//                        SetBank(bank, gmno, resno);
+//                    }
+//                    else
+//                    {
+//                        size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
+//                        SetBank(bank, gmno, resno);
+//                    }
+//                }
                 db.addInstrument(bnk, i, inst, ops, fn);
             }
             db.addMidiBank(bankDb, is_percussion, bnk);
         }
     }
 
-    SetBankSetup(bank, setup);
+//    SetBankSetup(bank, setup);
 
     return true;
 }

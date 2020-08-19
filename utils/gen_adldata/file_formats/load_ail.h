@@ -89,10 +89,10 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
         BanksDump::MidiBank &bnk = isPerc ? bnkPercussion : bnkMelodic[h.bank];
 
         int gmno = isPerc ? int(h.patch + 0x80) : int(h.patch);
-        int midi_index = gmno < 128 ? gmno
-                         : gmno < 128 + 35 ? -1
-                         : gmno < 128 + 88 ? gmno - 35
-                         : -1;
+//        int midi_index = gmno < 128 ? gmno
+//                         : gmno < 128 + 35 ? -1
+//                         : gmno < 128 + 88 ? gmno - 35
+//                         : -1;
 
         unsigned length = data[offset] + data[offset + 1] * 256;
         signed char notenum = ((signed char)data[offset + 2]);
@@ -107,7 +107,7 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
         insdata tmp[200];
 
         const unsigned inscount = (length - 3) / 11;
-        bool twoOp = (inscount == 1);
+//        bool twoOp = (inscount == 1);
 
         for(unsigned i = 0; i < inscount; ++i)
         {
@@ -156,13 +156,13 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
             tmp2.voice2_fine_tune = 0.0;
             tmp2.midi_velocity_offset = 0;
             tmp2.rhythmModeDrum = 0;
-            std::string name;
-            if(midi_index >= 0) name = std::string(1, '\377') + MidiInsName[midi_index];
-            if(h.bank == 0 || h.bank == 0x7F)
-            {
-                size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2, twoOp);
-                SetBank(bank, (unsigned int)gmno, resno);
-            }
+//            std::string name;
+//            if(midi_index >= 0) name = std::string(1, '\377') + MidiInsName[midi_index];
+//            if(h.bank == 0 || h.bank == 0x7F)
+//            {
+//                size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2, twoOp);
+//                SetBank(bank, (unsigned int)gmno, resno);
+//            }
             //---------------------------------------------------------------
             inst.percussionKeyNumber = isPerc ? static_cast<uint_fast8_t>(notenum) : 0;
             inst.noteOffset1 = isPerc ? 0 : notenum;
@@ -173,12 +173,12 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
         }
     }
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_Generic;
-    setup.deepTremolo = true;
-    setup.deepVibrato = true;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_Generic;
+//    setup.deepTremolo = true;
+//    setup.deepVibrato = true;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     for(auto &b : bnkMelodic)
         db.addMidiBank(bankDb, false, b);

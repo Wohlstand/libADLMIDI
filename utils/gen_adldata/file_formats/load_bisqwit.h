@@ -58,8 +58,8 @@ bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, cons
 
         tmp[1].diff = (tmp[0] != tmp[1]);
         tmp2.real4op = tmp[1].diff;
-        size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2, (tmp[0] == tmp[1]));
-        SetBank(bank, gmno, resno);
+//        size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2, (tmp[0] == tmp[1]));
+//        SetBank(bank, gmno, resno);
 
         db.toOps(tmp[0], ops, 0);
         if(tmp[0] != tmp[1])
@@ -78,12 +78,12 @@ bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, cons
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_Generic;
-    setup.deepTremolo = true;
-    setup.deepVibrato = true;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_Generic;
+//    setup.deepTremolo = true;
+//    setup.deepVibrato = true;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }

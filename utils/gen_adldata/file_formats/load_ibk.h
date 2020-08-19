@@ -107,25 +107,25 @@ bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
                 break;
             default:
                 // IBK logic: make non-percussion instrument be silent
-                tmp = MakeNoSoundIns();
+//                tmp = MakeNoSoundIns();
                 break;
             }
         }
 
-        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
-        SetBank(bank, (unsigned int)gmno, resno);
+//        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
+//        SetBank(bank, (unsigned int)gmno, resno);
 
         db.addInstrument(bnk, a, inst, ops, fn);
     }
 
     db.addMidiBank(bankDb, percussive, bnk);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_Generic;
-    setup.deepTremolo = false;
-    setup.deepVibrato = false;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_Generic;
+//    setup.deepTremolo = false;
+//    setup.deepVibrato = false;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }

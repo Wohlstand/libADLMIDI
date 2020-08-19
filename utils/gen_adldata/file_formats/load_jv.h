@@ -109,13 +109,13 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
 
         if(!data[offset])
         {
-            size_t resno = InsertIns(tmp[0], tmp2, name, name2);
-            SetBank(bank, gmno, resno);
+//            size_t resno = InsertIns(tmp[0], tmp2, name, name2);
+//            SetBank(bank, gmno, resno);
         }
         else // Double instrument
         {
-            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
-            SetBank(bank, gmno, resno);
+//            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
+//            SetBank(bank, gmno, resno);
         }
         db.addInstrument(bnk, patchId, inst, ops, fn);
     }
@@ -123,12 +123,12 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_9X;
-    setup.deepTremolo = true;
-    setup.deepVibrato = true;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_9X;
+//    setup.deepTremolo = true;
+//    setup.deepVibrato = true;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }

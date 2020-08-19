@@ -127,17 +127,17 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
         inst.percussionKeyNumber = is_fat ? voice_num : (percussive ? usage_flag : 0);
         inst.setFbConn(op1[2] * 2 + op1[12]);
 
-        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
+//        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
 
         if(!is_fat)
         {
-            SetBank(bank, (unsigned int)gmno, resno);
+//            SetBank(bank, (unsigned int)gmno, resno);
             db.addInstrument(bnk, n & 127, inst, ops, fn);
         }
         else
         {
-            if(name[2] == 'O' || name[1] == 'M') SetBank(bank + 0, (unsigned int)gmno, resno);
-            if(name[2] == 'S' || name[1] == 'M') SetBank(bank + 1, (unsigned int)gmno, resno);
+//            if(name[2] == 'O' || name[1] == 'M') SetBank(bank + 0, (unsigned int)gmno, resno);
+//            if(name[2] == 'S' || name[1] == 'M') SetBank(bank + 1, (unsigned int)gmno, resno);
         }
 
         /*
@@ -166,12 +166,12 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
 
     db.addMidiBank(bankDb, percussive, bnk);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_Generic;
-    setup.deepTremolo = false;
-    setup.deepVibrato = false;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_Generic;
+//    setup.deepTremolo = false;
+//    setup.deepVibrato = false;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }

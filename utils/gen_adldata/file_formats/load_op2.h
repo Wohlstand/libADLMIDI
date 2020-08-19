@@ -139,8 +139,8 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
 
         if(!(ins.flags & FL_DOUBLE_VOICE))
         {
-            size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
-            SetBank(bank, (unsigned int)gmno, resno);
+//            size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
+//            SetBank(bank, (unsigned int)gmno, resno);
         }
         else // Double instrument
         {
@@ -151,8 +151,8 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
             else if(ins.finetune == 127)
                 tmp2.voice2_fine_tune = -0.000025;
             //printf("/*DOOM FINE TUNE (flags %000X instrument is %d) IS %d -> %lf*/\n", ins.flags, a, ins.finetune, tmp2.fine_tune);
-            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
-            SetBank(bank, (unsigned int)gmno, resno);
+//            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
+//            SetBank(bank, (unsigned int)gmno, resno);
         }
 
         db.addInstrument(bnk, patchId, inst, ops, fn);
@@ -181,12 +181,12 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_DMX;
-    setup.deepTremolo = false;
-    setup.deepVibrato = false;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_DMX;
+//    setup.deepTremolo = false;
+//    setup.deepVibrato = false;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }

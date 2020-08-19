@@ -70,8 +70,10 @@ struct MeasureThreaded
     std::atomic<size_t> m_done;
     std::atomic<size_t> m_cache_matches;
 
+#if 0
     void LoadCache(const char *fileName);
     void SaveCache(const char *fileName);
+#endif
 
     void LoadCacheX(const char *fileName);
     void SaveCacheX(const char *fileName);
@@ -101,13 +103,17 @@ struct MeasureThreaded
 
     void printProgress();
     void printFinal();
+#if 0
     void run(InstrumentsData::const_iterator i);
+#endif
     void run(BanksDump &bd, BanksDump::InstrumentEntry &e);
     void waitAll();
 };
 
 class OPLChipBase;
+#if 0
 extern DurationInfo MeasureDurations(const ins &in, OPLChipBase *chip);
+#endif
 extern DurationInfo MeasureDurations(const BanksDump &db, const BanksDump::InstrumentEntry &ins, OPLChipBase *chip);
 
 #endif // MEASURER_H

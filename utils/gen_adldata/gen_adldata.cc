@@ -28,15 +28,18 @@ int main(int argc, char**argv)
 
     const char *outFile_s = argv[1];
 
+#if 0
     FILE *outFile = std::fopen(outFile_s, "w");
     if(!outFile)
     {
         std::fprintf(stderr, "Can't open %s file for write!\n", outFile_s);
         return 1;
     }
+#endif
 
     BanksDump db;
 
+#if 0
     std::fprintf(outFile, "\
 #include \"adldata.hh\"\n\
 \n\
@@ -45,6 +48,9 @@ int main(int argc, char**argv)
  * PREPROCESSED, CONVERTED, AND POSTPROCESSED OFF-SCREEN.\n\
  */\n\
 ");
+#endif
+
+
     {
         IniProcessing ini;
         if(!ini.open("banks.ini"))
@@ -97,7 +103,7 @@ int main(int argc, char**argv)
                 return 1;
             }
 
-            banknames.push_back(bank_name);
+//            banknames.push_back(bank_name);
 
             //printf("Loading %s...\n", filepath.c_str());
 
@@ -251,119 +257,34 @@ int main(int argc, char**argv)
     }
     #endif
 
-    std::printf("Writing raw instrument data...\n");
-    std::fflush(stdout);
-    {
-        std::fprintf(outFile,
-                /*
-                "static const struct\n"
-                "{\n"
-                "    unsigned modulator_E862, carrier_E862;  // See below\n"
-                "    unsigned char modulator_40, carrier_40; // KSL/attenuation settings\n"
-                "    unsigned char feedconn; // Feedback/connection bits for the channel\n"
-                "    signed char finetune;   // Finetune\n"
-                "} adl[] =\n"*/
-                "const adldata adl[%u] =\n"
-                "{ //    ,---------+-------- Wave select settings\n"
-                "  //    | ,-------ч-+------ Sustain/release rates\n"
-                "  //    | | ,-----ч-ч-+---- Attack/decay rates\n"
-                "  //    | | | ,---ч-ч-ч-+-- AM/VIB/EG/KSR/Multiple bits\n"
-                "  //    | | | |   | | | |\n"
-                "  //    | | | |   | | | |     ,----+-- KSL/attenuation settings\n"
-                "  //    | | | |   | | | |     |    |    ,----- Feedback/connection bits\n"
-                "  //    | | | |   | | | |     |    |    |    ,----- Fine tune\n\n"
-                "  //    | | | |   | | | |     |    |    |    |\n"
-                "  //    | | | |   | | | |     |    |    |    |\n", (unsigned)insdatatab.size());
-
-        for(size_t b = insdatatab.size(), c = 0; c < b; ++c)
-        {
-            for(std::map<insdata, std::pair<size_t, std::set<std::string> > >
-                ::const_iterator
-                i = insdatatab.begin();
-                i != insdatatab.end();
-                ++i)
-            {
-                if(i->second.first != c) continue;
-                std::fprintf(outFile, "    { ");
-
-                uint32_t carrier_E862 =
-                    uint32_t(i->first.data[6] << 24)
-                    + uint32_t(i->first.data[4] << 16)
-                    + uint32_t(i->first.data[2] << 8)
-                    + uint32_t(i->first.data[0] << 0);
-                uint32_t modulator_E862 =
-                    uint32_t(i->first.data[7] << 24)
-                    + uint32_t(i->first.data[5] << 16)
-                    + uint32_t(i->first.data[3] << 8)
-                    + uint32_t(i->first.data[1] << 0);
-
-                std::fprintf(outFile, "0x%07X,0x%07X, 0x%02X,0x%02X, 0x%X, %+d",
-                        carrier_E862,
-                        modulator_E862,
-                        i->first.data[8],
-                        i->first.data[9],
-                        i->first.data[10],
-                        i->first.finetune);
-
-#ifdef ADLDATA_WITH_COMMENTS
-                std::string names;
-                for(std::set<std::string>::const_iterator
-                    j = i->second.second.begin();
-                    j != i->second.second.end();
-                    ++j)
-                {
-                    if(!names.empty()) names += "; ";
-                    if((*j)[0] == '\377')
-                        names += j->substr(1);
-                    else
-                        names += *j;
-                }
-                std::fprintf(outFile, " }, // %u: %s\n", (unsigned)c, names.c_str());
-#else
-                std::fprintf(outFile, " },\n");
-#endif
-            }
-        }
-        std::fprintf(outFile, "};\n");
-    }
-
-    /*std::fprintf(outFile, "static const struct\n"
-           "{\n"
-           "    unsigned short adlno1, adlno2;\n"
-           "    unsigned char tone;\n"
-           "    unsigned char flags;\n"
-           "    long ms_sound_kon;  // Number of milliseconds it produces sound;\n"
-           "    long ms_sound_koff;\n"
-           "    double voice2_fine_tune;\n"
-           "} adlins[] =\n");*/
-
-    std::fprintf(outFile, "const struct adlinsdata adlins[%u] =\n", (unsigned)instab.size());
-    std::fprintf(outFile, "{\n");
+//    std::printf("Writing raw instrument data...\n");
+//    std::fflush(stdout);
 
     MeasureThreaded measureCounter;
-#ifndef GEN_ADLDATA_DEEP_DEBUG // Skip slowest place to work with a debug
-    {
-        std::printf("Beginning to generate measures data... (hardware concurrency of %d)\n", std::thread::hardware_concurrency());
-        std::fflush(stdout);
-        measureCounter.LoadCache("fm_banks/adldata-cache.dat");
-        measureCounter.m_total = instab.size();
-        for(size_t b = instab.size(), c = 0; c < b; ++c)
-        {
-            for(std::map<ins, std::pair<size_t, std::set<std::string> > >::const_iterator i =  instab.begin(); i != instab.end(); ++i)
-            {
-                if(i->second.first != c) continue;
-                measureCounter.run(i);
-            }
-        }
-        std::fflush(stdout);
-        measureCounter.waitAll();
-        measureCounter.SaveCache("fm_banks/adldata-cache.dat");
-    }
-#endif
+//#ifndef GEN_ADLDATA_DEEP_DEBUG // Skip slowest place to work with a debug
+//    {
+//        std::printf("Beginning to generate measures data... (hardware concurrency of %d)\n", std::thread::hardware_concurrency());
+//        std::fflush(stdout);
+//        measureCounter.LoadCache("fm_banks/adldata-cache.dat");
+//        measureCounter.m_total = instab.size();
+//        for(size_t b = instab.size(), c = 0; c < b; ++c)
+//        {
+//            for(std::map<ins, std::pair<size_t, std::set<std::string> > >::const_iterator i =  instab.begin(); i != instab.end(); ++i)
+//            {
+//                if(i->second.first != c) continue;
+//                measureCounter.run(i);
+//            }
+//        }
+//        std::fflush(stdout);
+//        measureCounter.waitAll();
+//        measureCounter.SaveCache("fm_banks/adldata-cache.dat");
+//    }
+//#endif
 
-    std::printf("Writing generated measure data...\n");
-    std::fflush(stdout);
+//    std::printf("Writing generated measure data...\n");
+//    std::fflush(stdout);
 
+#if 0
     std::vector<unsigned> adlins_flags;
 
     for(size_t b = instab.size(), c = 0; c < b; ++c)
@@ -469,6 +390,7 @@ int main(int argc, char**argv)
     }
     std::set<size_t> listed;
 
+
     std::fprintf(outFile,
             "\n\n//Returns total number of generated banks\n"
             "int  maxAdlBanks()\n"
@@ -531,6 +453,10 @@ int main(int argc, char**argv)
 #endif
     }
 
+#endif
+
+
+#if 0
     std::fprintf(outFile, "};\n\n");
     std::fflush(outFile);
 
@@ -557,9 +483,10 @@ int main(int argc, char**argv)
     std::fflush(outFile);
 
     std::fclose(outFile);
+#endif
 
     {
-        measureCounter.LoadCacheX("fm_banks/adldata-cache-x.dat");
+        measureCounter.LoadCacheX("fm_banks/adldata-cache.dat");
         measureCounter.m_durationInfo.clear();
         measureCounter.m_cache_matches = 0;
         measureCounter.m_done = 0;
@@ -573,7 +500,7 @@ int main(int argc, char**argv)
         }
         std::fflush(stdout);
         measureCounter.waitAll();
-        measureCounter.SaveCacheX("fm_banks/adldata-cache-x.dat");
+        measureCounter.SaveCacheX("fm_banks/adldata-cache.dat");
     }
 
     db.exportBanks(std::string(outFile_s));

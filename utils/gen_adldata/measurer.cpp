@@ -175,59 +175,59 @@ struct TinySynth
             writeReg((uint16_t)initdata[a], (uint8_t)initdata[a + 1]);
     }
 
-    void setInstrument(const ins &in)
-    {
-        insdata rawData[2];
-        bool found[2] = {false, false};
-        for(InstrumentDataTab::const_iterator j = insdatatab.begin();
-            j != insdatatab.end();
-            ++j)
-        {
-            if(j->second.first == in.insno1)
-            {
-                rawData[0] = j->first;
-                found[0] = true;
-                if(found[1]) break;
-            }
-            if(j->second.first == in.insno2)
-            {
-                rawData[1] = j->first;
-                found[1] = true;
-                if(found[0]) break;
-            }
-        }
+//    void setInstrument(const ins &in)
+//    {
+//        insdata rawData[2];
+//        bool found[2] = {false, false};
+//        for(InstrumentDataTab::const_iterator j = insdatatab.begin();
+//            j != insdatatab.end();
+//            ++j)
+//        {
+//            if(j->second.first == in.insno1)
+//            {
+//                rawData[0] = j->first;
+//                found[0] = true;
+//                if(found[1]) break;
+//            }
+//            if(j->second.first == in.insno2)
+//            {
+//                rawData[1] = j->first;
+//                found[1] = true;
+//                if(found[0]) break;
+//            }
+//        }
 
-        std::memset(m_x, 0, sizeof(m_x));
-        m_isRhythmMode = false;
-        m_playNoteNum = in.notenum >= 128 ? (in.notenum - 128) : in.notenum;
-        m_isReal4op = in.real4op && !in.pseudo4op;
-        m_isPseudo4op = in.pseudo4op;
-        if(m_playNoteNum == 0)
-            m_playNoteNum = 25;
-        m_notesNum = in.insno1 == in.insno2 ? 1 : 2;
-        m_actualNotesNum = (m_isReal4op ? 1 : m_notesNum);
-        m_voice1Detune = 0;
-        m_noteOffsets[0] = rawData[0].finetune;
-        m_noteOffsets[1] = rawData[1].finetune;
-        if(in.pseudo4op)
-            m_voice1Detune = in.voice2_fine_tune;
-        writeReg(0x104, in.real4op ? (1 << 6) - 1 : 0x00);
+//        std::memset(m_x, 0, sizeof(m_x));
+//        m_isRhythmMode = false;
+//        m_playNoteNum = in.notenum >= 128 ? (in.notenum - 128) : in.notenum;
+//        m_isReal4op = in.real4op && !in.pseudo4op;
+//        m_isPseudo4op = in.pseudo4op;
+//        if(m_playNoteNum == 0)
+//            m_playNoteNum = 25;
+//        m_notesNum = in.insno1 == in.insno2 ? 1 : 2;
+//        m_actualNotesNum = (m_isReal4op ? 1 : m_notesNum);
+//        m_voice1Detune = 0;
+//        m_noteOffsets[0] = rawData[0].finetune;
+//        m_noteOffsets[1] = rawData[1].finetune;
+//        if(in.pseudo4op)
+//            m_voice1Detune = in.voice2_fine_tune;
+//        writeReg(0x104, in.real4op ? (1 << 6) - 1 : 0x00);
 
-        //For cleaner measurement, disable tremolo and vibrato
-        rawData[0].data[0] &= 0x3F;
-        rawData[0].data[1] &= 0x3F;
-        rawData[1].data[0] &= 0x3F;
-        rawData[1].data[1] &= 0x3F;
+//        //For cleaner measurement, disable tremolo and vibrato
+//        rawData[0].data[0] &= 0x3F;
+//        rawData[0].data[1] &= 0x3F;
+//        rawData[1].data[0] &= 0x3F;
+//        rawData[1].data[1] &= 0x3F;
 
-        for(unsigned n = 0; n < m_notesNum; ++n)
-        {
-            static const unsigned char patchdata[11] =
-            {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
-            for(unsigned a = 0; a < 10; ++a)
-                writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
-            writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
-        }
-    }
+//        for(unsigned n = 0; n < m_notesNum; ++n)
+//        {
+//            static const unsigned char patchdata[11] =
+//            {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
+//            for(unsigned a = 0; a < 10; ++a)
+//                writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
+//            writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
+//        }
+//    }
 
     void setInstrument(const BanksDump &db, const BanksDump::InstrumentEntry &ins)
     {
@@ -332,7 +332,7 @@ struct TinySynth
     }
 };
 
-
+#if 0
 DurationInfo MeasureDurations(const ins &in, OPLChipBase *chip)
 {
     AudioHistory<double> audioHistory;
@@ -522,7 +522,7 @@ DurationInfo MeasureDurations(const ins &in, OPLChipBase *chip)
 
     return result;
 }
-
+#endif
 
 DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &ins, OPLChipBase *chip)
 {
@@ -791,6 +791,7 @@ MeasureThreaded::MeasureThreaded() :
     DosBoxOPL3::globalPreInit();
 }
 
+#if 0
 void MeasureThreaded::LoadCache(const char *fileName)
 {
     m_durationInfo.clear();
@@ -1025,6 +1026,7 @@ void MeasureThreaded::SaveCache(const char *fileName)
     }
     std::fclose(out);
 }
+#endif
 
 void MeasureThreaded::LoadCacheX(const char *fileName)
 {
@@ -1193,6 +1195,7 @@ void MeasureThreaded::printFinal()
     std::fflush(stdout);
 }
 
+#if 0
 void MeasureThreaded::run(InstrumentsData::const_iterator i)
 {
     m_semaphore.wait();
@@ -1221,6 +1224,7 @@ void MeasureThreaded::run(InstrumentsData::const_iterator i)
     printProgress();
 #endif
 }
+#endif
 
 void MeasureThreaded::run(BanksDump &bd, BanksDump::InstrumentEntry &e)
 {
@@ -1305,6 +1309,7 @@ void MeasureThreaded::destData::callback(void *myself)
     }
     else
     {
+#if 0
         const ins &ok = s->i->first;
         s->myself->m_durationInfo_mx.lock();
         DurationInfoCache::iterator cachedEntry = s->myself->m_durationInfo.find(ok);
@@ -1321,6 +1326,7 @@ void MeasureThreaded::destData::callback(void *myself)
         s->myself->m_durationInfo_mx.lock();
         s->myself->m_durationInfo.insert({ok, info});
         s->myself->m_durationInfo_mx.unlock();
+#endif
     }
 
 endWork:

@@ -120,8 +120,8 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
             // dual-op
             tmp2.real4op = true;
             tmp[1].diff = true;
-            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
-            SetBank(bank, (unsigned int)gmno, resno);
+//            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
+//            SetBank(bank, (unsigned int)gmno, resno);
 
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
             db.addInstrument(bnk, patchId, inst, opsD, fn);
@@ -129,8 +129,8 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
         else
         {
             // single-op
-            size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
-            SetBank(bank, (unsigned int)gmno, resno);
+//            size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
+//            SetBank(bank, (unsigned int)gmno, resno);
 
             db.addInstrument(bnk, patchId, inst, opsD, fn);
         }
@@ -139,12 +139,12 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
     db.addMidiBank(bankDb, false, bnkMelodic);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_Generic;
-    setup.deepTremolo = false;
-    setup.deepVibrato = false;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_Generic;
+//    setup.deepTremolo = false;
+//    setup.deepVibrato = false;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }

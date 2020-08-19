@@ -77,8 +77,8 @@ bool BankFormats::LoadTMB(BanksDump &db, const char *fn, unsigned bank, const st
         sprintf(name2, "%s%c%u", prefix,
                 (gmno < 128 ? 'M' : 'P'), gmno & 127);
 
-        size_t resno = InsertIns(tmp, tmp2, name, name2);
-        SetBank(bank, gmno, resno);
+//        size_t resno = InsertIns(tmp, tmp2, name, name2);
+//        SetBank(bank, gmno, resno);
 
         db.addInstrument(bnk, patchId, inst, ops, fn);
     }
@@ -86,12 +86,12 @@ bool BankFormats::LoadTMB(BanksDump &db, const char *fn, unsigned bank, const st
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-    AdlBankSetup setup;
-    setup.volumeModel = VOLUME_APOGEE;
-    setup.deepTremolo = false;
-    setup.deepVibrato = false;
-    setup.scaleModulators = false;
-    SetBankSetup(bank, setup);
+//    AdlBankSetup setup;
+//    setup.volumeModel = VOLUME_APOGEE;
+//    setup.deepTremolo = false;
+//    setup.deepVibrato = false;
+//    setup.scaleModulators = false;
+//    SetBankSetup(bank, setup);
 
     return true;
 }
