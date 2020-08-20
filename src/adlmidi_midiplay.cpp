@@ -704,8 +704,13 @@ void MIDIplay::realTime_ChannelAfterTouch(uint8_t channel, uint8_t atVal)
 void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
 {
     Synth &synth = *m_synth;
+
+    if(value > 127) // Allowed values 0~127 only
+        value = 127;
+
     if(static_cast<size_t>(channel) > m_midiChannels.size())
         channel = channel % 16;
+
     switch(type)
     {
     case 1: // Adjust vibrato
@@ -1311,8 +1316,8 @@ void MIDIplay::noteUpdate(size_t midCh,
 
             case Synth::VOLUME_DMX:
             {
-                volume = 2 * (m_midiChannels[midCh].volume * m_midiChannels[midCh].expression * m_masterVolume / 16129) + 1;
-                //volume = 2 * (Ch[MidCh].volume) + 1;
+                volume = (m_midiChannels[midCh].volume * m_midiChannels[midCh].expression * m_masterVolume) / 16129;
+                volume = (DMX_volume_mapping_table[volume] + 1) << 1;
                 volume = (DMX_volume_mapping_table[(vol < 128) ? vol : 127] * volume) >> 9;
             }
             break;
