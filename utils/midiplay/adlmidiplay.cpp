@@ -837,9 +837,9 @@ int main(int argc, char **argv)
         char posHMS[25];
         uint64_t milliseconds_prev = ~0u;
         int printsCounter = 0;
-        int printsCounterPeriod = 2;
+        int printsCounterPeriod = 1;
 #   ifdef HARDWARE_OPL3
-        printsCounterPeriod = 1000;
+        printsCounterPeriod = 500;
 #   endif
 
         std::fprintf(stdout, "                                               \r");
