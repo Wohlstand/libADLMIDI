@@ -195,12 +195,49 @@ static const uint16_t g_channelsMapPan[NUM_OF_CHANNELS] =
     Ports: ???
 */
 
+// Mapping from MIDI volume level to OPL level value.
+
+static const uint_fast32_t DMX_volume_mapping_table[128] =
+{
+    0,  1,  3,  5,  6,  8,  10, 11,
+    13, 14, 16, 17, 19, 20, 22, 23,
+    25, 26, 27, 29, 30, 32, 33, 34,
+    36, 37, 39, 41, 43, 45, 47, 49,
+    50, 52, 54, 55, 57, 59, 60, 61,
+    63, 64, 66, 67, 68, 69, 71, 72,
+    73, 74, 75, 76, 77, 79, 80, 81,
+    82, 83, 84, 84, 85, 86, 87, 88,
+    89, 90, 91, 92, 92, 93, 94, 95,
+    96, 96, 97, 98, 99, 99, 100, 101,
+    101, 102, 103, 103, 104, 105, 105, 106,
+    107, 107, 108, 109, 109, 110, 110, 111,
+    112, 112, 113, 113, 114, 114, 115, 115,
+    116, 117, 117, 118, 118, 119, 119, 120,
+    120, 121, 121, 122, 122, 123, 123, 123,
+    124, 124, 125, 125, 126, 126, 127, 127,
+};
+
+static const uint_fast32_t W9X_volume_mapping_table[32] =
+{
+    63, 63, 40, 36, 32, 28, 23, 21,
+    19, 17, 15, 14, 13, 12, 11, 10,
+    9,  8,  7,  6,  5,  5,  4,  4,
+    3,  3,  2,  2,  1,  1,  0,  0
+};
+
+enum
+{
+    MasterVolumeDefault = 127
+};
+
 enum
 {
     OPL_PANNING_LEFT  = 0x10,
     OPL_PANNING_RIGHT = 0x20,
     OPL_PANNING_BOTH  = 0x30
 };
+
+
 
 static adlinsdata2 makeEmptyInstrument()
 {
@@ -219,6 +256,7 @@ OPL3::OPL3() :
     m_deepVibratoMode(false),
     m_rhythmMode(false),
     m_softPanning(false),
+    m_masterVolume(MasterVolumeDefault),
     m_musicMode(MODE_MIDI),
     m_volumeScale(VOLUME_Generic)
 {
@@ -486,11 +524,12 @@ void OPL3::noteOn(size_t c1, size_t c2, double hertz) // Hertz range: 0..131071
     }
 }
 
-void OPL3::touchNote(size_t c, uint8_t volume, uint8_t brightness)
+void OPL3::touchNote(size_t c,
+                     uint_fast32_t velocity,
+                     uint_fast32_t channelVolume,
+                     uint_fast32_t channelExpression,
+                     uint8_t brightness)
 {
-    if(volume > 63)
-        volume = 63;
-
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
     const adldata &adli = m_insCache[c];
     size_t cmf_offset = ((m_musicMode == MODE_CMF) && cc >= OPL3_CHANNELS_RHYTHM_BASE) ? 10 : 0;
@@ -498,6 +537,94 @@ void OPL3::touchNote(size_t c, uint8_t volume, uint8_t brightness)
     uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
     uint8_t  x = adli.modulator_40, y = adli.carrier_40;
     uint32_t mode = 1; // 2-op AM
+
+    uint_fast32_t kslMod = x & 0xC0;
+    uint_fast32_t kslCar = y & 0xC0;
+    uint_fast32_t tlMod = x & 63;
+    uint_fast32_t tlCar = y & 63;
+
+    uint_fast32_t modulator;
+    uint_fast32_t carrier;
+
+    uint_fast32_t volume;
+
+    bool do_modulator;
+    bool do_carrier;
+
+    static const bool do_ops[10][2] =
+    {
+        { false, true },  /* 2 op FM */
+        { true,  true },  /* 2 op AM */
+        { false, false }, /* 4 op FM-FM ops 1&2 */
+        { true,  false }, /* 4 op AM-FM ops 1&2 */
+        { false, true  }, /* 4 op FM-AM ops 1&2 */
+        { true,  false }, /* 4 op AM-AM ops 1&2 */
+        { false, true  }, /* 4 op FM-FM ops 3&4 */
+        { false, true  }, /* 4 op AM-FM ops 3&4 */
+        { false, true  }, /* 4 op FM-AM ops 3&4 */
+        { true,  true  }  /* 4 op AM-AM ops 3&4 */
+    };
+
+
+    switch(m_volumeScale)
+    {
+    default:
+    case Synth::VOLUME_Generic:
+    {
+        volume = velocity * m_masterVolume * channelVolume * channelExpression;
+
+        /* If the channel has arpeggio, the effective volume of
+             * *this* instrument is actually lower due to timesharing.
+             * To compensate, add extra volume that corresponds to the
+             * time this note is *not* heard.
+             * Empirical tests however show that a full equal-proportion
+             * increment sounds wrong. Therefore, using the square root.
+             */
+        //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
+
+        // The formula below: SOLVE(V=127^4 * 2^( (A-63.49999) / 8), A)
+        volume = volume > (8725 * 127) ? static_cast<uint_fast32_t>(std::log(static_cast<double>(volume)) * 11.541560327111707 - 1.601379199767093e+02) : 0;
+        // The incorrect formula below: SOLVE(V=127^4 * (2^(A/63)-1), A)
+        //opl.Touch_Real(c, volume>(11210*127) ? 91.61112 * std::log((4.8819E-7/127)*volume + 1.0)+0.5 : 0);
+    }
+    break;
+
+    case Synth::VOLUME_NATIVE:
+    {
+        volume = velocity * channelVolume * channelExpression;
+        // volume = volume * m_masterVolume / (127 * 127 * 127) / 2;
+        volume = (volume * m_masterVolume) / 4096766;
+    }
+    break;
+
+    case Synth::VOLUME_DMX:
+    {
+        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
+        volume = (DMX_volume_mapping_table[volume] + 1) << 1;
+        volume = (DMX_volume_mapping_table[(velocity < 128) ? velocity : 127] * volume) >> 9;
+    }
+    break;
+
+    case Synth::VOLUME_APOGEE:
+    {
+        volume = (channelVolume * channelExpression * m_masterVolume / 16129);
+        volume = ((64 * (velocity + 0x80)) * volume) >> 15;
+        //volume = ((63 * (velocity + 0x80)) * Ch[MidCh].volume) >> 15;
+    }
+    break;
+
+    case Synth::VOLUME_9X:
+    {
+        //volume = 63 - W9X_volume_mapping_table[(((velocity * Ch[MidCh].volume /** Ch[MidCh].expression*/) * m_masterVolume / 16129 /*2048383*/) >> 2)];
+        volume = 63 - W9X_volume_mapping_table[((velocity * channelVolume * channelExpression * m_masterVolume / 2048383) >> 2)];
+        //volume = W9X_volume_mapping_table[vol >> 2] + volume;
+    }
+    break;
+    }
+
+    if(volume > 63)
+        volume = 63;
+
 
     if(m_channelCategory[c] == ChanCat_Regular ||
        m_channelCategory[c] == ChanCat_Rhythm_Bass)
@@ -525,49 +652,57 @@ void OPL3::touchNote(size_t c, uint8_t volume, uint8_t brightness)
         mode += (i0->feedconn & 1) + (i1->feedconn & 1) * 2;
     }
 
-    static const bool do_ops[10][2] =
-    {
-        { false, true },  /* 2 op FM */
-        { true,  true },  /* 2 op AM */
-        { false, false }, /* 4 op FM-FM ops 1&2 */
-        { true,  false }, /* 4 op AM-FM ops 1&2 */
-        { false, true  }, /* 4 op FM-AM ops 1&2 */
-        { true,  false }, /* 4 op AM-AM ops 1&2 */
-        { false, true  }, /* 4 op FM-FM ops 3&4 */
-        { false, true  }, /* 4 op AM-FM ops 3&4 */
-        { false, true  }, /* 4 op FM-AM ops 3&4 */
-        { true,  true  }  /* 4 op AM-AM ops 3&4 */
-    };
 
     if(m_musicMode == MODE_RSXX)
     {
-        if(o1 != 0xFFF)
-            writeRegI(chip, 0x40 + o1, x);
-        if(o2 != 0xFFF)
-            writeRegI(chip, 0x40 + o2, y - volume / 2);
+        tlCar -= volume / 2;
     }
-    else
+    else if(m_volumeScale == Synth::VOLUME_DMX && mode <= 1)
     {
-        bool do_modulator = do_ops[ mode ][ 0 ] || m_scaleModulators;
-        bool do_carrier   = do_ops[ mode ][ 1 ] || m_scaleModulators;
+        do_modulator = do_ops[mode][ 0 ] || m_scaleModulators;
 
-        uint32_t modulator = do_modulator ? (x | 63) - volume + volume * (x & 63) / 63 : x;
-        uint32_t carrier   = do_carrier   ? (y | 63) - volume + volume * (y & 63) / 63 : y;
+        tlCar = (63 - volume);
+
+        if(do_modulator)
+        {
+            if(tlMod < tlCar)
+                tlMod = tlCar;
+        }
 
         if(brightness != 127)
         {
             brightness = static_cast<uint8_t>(::round(127.0 * ::sqrt((static_cast<double>(brightness)) * (1.0 / 127.0))) / 2.0);
             if(!do_modulator)
-                modulator = (modulator | 63) - brightness + brightness * (modulator & 63) / 63;
-            if(!do_carrier)
-                carrier = (carrier | 63) - brightness + brightness * (carrier & 63) / 63;
+                tlMod = 63 - brightness + (brightness * tlMod) / 63;
         }
-
-        if(o1 != 0xFFF)
-            writeRegI(chip, 0x40 + o1, modulator);
-        if(o2 != 0xFFF)
-            writeRegI(chip, 0x40 + o2, carrier);
     }
+    else
+    {
+        do_modulator = do_ops[ mode ][ 0 ] || m_scaleModulators;
+        do_carrier   = do_ops[ mode ][ 1 ] || m_scaleModulators;
+
+        if(do_modulator)
+            tlMod = 63 - volume + (volume * tlMod) / 63;
+        if(do_carrier)
+            tlCar = 63 - volume + (volume * tlCar) / 63;
+
+        if(brightness != 127)
+        {
+            brightness = static_cast<uint8_t>(::round(127.0 * ::sqrt((static_cast<double>(brightness)) * (1.0 / 127.0))) / 2.0);
+            if(!do_modulator)
+                tlMod = 63 - brightness + (brightness * tlMod) / 63;
+            if(!do_carrier)
+                tlCar = 63 - brightness + (brightness * tlCar) / 63;
+        }
+    }
+
+    modulator = (kslMod & 0xC0) | (tlMod & 63);
+    carrier = (kslCar & 0xC0) | (tlCar & 63);
+
+    if(o1 != 0xFFF)
+        writeRegI(chip, 0x40 + o1, modulator);
+    if(o2 != 0xFFF)
+        writeRegI(chip, 0x40 + o2, carrier);
 
     // Correct formula (ST3, AdPlug):
     //   63-((63-(instrvol))/63)*chanvol
@@ -640,7 +775,7 @@ void OPL3::silenceAll() // Silence all OPL channels.
     for(size_t c = 0; c < m_numChannels; ++c)
     {
         noteOff(c);
-        touchNote(c, 0);
+        touchNote(c, 0, 0, 0);
     }
 }
 

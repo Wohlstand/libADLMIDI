@@ -29,38 +29,6 @@
 // Minimum life time of percussion notes
 static const double drum_note_min_time = 0.03;
 
-
-// Mapping from MIDI volume level to OPL level value.
-
-static const uint_fast32_t DMX_volume_mapping_table[128] =
-{
-    0,  1,  3,  5,  6,  8,  10, 11,
-    13, 14, 16, 17, 19, 20, 22, 23,
-    25, 26, 27, 29, 30, 32, 33, 34,
-    36, 37, 39, 41, 43, 45, 47, 49,
-    50, 52, 54, 55, 57, 59, 60, 61,
-    63, 64, 66, 67, 68, 69, 71, 72,
-    73, 74, 75, 76, 77, 79, 80, 81,
-    82, 83, 84, 84, 85, 86, 87, 88,
-    89, 90, 91, 92, 92, 93, 94, 95,
-    96, 96, 97, 98, 99, 99, 100, 101,
-    101, 102, 103, 103, 104, 105, 105, 106,
-    107, 107, 108, 109, 109, 110, 110, 111,
-    112, 112, 113, 113, 114, 114, 115, 115,
-    116, 117, 117, 118, 118, 119, 119, 120,
-    120, 121, 121, 122, 122, 123, 123, 123,
-    124, 124, 125, 125, 126, 126, 127, 127,
-};
-
-static const uint_fast32_t W9X_volume_mapping_table[32] =
-{
-    63, 63, 40, 36, 32, 28, 23, 21,
-    19, 17, 15, 14, 13, 12, 11, 10,
-    9,  8,  7,  6,  5,  5,  4,  4,
-    3,  3,  2,  2,  1,  1,  0,  0
-};
-
-
 //static const char MIDIsymbols[256+1] =
 //"PPPPPPhcckmvmxbd"  // Ins  0-15
 //"oooooahoGGGGGGGG"  // Ins 16-31
@@ -110,7 +78,6 @@ void MIDIplay::AdlChannel::addAge(int64_t us)
 
 MIDIplay::MIDIplay(unsigned long sampleRate):
     m_cmfPercussionMode(false),
-    m_masterVolume(MasterVolumeDefault),
     m_sysExDeviceId(0),
     m_synthMode(Mode_XG),
     m_arpeggioCounter(0)
@@ -224,7 +191,8 @@ void MIDIplay::partialReset()
 
 void MIDIplay::resetMIDI()
 {
-    m_masterVolume = MasterVolumeDefault;
+    Synth &synth = *m_synth;
+    synth.m_masterVolume = MasterVolumeDefault;
     m_sysExDeviceId = 0;
     m_synthMode = Mode_XG;
     m_arpeggioCounter = 0;
@@ -299,7 +267,7 @@ void MIDIplay::realTime_ResetState()
         noteUpdateAll(uint16_t(ch), Upd_All);
         noteUpdateAll(uint16_t(ch), Upd_Off);
     }
-    m_masterVolume = MasterVolumeDefault;
+    synth.m_masterVolume = MasterVolumeDefault;
 }
 
 bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
@@ -969,7 +937,8 @@ bool MIDIplay::doUniversalSysEx(unsigned dev, bool realtime, const uint8_t *data
             unsigned volume =
                 (((unsigned)data[0] & 0x7F)) |
                 (((unsigned)data[1] & 0x7F) << 7);
-            m_masterVolume = static_cast<uint8_t>(volume >> 7);
+            if(m_synth.get())
+                m_synth->m_masterVolume = static_cast<uint8_t>(volume >> 7);
             for(size_t ch = 0; ch < m_midiChannels.size(); ch++)
                 noteUpdateAll(uint16_t(ch), Upd_Volume);
             return true;
@@ -1245,7 +1214,7 @@ void MIDIplay::noteUpdate(size_t midCh,
                     synth.noteOff(c);
                     if(props_mask & Upd_Mute) // Mute the note
                     {
-                        synth.touchNote(c, 0);
+                        synth.touchNote(c, 0, 0, 0);
                         m_chipChannels[c].koff_time_until_neglible_us = 0;
                     }
                     else
@@ -1275,9 +1244,9 @@ void MIDIplay::noteUpdate(size_t midCh,
 
         if(props_mask & Upd_Volume)
         {
-            uint_fast32_t volume;
-            bool is_percussion = (midCh == 9) || m_midiChannels[midCh].is_xg_percussion;
-            uint_fast32_t brightness = is_percussion ? 127 : m_midiChannels[midCh].brightness;
+            const MIDIchannel &ch = m_midiChannels[midCh];
+            bool is_percussion = (midCh == 9) || ch.is_xg_percussion;
+            uint_fast32_t brightness = is_percussion ? 127 : ch.brightness;
 
             if(!m_setup.fullRangeBrightnessCC74)
             {
@@ -1288,63 +1257,11 @@ void MIDIplay::noteUpdate(size_t midCh,
                     brightness *= 2;
             }
 
-            switch(synth.m_volumeScale)
-            {
-            default:
-            case Synth::VOLUME_Generic:
-            {
-                volume = vol * m_masterVolume * m_midiChannels[midCh].volume * m_midiChannels[midCh].expression;
-
-                /* If the channel has arpeggio, the effective volume of
-                     * *this* instrument is actually lower due to timesharing.
-                     * To compensate, add extra volume that corresponds to the
-                     * time this note is *not* heard.
-                     * Empirical tests however show that a full equal-proportion
-                     * increment sounds wrong. Therefore, using the square root.
-                     */
-                //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
-
-                // The formula below: SOLVE(V=127^4 * 2^( (A-63.49999) / 8), A)
-                volume = volume > (8725 * 127) ? static_cast<uint_fast32_t>(std::log(static_cast<double>(volume)) * 11.541560327111707 - 1.601379199767093e+02) : 0;
-                // The incorrect formula below: SOLVE(V=127^4 * (2^(A/63)-1), A)
-                //opl.Touch_Real(c, volume>(11210*127) ? 91.61112 * std::log((4.8819E-7/127)*volume + 1.0)+0.5 : 0);
-            }
-            break;
-
-            case Synth::VOLUME_NATIVE:
-            {
-                volume = vol * m_midiChannels[midCh].volume * m_midiChannels[midCh].expression;
-                // volume = volume * m_masterVolume / (127 * 127 * 127) / 2;
-                volume = (volume * m_masterVolume) / 4096766;
-            }
-            break;
-
-            case Synth::VOLUME_DMX:
-            {
-                volume = (m_midiChannels[midCh].volume * m_midiChannels[midCh].expression * m_masterVolume) / 16129;
-                volume = (DMX_volume_mapping_table[volume] + 1) << 1;
-                volume = (DMX_volume_mapping_table[(vol < 128) ? vol : 127] * volume) >> 9;
-            }
-            break;
-
-            case Synth::VOLUME_APOGEE:
-            {
-                volume = (m_midiChannels[midCh].volume * m_midiChannels[midCh].expression * m_masterVolume / 16129);
-                volume = ((64 * (vol + 0x80)) * volume) >> 15;
-                //volume = ((63 * (vol + 0x80)) * Ch[MidCh].volume) >> 15;
-            }
-            break;
-
-            case Synth::VOLUME_9X:
-            {
-                //volume = 63 - W9X_volume_mapping_table[(((vol * Ch[MidCh].volume /** Ch[MidCh].expression*/) * m_masterVolume / 16129 /*2048383*/) >> 2)];
-                volume = 63 - W9X_volume_mapping_table[((vol * m_midiChannels[midCh].volume * m_midiChannels[midCh].expression * m_masterVolume / 2048383) >> 2)];
-                //volume = W9X_volume_mapping_table[vol >> 2] + volume;
-            }
-            break;
-            }
-
-            synth.touchNote(c, static_cast<uint8_t>(volume), static_cast<uint8_t>(brightness));
+            synth.touchNote(c,
+                            vol,
+                            ch.volume,
+                            ch.expression,
+                            static_cast<uint8_t>(brightness));
 
             /* DEBUG ONLY!!!
             static uint32_t max = 0;

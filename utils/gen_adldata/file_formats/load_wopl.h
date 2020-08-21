@@ -223,12 +223,8 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
                 int8_t fine_tune = (int8_t)data[offset + 37];
                 if(fine_tune != 0)
                 {
-                    if(fine_tune == 1)
-                        tmp2.voice2_fine_tune = 0.000025;
-                    else if(fine_tune == -1)
-                        tmp2.voice2_fine_tune = -0.000025;
-                    else
-                        tmp2.voice2_fine_tune = ((fine_tune * 15.625) / 1000.0);
+                    // Simulate behavior of DMX second voice detune
+                    tmp2.voice2_fine_tune = (double)((((int)fine_tune + 128) >> 1) - 64) / 32.0;
                 }
 
                 uint32_t gmno = is_percussion ? i + 128 : i;

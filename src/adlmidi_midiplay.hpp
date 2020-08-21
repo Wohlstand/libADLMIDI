@@ -538,9 +538,6 @@ public:
     //! CMF Rhythm mode
     bool    m_cmfPercussionMode;
 
-    //! Master volume, controlled via SysEx
-    uint8_t m_masterVolume;
-
     //! SysEx device ID
     uint8_t m_sysExDeviceId;
 
