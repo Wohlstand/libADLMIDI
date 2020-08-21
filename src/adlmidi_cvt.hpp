@@ -29,15 +29,12 @@ template <class WOPLI>
 static void cvt_generic_to_FMIns(adlinsdata2 &ins, const WOPLI &in)
 {
     ins.voice2_fine_tune = 0.0;
-    int8_t voice2_fine_tune = in.second_voice_detune;
+    int voice2_fine_tune = in.second_voice_detune;
+
     if(voice2_fine_tune != 0)
     {
-        if(voice2_fine_tune == 1)
-            ins.voice2_fine_tune = 0.000025;
-        else if(voice2_fine_tune == -1)
-            ins.voice2_fine_tune = -0.000025;
-        else
-            ins.voice2_fine_tune = voice2_fine_tune * (15.625 / 1000.0);
+        // Simulate behavior of DMX second voice detune
+        ins.voice2_fine_tune = (double)(((voice2_fine_tune + 128) >> 1) - 64) / 32.0;
     }
 
     ins.midi_velocity_offset = in.midi_velocity_offset;
