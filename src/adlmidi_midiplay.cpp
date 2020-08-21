@@ -1923,8 +1923,10 @@ ADLMIDI_EXPORT void AdlInstrumentTester::DoNote(int note)
 
 void AdlInstrumentTester::DoNoteOff()
 {
+#ifndef DISABLE_EMBEDDED_BANKS
     if(p->cur_note > 0)
         p->play->realTime_NoteOff(0, p->cur_note);
+#endif
 }
 
 ADLMIDI_EXPORT void AdlInstrumentTester::NextGM(int offset)
