@@ -1824,7 +1824,7 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
         AdlChannel::const_users_iterator locnext(loc);
         if(!loc.is_end()) ++locnext;
 
-	if(loc.is_end())  // off
+	    if(loc.is_end())  // off
         {
             str[index] = '-';
         }
