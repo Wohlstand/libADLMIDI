@@ -176,11 +176,11 @@ static bool LoadWopl(const char *fn, unsigned bank, const char *prefix)
                 tmp[0].diff = false;
                 tmp[1].diff = real4op && !tmp2.pseudo4op;
 
-                int fine_tune = (int)data[offset + 37];
+                int8_t fine_tune = (int8_t)data[offset + 37];
                 if(fine_tune != 0)
                 {
                     // Simulate behavior of DMX second voice detune
-                    tmp2.voice2_fine_tune = (double)((fine_tune >> 1) - 64) / 32.0;
+                    tmp2.voice2_fine_tune = (double)((((int)fine_tune + 128) >> 1) - 64) / 32.0;
                 }
 
                 uint32_t gmno = is_percussion ? i + 128 : i;
