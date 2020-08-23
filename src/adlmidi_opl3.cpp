@@ -523,7 +523,8 @@ void OPL3::touchNote(size_t c,
     default:
     case Synth::VOLUME_Generic:
     {
-        volume = velocity * m_masterVolume * channelVolume * channelExpression;
+        volume = velocity * m_masterVolume *
+                 channelVolume * channelExpression;
 
         /* If the channel has arpeggio, the effective volume of
              * *this* instrument is actually lower due to timesharing.
@@ -533,9 +534,18 @@ void OPL3::touchNote(size_t c,
              * increment sounds wrong. Therefore, using the square root.
              */
         //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
+        const double c1 = 11.541560327111707;
+        const double c2 = 1.601379199767093e+02;
+        uint_fast32_t minVolume = 8725 * 127;
 
         // The formula below: SOLVE(V=127^4 * 2^( (A-63.49999) / 8), A)
-        volume = volume > (8725 * 127) ? static_cast<uint_fast32_t>(std::log(static_cast<double>(volume)) * 11.541560327111707 - 1.601379199767093e+02) : 0;
+        if(volume > minVolume)
+        {
+            double lv = std::log(static_cast<double>(volume));
+            volume = static_cast<uint_fast32_t>(lv * c1 - c2);
+        }
+        else
+            volume = 0;
         // The incorrect formula below: SOLVE(V=127^4 * (2^(A/63)-1), A)
         //opl.Touch_Real(c, volume>(11210*127) ? 91.61112 * std::log((4.8819E-7/127)*volume + 1.0)+0.5 : 0);
     }
@@ -544,7 +554,7 @@ void OPL3::touchNote(size_t c,
     case Synth::VOLUME_NATIVE:
     {
         volume = velocity * channelVolume * channelExpression;
-        // volume = volume * m_masterVolume / (127 * 127 * 127) / 2;
+        // 4096766 = (127 * 127 * 127) / 2
         volume = (volume * m_masterVolume) / 4096766;
     }
     break;
@@ -561,15 +571,13 @@ void OPL3::touchNote(size_t c,
     {
         volume = (channelVolume * channelExpression * m_masterVolume / 16129);
         volume = ((64 * (velocity + 0x80)) * volume) >> 15;
-        //volume = ((63 * (velocity + 0x80)) * Ch[MidCh].volume) >> 15;
     }
     break;
 
     case Synth::VOLUME_9X:
     {
-        //volume = 63 - W9X_volume_mapping_table[(((velocity * Ch[MidCh].volume /** Ch[MidCh].expression*/) * m_masterVolume / 16129 /*2048383*/) >> 2)];
-        volume = 63 - W9X_volume_mapping_table[((velocity * channelVolume * channelExpression * m_masterVolume / 2048383) >> 2)];
-        //volume = W9X_volume_mapping_table[vol >> 2] + volume;
+        volume = velocity * channelVolume * channelExpression * m_masterVolume;
+        volume = 63 - W9X_volume_mapping_table[(volume / 2048383) >> 2];
     }
     break;
     }
