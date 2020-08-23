@@ -88,7 +88,7 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
         BanksDump::InstrumentEntry inst;
         BanksDump::Operator ops[5];
 
-        insdata tmp;
+        InstBuffer tmp;
         tmp.data[0] = uint8_t(
                       (op1[ 9] << 7) // TREMOLO FLAG
                       + (op1[10] << 6) // VIBRATO FLAG
@@ -110,21 +110,13 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
         tmp.data[8] = op1[0] * 0x40 + op1[8]; // KSL , LEVEL
         tmp.data[9] = op2[0] * 0x40 + op2[8]; // KSL , LEVEL
         tmp.data[10] = op1[2] * 2 + op1[12]; // FEEDBACK, ADDITIVEFLAG
-        tmp.finetune = 0;
-        tmp.diff = false;
+
         // Note: op2[2] and op2[12] are unused and contain garbage.
-        ins tmp2;
-        tmp2.notenum = is_fat ? voice_num : (percussive ? usage_flag : 0);
-        tmp2.pseudo4op = false;
-        tmp2.real4op = false;
-        tmp2.voice2_fine_tune = 0.0;
-        tmp2.midi_velocity_offset = 0;
-        tmp2.rhythmModeDrum = 0;
 
         if(is_fat)
             tmp.data[10] ^= 1;
 
-        db.toOps(tmp, ops, 0);
+        db.toOps(tmp.d, ops, 0);
         inst.percussionKeyNumber = is_fat ? voice_num : (percussive ? usage_flag : 0);
         inst.setFbConn(op1[2] * 2 + op1[12]);
 

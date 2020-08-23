@@ -6,9 +6,9 @@
 
 bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("Bisqwit", fn, prefix, bank, INI_Both);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -33,18 +33,12 @@ bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, cons
         BanksDump::InstrumentEntry inst;
         BanksDump::Operator ops[5];
 
-        struct ins tmp2;
-        tmp2.notenum = (uint8_t)std::fgetc(fp);
-        tmp2.pseudo4op = false;
-        tmp2.voice2_fine_tune = 0.0;
-        tmp2.midi_velocity_offset = 0;
-        tmp2.rhythmModeDrum = 0;
+        uint8_t notenum = static_cast<uint8_t>(std::fgetc(fp));
 
-        insdata tmp[2];
+        InstBuffer tmp[2];
         for(int side = 0; side < 2; ++side)
         {
-            tmp[side].finetune = (int8_t)std::fgetc(fp);
-            tmp[side].diff = false;
+            std::fseek(fp, +1, SEEK_CUR); // skip first byte, unused "fine tune"
             if(std::fread(tmp[side].data, 1, 11, fp) != 11)
                 return false;
         }
@@ -56,21 +50,16 @@ bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, cons
         sprintf(name2, "%s%c%u", prefix,
                 (gmno < 128 ? 'M' : 'P'), gmno & 127);
 
-        tmp[1].diff = (tmp[0] != tmp[1]);
-        tmp2.real4op = tmp[1].diff;
-//        size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2, (tmp[0] == tmp[1]));
-//        SetBank(bank, gmno, resno);
-
-        db.toOps(tmp[0], ops, 0);
-        if(tmp[0] != tmp[1])
+        db.toOps(tmp[0].d, ops, 0);
+        if(tmp[0].d != tmp[1].d)
         {
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
-            db.toOps(tmp[1], ops, 2);
+            db.toOps(tmp[1].d, ops, 2);
         }
 
         inst.fbConn = uint_fast16_t(tmp[0].data[10]) | (uint_fast16_t(tmp[1].data[10]) << 8);
-        inst.percussionKeyNumber = a >= 128 ? tmp2.notenum : 0;
-        inst.noteOffset1 = a < 128 ? tmp2.notenum : 0;
+        inst.percussionKeyNumber = a >= 128 ? notenum : 0;
+        inst.noteOffset1 = a < 128 ? notenum : 0;
         db.addInstrument(bnk, patchId, inst, ops, fn);
     }
     std::fclose(fp);

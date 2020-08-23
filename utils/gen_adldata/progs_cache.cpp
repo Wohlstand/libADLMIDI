@@ -12,31 +12,28 @@
 #include "file_formats/load_ea.h"
 
 
-insdata MakeNoSoundIns()
+InstBuffer MakeNoSoundIns1()
 {
-    insdata nosnd;
+    InstBuffer nosnd;
     uint8_t d[] = {0x00, 0x10, 0x07, 0x07, 0xF7, 0xF7, 0x00, 0x00, 0xFF, 0xFF, 0x00};
     std::memcpy(nosnd.data, d, 11);
-    nosnd.finetune = 0;
-    nosnd.diff = false;
     return nosnd;
 }
 
-
-void BanksDump::toOps(const insdata &inData, BanksDump::Operator *outData, size_t begin)
+void BanksDump::toOps(const InstBuffer_t &inData, BanksDump::Operator *outData, size_t begin)
 {
     outData[begin + 0].d_E862 =
-            uint_fast32_t(inData.data[6] << 24)
-          + uint_fast32_t(inData.data[4] << 16)
-          + uint_fast32_t(inData.data[2] << 8)
-          + uint_fast32_t(inData.data[0] << 0);
+            uint_fast32_t(inData.op1_wave << 24)
+          + uint_fast32_t(inData.op1_susrel << 16)
+          + uint_fast32_t(inData.op1_atdec << 8)
+          + uint_fast32_t(inData.op1_amvib << 0);
     outData[begin + 1].d_E862 =
-            uint_fast32_t(inData.data[7] << 24)
-          + uint_fast32_t(inData.data[5] << 16)
-          + uint_fast32_t(inData.data[3] << 8)
-          + uint_fast32_t(inData.data[1] << 0);
-    outData[begin + 0].d_40 = inData.data[8];
-    outData[begin + 1].d_40 = inData.data[9];
+            uint_fast32_t(inData.op2_wave << 24)
+          + uint_fast32_t(inData.op2_susrel << 16)
+          + uint_fast32_t(inData.op2_atdec << 8)
+          + uint_fast32_t(inData.op2_amvib << 0);
+    outData[begin + 0].d_40 = inData.op1_ksltl;
+    outData[begin + 1].d_40 = inData.op2_ksltl;
 }
 
 size_t BanksDump::initBank(size_t bankId, const std::string &title, uint_fast16_t bankSetup)

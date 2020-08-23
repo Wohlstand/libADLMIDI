@@ -128,7 +128,7 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
             {
                 uint32_t offset = bank_offset + uint32_t(i * insSize);
                 std::string name;
-                insdata tmp[2];
+                InstBuffer tmp[2];
 
                 BanksDump::InstrumentEntry inst;
                 BanksDump::Operator ops[5];
@@ -151,53 +151,40 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
      8   Systain and Release register data
      9   Wave form
     */
-                tmp[0].data[0]  = data[offset + 42 + 5];//AMVIB op1
-                tmp[0].data[1]  = data[offset + 42 + 0];//AMVIB op2
-                tmp[0].data[2]  = data[offset + 42 + 7];//AtDec op1
-                tmp[0].data[3]  = data[offset + 42 + 2];//AtDec op2
-                tmp[0].data[4]  = data[offset + 42 + 8];//SusRel op1
-                tmp[0].data[5]  = data[offset + 42 + 3];//SusRel op2
-                tmp[0].data[6]  = data[offset + 42 + 9];//Wave op1
-                tmp[0].data[7]  = data[offset + 42 + 4];//Wave op2
-                tmp[0].data[8]  = data[offset + 42 + 6];//KSL op1
-                tmp[0].data[9]  = data[offset + 42 + 1];//KSL op2
-                tmp[0].data[10] = data[offset + 40];    //FeedBack/Connection
+                tmp[0].d.op1_amvib  = data[offset + 42 + 5];//AMVIB op1
+                tmp[0].d.op2_amvib  = data[offset + 42 + 0];//AMVIB op2
+                tmp[0].d.op1_atdec  = data[offset + 42 + 7];//AtDec op1
+                tmp[0].d.op2_atdec  = data[offset + 42 + 2];//AtDec op2
+                tmp[0].d.op1_susrel = data[offset + 42 + 8];//SusRel op1
+                tmp[0].d.op2_susrel = data[offset + 42 + 3];//SusRel op2
+                tmp[0].d.op1_wave   = data[offset + 42 + 9];//Wave op1
+                tmp[0].d.op2_wave   = data[offset + 42 + 4];//Wave op2
+                tmp[0].d.op1_ksltl  = data[offset + 42 + 6];//KSL op1
+                tmp[0].d.op2_ksltl  = data[offset + 42 + 1];//KSL op2
+                tmp[0].d.fbconn     = data[offset + 40];    //FeedBack/Connection
 
-                tmp[1].data[0]  = data[offset + 52 + 5];
-                tmp[1].data[1]  = data[offset + 52 + 0];
-                tmp[1].data[2]  = data[offset + 52 + 7];
-                tmp[1].data[3]  = data[offset + 52 + 2];
-                tmp[1].data[4]  = data[offset + 52 + 8];
-                tmp[1].data[5]  = data[offset + 52 + 3];
-                tmp[1].data[6]  = data[offset + 52 + 9];
-                tmp[1].data[7]  = data[offset + 52 + 4];
-                tmp[1].data[8]  = data[offset + 52 + 6];
-                tmp[1].data[9]  = data[offset + 52 + 1];
-                tmp[1].data[10] = data[offset + 41];
+                tmp[1].d.op1_amvib  = data[offset + 52 + 5];
+                tmp[1].d.op2_amvib  = data[offset + 52 + 0];
+                tmp[1].d.op1_atdec  = data[offset + 52 + 7];
+                tmp[1].d.op2_atdec  = data[offset + 52 + 2];
+                tmp[1].d.op1_susrel = data[offset + 52 + 8];
+                tmp[1].d.op2_susrel = data[offset + 52 + 3];
+                tmp[1].d.op1_wave   = data[offset + 52 + 9];
+                tmp[1].d.op2_wave   = data[offset + 52 + 4];
+                tmp[1].d.op1_ksltl  = data[offset + 52 + 6];
+                tmp[1].d.op2_ksltl  = data[offset + 52 + 1];
+                tmp[1].d.fbconn     = data[offset + 41];
                 /*
                  * We will don't read two millisecond delays on tail of instrument
                  * as there are will be re-calculated by measurer here.
                  * Those fields are made for hot-loading while runtime, but not
                  * for generation of embedded banks database.
                  */
-                db.toOps(tmp[0], ops, 0);
-                db.toOps(tmp[1], ops, 2);
+                db.toOps(tmp[0].d, ops, 0);
+                db.toOps(tmp[1].d, ops, 2);
 
-
-                tmp[0].finetune = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 32));
-                tmp[1].finetune = int8_t(toSint16BE((const uint8_t *)data.data() + offset + 34));
                 uint8_t flags = data[offset + 39];
 
-                struct ins tmp2;
-                tmp2.notenum = is_percussion ? data[offset + 38] : 0;
-                bool real4op = (flags & (uint8_t)WOPL_Flags::Mode_4op) != 0;
-                tmp2.pseudo4op = (flags & (uint8_t)WOPL_Flags::Mode_DoubleVoice) != 0;
-                tmp2.real4op = real4op && !tmp2.pseudo4op;
-                tmp2.voice2_fine_tune = 0;
-                tmp2.midi_velocity_offset = (int8_t)data[offset + 36];
-                tmp2.rhythmModeDrum = (flags & (uint8_t)WOPL_Flags::WOPL_RhythmModeMask);
-                tmp[0].diff = false;
-                tmp[1].diff = real4op && !tmp2.pseudo4op;
                 //----------------
                 inst.instFlags = flags;
                 inst.percussionKeyNumber = is_percussion ? data[offset + 38] : 0;
@@ -213,13 +200,6 @@ bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const s
                     inst.delay_off_ms = toUint16BE((const uint8_t *)data.data() + offset + 64);
                 }
                 //----------------
-
-                int8_t fine_tune = (int8_t)data[offset + 37];
-                if(fine_tune != 0)
-                {
-                    // Simulate behavior of DMX second voice detune
-                    tmp2.voice2_fine_tune = (double)((((int)fine_tune + 128) >> 1) - 64) / 32.0;
-                }
 
                 uint32_t gmno = is_percussion ? i + 128 : i;
 

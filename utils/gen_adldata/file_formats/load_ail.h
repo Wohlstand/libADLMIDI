@@ -104,7 +104,7 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
         sprintf(name2, "%s%c%u", prefix,
                 (gmno < 128 ? 'M' : 'P'), gmno & 127);
 
-        insdata tmp[200];
+        InstBuffer tmp[200];
 
         const unsigned inscount = (length - 3) / 11;
 //        bool twoOp = (inscount == 1);
@@ -114,8 +114,8 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
             if(i >= 2)
                 break;
             unsigned o = offset + 3 + i * 11;
-            tmp[i].finetune = (gmno < 128 && i == 0) ? notenum : 0;
-            tmp[i].diff = (i == 1);
+//            tmp[i].finetune = (gmno < 128 && i == 0) ? notenum : 0;
+//            tmp[i].diff = (i == 1);
 
             uint8_t temp[11] = {0};
             if(o < data.size())
@@ -144,18 +144,19 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
                 tmp[0].data[10] = fb_c & 0x0F;
                 tmp[1].data[10] = uint8_t((fb_c & 0x0E) | (fb_c >> 7));
             }
-            db.toOps(tmp[i], ops, i * 2);
+            db.toOps(tmp[i].d, ops, i * 2);
         }
 
         if(inscount <= 2)
         {
-            struct ins tmp2;
-            tmp2.notenum  = gmno < 128 ? 0 : (unsigned char)notenum;
-            tmp2.pseudo4op = false;
-            tmp2.real4op = (inscount > 1);
-            tmp2.voice2_fine_tune = 0.0;
-            tmp2.midi_velocity_offset = 0;
-            tmp2.rhythmModeDrum = 0;
+//            struct ins tmp2;
+//            tmp2.notenum  = gmno < 128 ? 0 : (unsigned char)notenum;
+//            tmp2.pseudo4op = false;
+//            tmp2.real4op = (inscount > 1);
+//            tmp2.voice2_fine_tune = 0.0;
+//            tmp2.midi_velocity_offset = 0;
+//            tmp2.rhythmModeDrum = 0;
+
 //            std::string name;
 //            if(midi_index >= 0) name = std::string(1, '\377') + MidiInsName[midi_index];
 //            if(h.bank == 0 || h.bank == 0x7F)

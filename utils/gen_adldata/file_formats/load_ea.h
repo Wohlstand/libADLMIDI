@@ -69,7 +69,7 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
         BanksDump::InstrumentEntry inst;
         BanksDump::Operator ops[5];
 
-        insdata tmp;
+        InstBuffer tmp;
         tmp.data[0] = bytes[0]; // reg 0x20: modulator AM/VIG/EG/KSR
         tmp.data[8] = bytes[1]; // reg 0x40: modulator ksl/attenuation
         tmp.data[2] = bytes[2]; // reg 0x60: modulator attack/decay
@@ -86,17 +86,10 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
 
         tmp.data[10] = bytes[8]; // reg 0xC0 (feedback and connection)
 
-        tmp.finetune = int8_t(bytes[9] + 12); // finetune
         tmp.data[6] = 0;        // reg 0xE0: modulator, never seems to be set
         tmp.data[7] = 0;        // reg 0xE0: carrier,   never seems to be set
 
-        ins tmp2;
-        tmp2.notenum   = 0;
-        tmp2.pseudo4op = false;
-        tmp2.real4op = false;
-        tmp2.rhythmModeDrum = 0;
-
-        db.toOps(tmp, ops, 0);
+        db.toOps(tmp.d, ops, 0);
         inst.setFbConn(bytes[8]);
         inst.noteOffset1 = int8_t(bytes[9] + 12);
 
@@ -115,28 +108,24 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
 
         if(gmno == 10)
         {
-            /*tmp.finetune=0;*/ tmp2.notenum = 0x49;
             inst.percussionKeyNumber = 0x49;
             db.addInstrument(bnkPercussion, 0x36, inst, ops, fn);
         }
 
         if(gmno == 18)
         {
-            /*tmp.finetune=0;*/ tmp2.notenum = 0x17;
             inst.percussionKeyNumber = 0x17;
             db.addInstrument(bnkPercussion, 0x2A, inst, ops, fn);
         }
 
         if(gmno == 16)
         {
-            /*tmp.finetune=0;*/ tmp2.notenum = 0x0C;
             inst.percussionKeyNumber = 0x0C;
             db.addInstrument(bnkPercussion, 0x24, inst, ops, fn);
         }
 
         if(gmno == 17)
         {
-            /*tmp.finetune=0;*/ tmp2.notenum = 0x01;
             inst.percussionKeyNumber = 0x01;
             db.addInstrument(bnkPercussion, 0x26, inst, ops, fn);
         }

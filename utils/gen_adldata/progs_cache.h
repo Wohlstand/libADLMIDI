@@ -1,3 +1,4 @@
+#pragma once
 #ifndef PROGS_H
 #define PROGS_H
 
@@ -17,43 +18,47 @@
 
 #include <cassert>
 
-struct insdata
+struct InstBuffer_t
 {
-    uint8_t         data[11];
-    int8_t          finetune;
-    bool            diff;
-    explicit insdata()
+    uint8_t op1_amvib;      // 0
+    uint8_t op2_amvib;      // 1
+    uint8_t op1_atdec;      // 2
+    uint8_t op2_atdec;      // 3
+    uint8_t op1_susrel;     // 4
+    uint8_t op2_susrel;     // 5
+    uint8_t op1_wave;       // 6
+    uint8_t op2_wave;       // 7
+    uint8_t op1_ksltl;      // 8
+    uint8_t op2_ksltl;      // 9
+    uint8_t fbconn;         // 10
+
+    bool operator==(const InstBuffer_t &b) const
     {
-        std::memset(data, 0, 11);
-        finetune = 0;
-        diff = false;
+        return std::memcmp(this, &b, sizeof(InstBuffer_t)) == 0;
     }
-    insdata(const insdata &b)
-    {
-        std::memcpy(data, b.data, 11);
-        finetune = b.finetune;
-        diff = b.diff;
-    }
-    bool operator==(const insdata &b) const
-    {
-        return (std::memcmp(data, b.data, 11) == 0) && (finetune == b.finetune) && (diff == b.diff);
-    }
-    bool operator!=(const insdata &b) const
+
+    bool operator!=(const InstBuffer_t &b) const
     {
         return !operator==(b);
     }
-    bool operator<(const insdata &b) const
+
+    bool operator<(const InstBuffer_t &b) const
     {
-        int c = std::memcmp(data, b.data, 11);
+        int c = std::memcmp(this, &b, 11);
         if(c != 0) return c < 0;
-        if(finetune != b.finetune) return finetune < b.finetune;
-        if(diff != b.diff) return (diff) == (!b.diff);
         return 0;
     }
-    bool operator>(const insdata &b) const
+
+    bool operator>(const InstBuffer_t &b) const
     {
         return !operator<(b) && operator!=(b);
     }
+};
+
+union InstBuffer
+{
+    InstBuffer_t d;
+    uint8_t data[11];
 };
 
 inline bool equal_approx(double const a, double const b)
@@ -62,78 +67,6 @@ inline bool equal_approx(double const a, double const b)
     int_fast64_t bi = static_cast<int_fast64_t>(b * 1000000.0);
     return ai == bi;
 }
-
-struct ins
-{
-    enum { Flag_Pseudo4op = 0x01, Flag_NoSound = 0x02, Flag_Real4op = 0x04 };
-
-    enum { Flag_RM_BassDrum  = 0x08, Flag_RM_Snare = 0x10, Flag_RM_TomTom = 0x18,
-           Flag_RM_Cymbal = 0x20, Flag_RM_HiHat = 0x28, Mask_RhythmMode = 0x38 };
-
-    size_t insno1, insno2;
-    insdata instCache1, instCache2;
-    unsigned char notenum;
-    bool pseudo4op;
-    bool real4op;
-    uint32_t rhythmModeDrum;
-    double voice2_fine_tune;
-    int8_t midi_velocity_offset;
-    explicit ins() :
-        insno1(0),
-        insno2(0),
-        notenum(0),
-        pseudo4op(false),
-        real4op(false),
-        rhythmModeDrum(false),
-        voice2_fine_tune(0.0),
-        midi_velocity_offset(0)
-    {}
-
-    ins(const ins &o) :
-        insno1(o.insno1),
-        insno2(o.insno2),
-        instCache1(o.instCache1),
-        instCache2(o.instCache2),
-        notenum(o.notenum),
-        pseudo4op(o.pseudo4op),
-        real4op(o.real4op),
-        rhythmModeDrum(o.rhythmModeDrum),
-        voice2_fine_tune(o.voice2_fine_tune),
-        midi_velocity_offset(o.midi_velocity_offset)
-    {}
-
-    bool operator==(const ins &b) const
-    {
-        return notenum == b.notenum
-               && insno1 == b.insno1
-               && insno2 == b.insno2
-               && instCache1 == b.instCache2
-               && instCache2 == b.instCache2
-               && pseudo4op == b.pseudo4op
-               && real4op == b.real4op
-               && rhythmModeDrum == b.rhythmModeDrum
-               && equal_approx(voice2_fine_tune, b.voice2_fine_tune)
-               && midi_velocity_offset == b.midi_velocity_offset;
-    }
-    bool operator< (const ins &b) const
-    {
-        if(insno1 != b.insno1) return insno1 < b.insno1;
-        if(insno2 != b.insno2) return insno2 < b.insno2;
-        if(instCache1 != b.instCache1) return instCache1 < b.instCache1;
-        if(instCache2 != b.instCache2) return instCache2 < b.instCache2;
-        if(notenum != b.notenum) return notenum < b.notenum;
-        if(pseudo4op != b.pseudo4op) return pseudo4op < b.pseudo4op;
-        if(real4op != b.real4op) return real4op < b.real4op;
-        if(rhythmModeDrum != b.rhythmModeDrum) return rhythmModeDrum < b.rhythmModeDrum;
-        if(!equal_approx(voice2_fine_tune, b.voice2_fine_tune)) return voice2_fine_tune < b.voice2_fine_tune;
-        if(midi_velocity_offset != b.midi_velocity_offset) return midi_velocity_offset < b.midi_velocity_offset;
-        return 0;
-    }
-    bool operator!=(const ins &b) const
-    {
-        return !operator==(b);
-    }
-};
 
 enum VolumesModels
 {
@@ -144,7 +77,7 @@ enum VolumesModels
     VOLUME_9X
 };
 
-insdata MakeNoSoundIns();
+InstBuffer MakeNoSoundIns1();
 
 
 
@@ -360,7 +293,7 @@ struct BanksDump
     std::vector<InstrumentEntry> instruments;
     std::vector<Operator>        operators;
 
-    static void toOps(const insdata &inData, Operator *outData, size_t begin = 0);
+    static void toOps(const InstBuffer_t &inData, Operator *outData, size_t begin = 0);
     //! WIP
     static bool isSilent(const BanksDump &db, const BanksDump::InstrumentEntry &ins, bool moreInfo = false);
     static bool isSilent(const Operator *ops, uint_fast16_t fbConn, size_t countOps = 2, bool pseudo4op = false, bool moreInfo = false);

@@ -213,7 +213,6 @@ int main(int argc, char**argv)
 
     {
         measureCounter.LoadCacheX("fm_banks/adldata-cache.dat");
-        measureCounter.m_durationInfo.clear();
         measureCounter.m_cache_matches = 0;
         measureCounter.m_done = 0;
         measureCounter.m_total = db.instruments.size();

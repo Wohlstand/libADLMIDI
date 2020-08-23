@@ -56,14 +56,12 @@ private:
 struct MeasureThreaded
 {
     typedef std::array<int_fast32_t, 10> OperatorsKey;
-    typedef std::map<ins, DurationInfo> DurationInfoCache;
     typedef std::map<OperatorsKey, DurationInfo> DurationInfoCacheX;
 
     MeasureThreaded();
 
     Semaphore           m_semaphore;
     std::mutex          m_durationInfo_mx;
-    DurationInfoCache   m_durationInfo;
     DurationInfoCacheX  m_durationInfoX;
     std::atomic_bool    m_delete_tail;
     size_t              m_total = 0;
@@ -84,7 +82,6 @@ struct MeasureThreaded
             m_work.join();
         }
         MeasureThreaded  *myself;
-        std::map<ins, std::pair<size_t, std::set<std::string> > >::const_iterator i;
         BanksDump *bd;
         BanksDump::InstrumentEntry *bd_ins;
         std::thread       m_work;

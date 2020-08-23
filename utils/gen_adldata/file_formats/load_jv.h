@@ -47,8 +47,9 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
         BanksDump::MidiBank &bnk = isPercussion ? bnkPercussion : bnkMelodique;
         BanksDump::InstrumentEntry inst;
         BanksDump::Operator ops[5];
+        uint8_t notenum;
 
-        insdata tmp[2];
+        InstBuffer tmp[2];
 
         tmp[0].data[0] = data[offset + 2];
         tmp[0].data[1] = data[offset + 8];
@@ -61,8 +62,7 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
         tmp[0].data[8] = data[offset + 3];
         tmp[0].data[9] = data[offset + 9];
         tmp[0].data[10] = data[offset + 7] & 0x0F;//~0x30;
-        tmp[0].finetune = 0;
-        tmp[0].diff = false;
+        inst.noteOffset1 = 0;
 
         tmp[1].data[0] = data[offset + 2 + 11];
         tmp[1].data[1] = data[offset + 8 + 11];
@@ -75,30 +75,23 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
         tmp[1].data[8] = data[offset + 3 + 11];
         tmp[1].data[9] = data[offset + 9 + 11];
         tmp[1].data[10] = data[offset + 7 + 11] & 0x0F;//~0x30;
-        tmp[1].finetune = 0;
-        tmp[1].diff = (data[offset] != 0);
+        inst.noteOffset2 = 0;
 
-        struct ins tmp2;
-        tmp2.notenum  = data[offset + 1];
-        tmp2.pseudo4op = false;
-        tmp2.real4op = (data[offset] != 0);
-        tmp2.voice2_fine_tune = 0.0;
-        tmp2.midi_velocity_offset = 0;
-        tmp2.rhythmModeDrum = 0;
+        notenum = data[offset + 1];
 
-        while(tmp2.notenum && tmp2.notenum < 20)
+        while(notenum && notenum < 20)
         {
-            tmp2.notenum += 12;
-            tmp[0].finetune -= 12;
-            tmp[1].finetune -= 12;
+            notenum += 12;
+            inst.noteOffset1 -= 12;
+            inst.noteOffset2 -= 12;
         }
 
         if(data[offset] != 0)
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
-        inst.percussionKeyNumber = data[offset + 1];
+        inst.percussionKeyNumber = notenum;
         inst.setFbConn(data[offset + 7], data[offset + 7 + 11]);
-        db.toOps(tmp[0], ops, 0);
-        db.toOps(tmp[1], ops, 2);
+        db.toOps(tmp[0].d, ops, 0);
+        db.toOps(tmp[1].d, ops, 2);
 
         std::string name;
         if(midi_index >= 0)

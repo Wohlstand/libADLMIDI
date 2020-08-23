@@ -83,7 +83,7 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
         BanksDump::InstrumentEntry inst;
         BanksDump::Operator opsD[5];
 
-        struct insdata tmp[2];
+        InstBuffer tmp[2];
         for(unsigned a = 0; a < 2; ++a)
         {
             tmp[a].data[0] = ops[a * 2 + 0][0];
@@ -96,20 +96,10 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
             tmp[a].data[7] = ops[a * 2 + 1][4] & 0x07;
             tmp[a].data[8] = ops[a * 2 + 0][1];
             tmp[a].data[9] = ops[a * 2 + 1][1];
-            tmp[a].finetune = (int8_t)TTTTTTTT;
-            tmp[a].diff = false;
-            db.toOps(tmp[a], opsD, a * 2);
+            db.toOps(tmp[a].d, opsD, a * 2);
         }
         tmp[0].data[10] = C4xxxFFFC & 0x0F;
         tmp[1].data[10] = (tmp[0].data[10] & 0x0E) | (C4xxxFFFC >> 7);
-
-        ins tmp2;
-        tmp2.notenum = (gmno & 128) ? 35 : 0;
-        tmp2.pseudo4op = false;
-        tmp2.real4op = false;
-        tmp2.voice2_fine_tune = 0.0;
-        tmp2.midi_velocity_offset = 0;
-        tmp2.rhythmModeDrum = 0;
 
         inst.setFbConn(C4xxxFFFC & 0x0F, (tmp[0].data[10] & 0x0E) | (C4xxxFFFC >> 7));
         inst.noteOffset1 = (int8_t)TTTTTTTT;
@@ -118,8 +108,6 @@ bool BankFormats::LoadBNK2(BanksDump &db, const char *fn, unsigned bank,
         if(xxP24NNN & 8)
         {
             // dual-op
-            tmp2.real4op = true;
-            tmp[1].diff = true;
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op;
             db.addInstrument(bnk, patchId, inst, opsD, fn);
         }
