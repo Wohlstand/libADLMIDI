@@ -126,14 +126,7 @@ void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, adlinsdata2 &in
 {
     instOut.voice2_fine_tune = 0.0;
     if(instIn.secondVoiceDetune != 0)
-    {
-        if(instIn.secondVoiceDetune == 1)
-            instOut.voice2_fine_tune = 0.000025;
-        else if(instIn.secondVoiceDetune == -1)
-            instOut.voice2_fine_tune = -0.000025;
-        else
-            instOut.voice2_fine_tune = instIn.secondVoiceDetune * (15.625 / 1000.0);
-    }
+        instOut.voice2_fine_tune = (double)((((int)instIn.secondVoiceDetune + 128) >> 1) - 64) / 32.0;
 
     instOut.midi_velocity_offset = instIn.midiVelocityOffset;
     instOut.tone = instIn.percussionKeyNumber;
@@ -155,6 +148,7 @@ void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, adlinsdata2 &in
         instOut.adl[op].feedconn = (instIn.fbConn >> (op * 8)) & 0xFF;
         instOut.adl[op].finetune = static_cast<int8_t>(op == 0 ? instIn.noteOffset1 : instIn.noteOffset2);
     }
+
     instOut.ms_sound_kon  = instIn.delay_on_ms;
     instOut.ms_sound_koff = instIn.delay_off_ms;
 }
