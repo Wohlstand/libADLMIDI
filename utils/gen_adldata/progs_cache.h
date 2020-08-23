@@ -144,44 +144,6 @@ enum VolumesModels
     VOLUME_9X
 };
 
-//struct AdlBankSetup
-//{
-//    int     volumeModel;
-//    bool    deepTremolo;
-//    bool    deepVibrato;
-//    bool    scaleModulators;
-//};
-
-//typedef std::map<insdata, std::pair<size_t, std::set<std::string> > > InstrumentDataTab;
-//extern InstrumentDataTab insdatatab;
-
-//typedef std::map<ins, std::pair<size_t, std::set<std::string> > > InstrumentsData;
-//extern InstrumentsData instab;
-
-//typedef std::map<size_t, std::map<size_t, size_t> > InstProgsData;
-//extern InstProgsData progs;
-
-//typedef std::map<size_t, AdlBankSetup> BankSetupData;
-//extern BankSetupData banksetup;
-
-//extern std::vector<std::string> banknames;
-
-//static std::map<unsigned, std::map<unsigned, unsigned> > Correlate;
-//extern unsigned maxvalues[30];
-
-//void SetBank(size_t bank, unsigned patch, size_t insno);
-//void SetBankSetup(size_t bank, const AdlBankSetup &setup);
-
-///* 2op voice instrument */
-//size_t InsertIns(const insdata &id, ins &in,
-//                 const std::string &name, const std::string &name2);
-
-///* 4op voice instrument or double-voice 2-op instrument */
-//size_t InsertIns(const insdata &id, const insdata &id2, ins &in,
-//                 const std::string &name, const std::string &name2,
-//                 bool oneVoice = false);
-
-//size_t InsertNoSoundIns();
 insdata MakeNoSoundIns();
 
 

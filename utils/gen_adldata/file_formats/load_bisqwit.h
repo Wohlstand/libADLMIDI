@@ -78,13 +78,6 @@ bool BankFormats::LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, cons
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_Generic;
-//    setup.deepTremolo = true;
-//    setup.deepVibrato = true;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
-
     return true;
 }
 

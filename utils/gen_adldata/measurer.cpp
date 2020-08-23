@@ -175,60 +175,6 @@ struct TinySynth
             writeReg((uint16_t)initdata[a], (uint8_t)initdata[a + 1]);
     }
 
-//    void setInstrument(const ins &in)
-//    {
-//        insdata rawData[2];
-//        bool found[2] = {false, false};
-//        for(InstrumentDataTab::const_iterator j = insdatatab.begin();
-//            j != insdatatab.end();
-//            ++j)
-//        {
-//            if(j->second.first == in.insno1)
-//            {
-//                rawData[0] = j->first;
-//                found[0] = true;
-//                if(found[1]) break;
-//            }
-//            if(j->second.first == in.insno2)
-//            {
-//                rawData[1] = j->first;
-//                found[1] = true;
-//                if(found[0]) break;
-//            }
-//        }
-
-//        std::memset(m_x, 0, sizeof(m_x));
-//        m_isRhythmMode = false;
-//        m_playNoteNum = in.notenum >= 128 ? (in.notenum - 128) : in.notenum;
-//        m_isReal4op = in.real4op && !in.pseudo4op;
-//        m_isPseudo4op = in.pseudo4op;
-//        if(m_playNoteNum == 0)
-//            m_playNoteNum = 25;
-//        m_notesNum = in.insno1 == in.insno2 ? 1 : 2;
-//        m_actualNotesNum = (m_isReal4op ? 1 : m_notesNum);
-//        m_voice1Detune = 0;
-//        m_noteOffsets[0] = rawData[0].finetune;
-//        m_noteOffsets[1] = rawData[1].finetune;
-//        if(in.pseudo4op)
-//            m_voice1Detune = in.voice2_fine_tune;
-//        writeReg(0x104, in.real4op ? (1 << 6) - 1 : 0x00);
-
-//        //For cleaner measurement, disable tremolo and vibrato
-//        rawData[0].data[0] &= 0x3F;
-//        rawData[0].data[1] &= 0x3F;
-//        rawData[1].data[0] &= 0x3F;
-//        rawData[1].data[1] &= 0x3F;
-
-//        for(unsigned n = 0; n < m_notesNum; ++n)
-//        {
-//            static const unsigned char patchdata[11] =
-//            {0x20, 0x23, 0x60, 0x63, 0x80, 0x83, 0xE0, 0xE3, 0x40, 0x43, 0xC0};
-//            for(unsigned a = 0; a < 10; ++a)
-//                writeReg(patchdata[a] + n * 8, rawData[n].data[a]);
-//            writeReg(patchdata[10] + n * 8, rawData[n].data[10] | 0x30);
-//        }
-//    }
-
     void setInstrument(const BanksDump &db, const BanksDump::InstrumentEntry &ins)
     {
         bool isPseudo4ops = ((ins.instFlags & BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op) != 0);
@@ -331,198 +277,6 @@ struct TinySynth
         m_chip->generate(output, frames);
     }
 };
-
-#if 0
-DurationInfo MeasureDurations(const ins &in, OPLChipBase *chip)
-{
-    AudioHistory<double> audioHistory;
-
-    const unsigned interval             = 150;
-    const unsigned samples_per_interval = g_outputRate / interval;
-
-    const double historyLength = 0.1;  // maximum duration to memorize (seconds)
-    audioHistory.reset(std::ceil(historyLength * g_outputRate));
-
-    std::unique_ptr<double[]> window;
-    window.reset(new double[audioHistory.capacity()]);
-    unsigned winsize = 0;
-
-    TinySynth synth;
-    synth.m_chip = chip;
-    synth.resetChip();
-    synth.setInstrument(in);
-    synth.noteOn();
-
-    /* For capturing */
-    const unsigned max_silent = 6;
-    const unsigned max_on  = 40;
-    const unsigned max_off = 60;
-
-    unsigned max_period_on = max_on * interval;
-    unsigned max_period_off = max_off * interval;
-
-    const double min_coefficient_on = 0.008;
-    const double min_coefficient_off = 0.003;
-
-    unsigned windows_passed_on = 0;
-    unsigned windows_passed_off = 0;
-
-    /* For Analyze the results */
-    double begin_amplitude        = 0;
-    double peak_amplitude_value   = 0;
-    size_t peak_amplitude_time    = 0;
-    size_t quarter_amplitude_time = max_period_on;
-    bool   quarter_amplitude_time_found = false;
-    size_t keyoff_out_time        = 0;
-    bool   keyoff_out_time_found  = false;
-
-    const size_t audioBufferLength = 256;
-    const size_t audioBufferSize = 2 * audioBufferLength;
-    int16_t audioBuffer[audioBufferSize];
-
-    // For up to 40 seconds, measure mean amplitude.
-    double highest_sofar = 0;
-    short sound_min = 0, sound_max = 0;
-
-    for(unsigned period = 0; period < max_period_on; ++period, ++windows_passed_on)
-    {
-        for(unsigned i = 0; i < samples_per_interval;)
-        {
-            size_t blocksize = samples_per_interval - i;
-            blocksize = (blocksize < audioBufferLength) ? blocksize : audioBufferLength;
-            synth.generate(audioBuffer, blocksize);
-            for (unsigned j = 0; j < blocksize; ++j)
-            {
-                int16_t s = audioBuffer[2 * j];
-                audioHistory.add(s);
-                if(sound_min > s) sound_min = s;
-                if(sound_max < s) sound_max = s;
-            }
-            i += blocksize;
-        }
-
-        if(winsize != audioHistory.size())
-        {
-            winsize = audioHistory.size();
-            HannWindow(window.get(), winsize);
-        }
-
-        double rms = MeasureRMS(audioHistory.data(), window.get(), winsize);
-        /* ======== Peak time detection ======== */
-        if(period == 0)
-        {
-            begin_amplitude = rms;
-            peak_amplitude_value = rms;
-            peak_amplitude_time = 0;
-        }
-        else if(rms > peak_amplitude_value)
-        {
-            peak_amplitude_value = rms;
-            peak_amplitude_time  = period;
-            // In next step, update the quater amplitude time
-            quarter_amplitude_time_found = false;
-        }
-        else if(!quarter_amplitude_time_found && (rms <= peak_amplitude_value * min_coefficient_on))
-        {
-            quarter_amplitude_time = period;
-            quarter_amplitude_time_found = true;
-        }
-        /* ======== Peak time detection =END==== */
-        if(rms > highest_sofar)
-            highest_sofar = rms;
-
-        if((period > max_silent * interval) &&
-           ( (rms < highest_sofar * min_coefficient_on) || (sound_min >= -1 && sound_max <= 1) )
-        )
-            break;
-    }
-
-    if(!quarter_amplitude_time_found)
-        quarter_amplitude_time = windows_passed_on;
-
-    if(windows_passed_on >= max_period_on)
-    {
-        // Just Keyoff the note
-        synth.noteOff();
-    }
-    else
-    {
-        // Reset the emulator and re-run the "ON" simulation until reaching the peak time
-        synth.resetChip();
-        synth.setInstrument(in);
-        synth.noteOn();
-
-        audioHistory.reset(std::ceil(historyLength * g_outputRate));
-        for(unsigned period = 0;
-            ((period < peak_amplitude_time) || (period == 0)) && (period < max_period_on);
-            ++period)
-        {
-            for(unsigned i = 0; i < samples_per_interval;)
-            {
-                size_t blocksize = samples_per_interval - i;
-                blocksize = (blocksize < audioBufferLength) ? blocksize : audioBufferLength;
-                synth.generate(audioBuffer, blocksize);
-                for (unsigned j = 0; j < blocksize; ++j)
-                    audioHistory.add(audioBuffer[2 * j]);
-                i += blocksize;
-            }
-        }
-        synth.noteOff();
-    }
-
-    // Now, for up to 60 seconds, measure mean amplitude.
-    for(unsigned period = 0; period < max_period_off; ++period, ++windows_passed_off)
-    {
-        for(unsigned i = 0; i < samples_per_interval;)
-        {
-            size_t blocksize = samples_per_interval - i;
-            blocksize = (blocksize < 256) ? blocksize : 256;
-            synth.generate(audioBuffer, blocksize);
-            for (unsigned j = 0; j < blocksize; ++j)
-            {
-                int16_t s = audioBuffer[2 * j];
-                audioHistory.add(s);
-                if(sound_min > s) sound_min = s;
-                if(sound_max < s) sound_max = s;
-            }
-            i += blocksize;
-        }
-
-        if(winsize != audioHistory.size())
-        {
-            winsize = audioHistory.size();
-            HannWindow(window.get(), winsize);
-        }
-
-        double rms = MeasureRMS(audioHistory.data(), window.get(), winsize);
-        /* ======== Find Key Off time ======== */
-        if(!keyoff_out_time_found && (rms <= peak_amplitude_value * min_coefficient_off))
-        {
-            keyoff_out_time = period;
-            keyoff_out_time_found = true;
-        }
-        /* ======== Find Key Off time ==END=== */
-        if(rms < highest_sofar * min_coefficient_off)
-            break;
-
-        if((period > max_silent * interval) && (sound_min >= -1 && sound_max <= 1))
-            break;
-    }
-
-    DurationInfo result;
-    result.peak_amplitude_time = peak_amplitude_time;
-    result.peak_amplitude_value = peak_amplitude_value;
-    result.begin_amplitude = begin_amplitude;
-    result.quarter_amplitude_time = (double)quarter_amplitude_time;
-    result.keyoff_out_time = (double)keyoff_out_time;
-
-    result.ms_sound_kon  = (int64_t)(quarter_amplitude_time * 1000.0 / interval);
-    result.ms_sound_koff = (int64_t)(keyoff_out_time        * 1000.0 / interval);
-    result.nosound = (peak_amplitude_value < 0.5) || ((sound_min >= -1) && (sound_max <= 1));
-
-    return result;
-}
-#endif
 
 DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &ins, OPLChipBase *chip)
 {
@@ -791,243 +545,6 @@ MeasureThreaded::MeasureThreaded() :
     DosBoxOPL3::globalPreInit();
 }
 
-#if 0
-void MeasureThreaded::LoadCache(const char *fileName)
-{
-    m_durationInfo.clear();
-
-    FILE *in = std::fopen(fileName, "rb");
-    if(!in)
-    {
-        std::printf("Failed to load cache: file is not exists.\n"
-               "Complete data will be generated from scratch.\n");
-        std::fflush(stdout);
-        return;
-    }
-
-    char magic[32];
-    if(std::fread(magic, 1, 32, in) != 32)
-    {
-        std::fclose(in);
-        std::printf("Failed to load cache: can't read magic.\n"
-               "Complete data will be generated from scratch.\n");
-        std::fflush(stdout);
-        return;
-    }
-
-    if(memcmp(magic, "ADLMIDI-DURATION-CACHE-FILE-V1.0", 32) != 0)
-    {
-        std::fclose(in);
-        std::printf("Failed to load cache: magic missmatch.\n"
-               "Complete data will be generated from scratch.\n");
-        std::fflush(stdout);
-        return;
-    }
-
-    while(!std::feof(in))
-    {
-        DurationInfo info;
-        ins inst;
-        //got by instrument
-        insdata id[2];
-        size_t insNo[2] = {0, 0};
-        bool found[2] = {false, false};
-        //got from file
-        insdata id_f[2];
-        bool found_f[2] = {false, false};
-        bool isMatches = false;
-
-        memset(id, 0, sizeof(insdata) * 2);
-        memset(id_f, 0, sizeof(insdata) * 2);
-        memset(&info, 0, sizeof(DurationInfo));
-        memset(&inst, 0, sizeof(ins));
-
-        //Instrument
-        uint64_t inval;
-        if(std::fread(&inval, 1, sizeof(uint64_t), in) != sizeof(uint64_t))
-            break;
-        inst.insno1 = inval;
-        if(std::fread(&inval, 1, sizeof(uint64_t), in) != sizeof(uint64_t))
-            break;
-        inst.insno2 = inval;
-        if(std::fread(&inst.instCache1.data, 1, 11, in) != 11)
-            break;
-        if(std::fread(&inst.instCache1.finetune, 1, 1, in) != 1)
-            break;
-        if(std::fread(&inst.instCache1.diff, 1, sizeof(bool), in) != sizeof(bool))
-            break;
-        if(std::fread(&inst.instCache2.data, 1, 11, in) != 11)
-            break;
-        if(std::fread(&inst.instCache2.finetune, 1, 1, in) != 1)
-            break;
-        if(std::fread(&inst.instCache2.diff, 1, sizeof(bool), in) != sizeof(bool))
-            break;
-
-        if(std::fread(&inst.notenum, 1, 1, in) != 1)
-            break;
-        if(std::fread(&inst.real4op, 1, 1, in) != 1)
-            break;
-        if(std::fread(&inst.pseudo4op, 1, 1, in) != 1)
-            break;
-        int64_t voice2detune = 0;
-        if(std::fread(&voice2detune, sizeof(int64_t), 1, in) != 1)
-            break;
-        inst.voice2_fine_tune = static_cast<double>(voice2detune) / 1000000.0;
-
-        //Instrument data
-        if(fread(found_f, 1, 2 * sizeof(bool), in) != sizeof(bool) * 2)
-            break;
-        for(size_t i = 0; i < 2; i++)
-        {
-            if(fread(id_f[i].data, 1, 11, in) != 11)
-                break;
-            if(fread(&id_f[i].finetune, 1, 1, in) != 1)
-                break;
-            if(fread(&id_f[i].diff, 1, sizeof(bool), in) != sizeof(bool))
-                break;
-        }
-
-        if(found_f[0] || found_f[1])
-        {
-            for(InstrumentDataTab::const_iterator j = insdatatab.begin(); j != insdatatab.end(); ++j)
-            {
-                if(j->second.first == inst.insno1)
-                {
-                    id[0] = j->first;
-                    found[0] = (id[0] == id_f[0]);
-                    insNo[0] = inst.insno1;
-                    if(found[1]) break;
-                }
-                if(j->second.first == inst.insno2)
-                {
-                    id[1] = j->first;
-                    found[1] = (id[1] == id_f[1]);
-                    insNo[1] = inst.insno2;
-                    if(found[0]) break;
-                }
-            }
-
-            //Find instrument entries are matching
-            if((found[0] != found_f[0]) || (found[1] != found_f[1]))
-            {
-                for(InstrumentDataTab::const_iterator j = insdatatab.begin(); j != insdatatab.end(); ++j)
-                {
-                    if(found_f[0] && (j->first == id_f[0]))
-                    {
-                        found[0] = true;
-                        insNo[0] = j->second.first;
-                    }
-                    if(found_f[1] && (j->first == id_f[1]))
-                    {
-                        found[1] = true;
-                        insNo[1] = j->second.first;
-                    }
-                    if(found[0] && !found_f[1])
-                    {
-                        isMatches = true;
-                        break;
-                    }
-                    if(found[0] && found[1])
-                    {
-                        isMatches = true;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                isMatches = true;
-            }
-
-            //Then find instrument entry that uses found instruments
-            if(isMatches)
-            {
-                inst.insno1 = insNo[0];
-                inst.insno2 = insNo[1];
-                InstrumentsData::iterator d = instab.find(inst);
-                if(d == instab.end())
-                    isMatches = false;
-            }
-        }
-
-        //Duration data
-        if(std::fread(&info.ms_sound_kon, 1, sizeof(int64_t), in) != sizeof(int64_t))
-            break;
-        if(std::fread(&info.ms_sound_koff, 1, sizeof(int64_t), in) != sizeof(int64_t))
-            break;
-        if(std::fread(&info.nosound, 1, sizeof(bool), in) != sizeof(bool))
-            break;
-
-        if(isMatches)//Store only if cached entry matches actual raw instrument data
-            m_durationInfo.insert({inst, info});
-    }
-
-    std::printf("Cache loaded!\n");
-    std::fflush(stdout);
-
-    std::fclose(in);
-}
-
-void MeasureThreaded::SaveCache(const char *fileName)
-{
-    FILE *out = std::fopen(fileName, "wb");
-    fprintf(out, "ADLMIDI-DURATION-CACHE-FILE-V1.0");
-    for(DurationInfoCache::iterator it = m_durationInfo.begin(); it != m_durationInfo.end(); it++)
-    {
-        const ins &in = it->first;
-        insdata id[2];
-        bool found[2] = {false, false};
-        memset(id, 0, sizeof(insdata) * 2);
-
-        uint64_t outval;
-        outval = in.insno1;
-        fwrite(&outval, 1, sizeof(uint64_t), out);
-        outval = in.insno2;
-        fwrite(&outval, 1, sizeof(uint64_t), out);
-        fwrite(&in.instCache1.data, 1, 11, out);
-        fwrite(&in.instCache1.finetune, 1, 1, out);
-        fwrite(&in.instCache1.diff, 1, sizeof(bool), out);
-        fwrite(&in.instCache2.data, 1, 11, out);
-        fwrite(&in.instCache2.finetune, 1, 1, out);
-        fwrite(&in.instCache2.diff, 1, sizeof(bool), out);
-        fwrite(&in.notenum, 1, 1, out);
-        fwrite(&in.real4op, 1, 1, out);
-        fwrite(&in.pseudo4op, 1, 1, out);
-        int64_t voice2detune = static_cast<int64_t>(in.voice2_fine_tune * 1000000.0);
-        fwrite(&voice2detune, sizeof(int64_t), 1, out);
-
-        for(InstrumentDataTab::const_iterator j = insdatatab.begin(); j != insdatatab.end(); ++j)
-        {
-            if(j->second.first == in.insno1)
-            {
-                id[0] = j->first;
-                found[0] = true;
-                if(found[1]) break;
-            }
-            if(j->second.first == in.insno2)
-            {
-                id[1] = j->first;
-                found[1] = true;
-                if(found[0]) break;
-            }
-        }
-
-        fwrite(found, 1, 2 * sizeof(bool), out);
-        for(size_t i = 0; i < 2; i++)
-        {
-            fwrite(id[i].data, 1, 11, out);
-            fwrite(&id[i].finetune, 1, 1, out);
-            fwrite(&id[i].diff, 1, sizeof(bool), out);
-        }
-
-        fwrite(&it->second.ms_sound_kon, 1, sizeof(int64_t), out);
-        fwrite(&it->second.ms_sound_koff, 1, sizeof(int64_t), out);
-        fwrite(&it->second.nosound, 1, sizeof(bool), out);
-    }
-    std::fclose(out);
-}
-#endif
-
 void MeasureThreaded::LoadCacheX(const char *fileName)
 {
     m_durationInfoX.clear();
@@ -1195,37 +712,6 @@ void MeasureThreaded::printFinal()
     std::fflush(stdout);
 }
 
-#if 0
-void MeasureThreaded::run(InstrumentsData::const_iterator i)
-{
-    m_semaphore.wait();
-    if(m_threads.size() > 0)
-    {
-        for(std::vector<destData *>::iterator it = m_threads.begin(); it != m_threads.end();)
-        {
-            if(!(*it)->m_works)
-            {
-                delete(*it);
-                it = m_threads.erase(it);
-            }
-            else
-                it++;
-        }
-    }
-
-    destData *dd = new destData;
-    dd->i = i;
-    dd->bd = nullptr;
-    dd->bd_ins = nullptr;
-    dd->myself = this;
-    dd->start();
-    m_threads.push_back(dd);
-#ifdef ADL_GENDATA_PRINT_PROGRESS
-    printProgress();
-#endif
-}
-#endif
-
 void MeasureThreaded::run(BanksDump &bd, BanksDump::InstrumentEntry &e)
 {
     m_semaphore.wait();
@@ -1276,58 +762,34 @@ void MeasureThreaded::destData::callback(void *myself)
 {
     destData *s = reinterpret_cast<destData *>(myself);
     DurationInfo info;
-    DosBoxOPL3 dosbox;
-    // NukedOPL3 dosbox;
+    DosBoxOPL3 chip;
+    // NukedOPL3 chip;
 
-    if(s->bd)
+    OperatorsKey ok = {s->bd_ins->ops[0], s->bd_ins->ops[1], s->bd_ins->ops[2], s->bd_ins->ops[3],
+                       static_cast<int_fast32_t>(s->bd_ins->fbConn),
+                       s->bd_ins->noteOffset1, s->bd_ins->noteOffset2,
+                       static_cast<int_fast32_t>(s->bd_ins->percussionKeyNumber),
+                       static_cast<int_fast32_t>(s->bd_ins->instFlags),
+                       static_cast<int_fast32_t>(s->bd_ins->secondVoiceDetune)};
+    s->myself->m_durationInfo_mx.lock();
+    DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfoX.find(ok);
+    bool atEnd = cachedEntry == s->myself->m_durationInfoX.end();
+    s->myself->m_durationInfo_mx.unlock();
+
+    if(!atEnd)
     {
-        OperatorsKey ok = {s->bd_ins->ops[0], s->bd_ins->ops[1], s->bd_ins->ops[2], s->bd_ins->ops[3],
-                           static_cast<int_fast32_t>(s->bd_ins->fbConn),
-                           s->bd_ins->noteOffset1, s->bd_ins->noteOffset2,
-                           static_cast<int_fast32_t>(s->bd_ins->percussionKeyNumber),
-                           static_cast<int_fast32_t>(s->bd_ins->instFlags),
-                           static_cast<int_fast32_t>(s->bd_ins->secondVoiceDetune)};
-        s->myself->m_durationInfo_mx.lock();
-        DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfoX.find(ok);
-        bool atEnd = cachedEntry == s->myself->m_durationInfoX.end();
-        s->myself->m_durationInfo_mx.unlock();
-
-        if(!atEnd)
-        {
-            const DurationInfo &di = cachedEntry->second;
-            s->bd_ins->delay_on_ms = di.ms_sound_kon;
-            s->bd_ins->delay_off_ms = di.ms_sound_koff;
-            if(di.nosound)
-                s->bd_ins->instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
-            s->myself->m_cache_matches++;
-            goto endWork;
-        }
-        info = MeasureDurations(*s->bd, *s->bd_ins, &dosbox);
-        s->myself->m_durationInfo_mx.lock();
-        s->myself->m_durationInfoX.insert({ok, info});
-        s->myself->m_durationInfo_mx.unlock();
+        const DurationInfo &di = cachedEntry->second;
+        s->bd_ins->delay_on_ms = di.ms_sound_kon;
+        s->bd_ins->delay_off_ms = di.ms_sound_koff;
+        if(di.nosound)
+            s->bd_ins->instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
+        s->myself->m_cache_matches++;
+        goto endWork;
     }
-    else
-    {
-#if 0
-        const ins &ok = s->i->first;
-        s->myself->m_durationInfo_mx.lock();
-        DurationInfoCache::iterator cachedEntry = s->myself->m_durationInfo.find(ok);
-        bool atEnd = cachedEntry == s->myself->m_durationInfo.end();
-        s->myself->m_durationInfo_mx.unlock();
-
-        if(!atEnd)
-        {
-            s->myself->m_cache_matches++;
-            goto endWork;
-        }
-
-        info = MeasureDurations(ok, &dosbox);
-        s->myself->m_durationInfo_mx.lock();
-        s->myself->m_durationInfo.insert({ok, info});
-        s->myself->m_durationInfo_mx.unlock();
-#endif
-    }
+    info = MeasureDurations(*s->bd, *s->bd_ins, &chip);
+    s->myself->m_durationInfo_mx.lock();
+    s->myself->m_durationInfoX.insert({ok, info});
+    s->myself->m_durationInfo_mx.unlock();
 
 endWork:
     s->myself->m_semaphore.notify();

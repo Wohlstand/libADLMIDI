@@ -6,9 +6,9 @@
 
 bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("Junglevision", fn, prefix, bank, INI_Both);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -101,37 +101,20 @@ bool BankFormats::LoadJunglevision(BanksDump &db, const char *fn, unsigned bank,
         db.toOps(tmp[1], ops, 2);
 
         std::string name;
-        if(midi_index >= 0) name = std::string(1, '\377') + MidiInsName[midi_index];
+        if(midi_index >= 0)
+            name = std::string(1, '\377') + MidiInsName[midi_index];
 
         char name2[512];
         sprintf(name2, "%s%c%u", prefix,
                 (gmno < 128 ? 'M' : 'P'), gmno & 127);
 
-        if(!data[offset])
-        {
-//            size_t resno = InsertIns(tmp[0], tmp2, name, name2);
-//            SetBank(bank, gmno, resno);
-        }
-        else // Double instrument
-        {
-//            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, name, name2);
-//            SetBank(bank, gmno, resno);
-        }
         db.addInstrument(bnk, patchId, inst, ops, fn);
     }
 
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
 
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_9X;
-//    setup.deepTremolo = true;
-//    setup.deepVibrato = true;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
-
     return true;
 }
 
 #endif // LOAD_JV_H
-

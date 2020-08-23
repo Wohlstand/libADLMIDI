@@ -110,15 +110,12 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
         {
             snprintf(name2, 512, "%sunk%04X", prefix, offset);
         }
-//        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
-//        SetBank(bank, gmno, resno);
 
         db.addInstrument(bnkMelodic, gmno, inst, ops, fn);
 
         if(gmno == 10)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x49;
-//            SetBank(bank, 0x80 + 0x36, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x36 - 35], std::string(1, '\377') + prefix + "P54"));
             inst.percussionKeyNumber = 0x49;
             db.addInstrument(bnkPercussion, 0x36, inst, ops, fn);
         }
@@ -126,7 +123,6 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
         if(gmno == 18)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x17;
-//            SetBank(bank, 0x80 + 0x2A, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x2A - 35], std::string(1, '\377') + prefix + "P42"));
             inst.percussionKeyNumber = 0x17;
             db.addInstrument(bnkPercussion, 0x2A, inst, ops, fn);
         }
@@ -134,7 +130,6 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
         if(gmno == 16)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x0C;
-//            SetBank(bank, 0x80 + 0x24, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x24 - 35], std::string(1, '\377') + prefix + "P36"));
             inst.percussionKeyNumber = 0x0C;
             db.addInstrument(bnkPercussion, 0x24, inst, ops, fn);
         }
@@ -142,20 +137,12 @@ bool BankFormats::LoadEA(BanksDump &db, const char *fn, unsigned bank,
         if(gmno == 17)
         {
             /*tmp.finetune=0;*/ tmp2.notenum = 0x01;
-//            SetBank(bank, 0x80 + 0x26, InsertIns(tmp, tmp2, std::string(1, '\377') + MidiInsName[0x80 + 0x26 - 35], std::string(1, '\377') + prefix + "P38"));
             inst.percussionKeyNumber = 0x01;
             db.addInstrument(bnkPercussion, 0x26, inst, ops, fn);
         }
     }
 
     std::fclose(fp);
-
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_CMF;
-//    setup.deepTremolo = false;
-//    setup.deepVibrato = false;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
 
     db.addMidiBank(bankDb, false, bnkMelodic);
     db.addMidiBank(bankDb, true, bnkPercussion);

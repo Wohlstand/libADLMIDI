@@ -51,9 +51,9 @@ struct Doom_opl_instr
 
 bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("OP2", fn, prefix, bank, INI_Both);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -137,19 +137,11 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
         inst.percussionKeyNumber = tmp2.notenum;
         inst.secondVoiceDetune = static_cast<char>(static_cast<int>(ins.finetune) - 128);
 
-        if(!(ins.flags & FL_DOUBLE_VOICE))
-        {
-//            size_t resno = InsertIns(tmp[0], tmp2, std::string(1, '\377') + name, name2);
-//            SetBank(bank, (unsigned int)gmno, resno);
-        }
-        else // Double instrument
+        if((ins.flags & FL_DOUBLE_VOICE) != 0)
         {
             tmp2.pseudo4op = true;
             // Simulate behavior of DMX second voice detune
             tmp2.voice2_fine_tune = (double)((ins.finetune >> 1) - 64) / 32.0;
-            //printf("/*DOOM FINE TUNE (flags %000X instrument is %d) IS %d -> %lf*/\n", ins.flags, a, ins.finetune, tmp2.fine_tune);
-//            size_t resno = InsertIns(tmp[0], tmp[1], tmp2, std::string(1, '\377') + name, name2);
-//            SetBank(bank, (unsigned int)gmno, resno);
         }
 
         db.addInstrument(bnk, patchId, inst, ops, fn);
@@ -177,13 +169,6 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
 
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
-
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_DMX;
-//    setup.deepTremolo = false;
-//    setup.deepVibrato = false;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
 
     return true;
 }

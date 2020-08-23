@@ -7,9 +7,9 @@ bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
                           const std::string &bankTitle, const char *prefix,
                           bool percussive, bool noRhythmMode)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("IBK", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -112,20 +112,10 @@ bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
             }
         }
 
-//        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
-//        SetBank(bank, (unsigned int)gmno, resno);
-
         db.addInstrument(bnk, a, inst, ops, fn);
     }
 
     db.addMidiBank(bankDb, percussive, bnk);
-
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_Generic;
-//    setup.deepTremolo = false;
-//    setup.deepVibrato = false;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
 
     return true;
 }

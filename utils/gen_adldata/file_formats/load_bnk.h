@@ -11,9 +11,9 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
                           const std::string &bankTitle, const char *prefix,
                           bool is_fat, bool percussive)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("HMI", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -121,24 +121,15 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
         tmp2.midi_velocity_offset = 0;
         tmp2.rhythmModeDrum = 0;
 
-        if(is_fat) tmp.data[10] ^= 1;
+        if(is_fat)
+            tmp.data[10] ^= 1;
 
         db.toOps(tmp, ops, 0);
         inst.percussionKeyNumber = is_fat ? voice_num : (percussive ? usage_flag : 0);
         inst.setFbConn(op1[2] * 2 + op1[12]);
 
-//        size_t resno = InsertIns(tmp, tmp2, std::string(1, '\377') + name, name2);
-
         if(!is_fat)
-        {
-//            SetBank(bank, (unsigned int)gmno, resno);
             db.addInstrument(bnk, n & 127, inst, ops, fn);
-        }
-        else
-        {
-//            if(name[2] == 'O' || name[1] == 'M') SetBank(bank + 0, (unsigned int)gmno, resno);
-//            if(name[2] == 'S' || name[1] == 'M') SetBank(bank + 1, (unsigned int)gmno, resno);
-        }
 
         /*
         for(unsigned p=0; p<30; ++p)
@@ -165,13 +156,6 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
     }
 
     db.addMidiBank(bankDb, percussive, bnk);
-
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_Generic;
-//    setup.deepTremolo = false;
-//    setup.deepVibrato = false;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
 
     return true;
 }

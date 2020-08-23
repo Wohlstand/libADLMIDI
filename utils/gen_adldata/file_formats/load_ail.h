@@ -15,9 +15,9 @@ struct GTL_Head // GTL file header entry structure
 bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
                             const std::string &bankTitle, const char *prefix)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("AIL", fn, prefix, bank, INI_Both);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -172,13 +172,6 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
             db.addInstrument(bnk, h.patch, inst, ops, fn);
         }
     }
-
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_Generic;
-//    setup.deepTremolo = true;
-//    setup.deepVibrato = true;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
 
     for(auto &b : bnkMelodic)
         db.addMidiBank(bankDb, false, b);

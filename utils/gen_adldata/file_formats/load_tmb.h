@@ -6,9 +6,9 @@
 
 bool BankFormats::LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix)
 {
-    #ifdef HARD_BANKS
+#ifdef HARD_BANKS
     writeIni("TMB", fn, prefix, bank, INI_Both);
-    #endif
+#endif
     FILE *fp = std::fopen(fn, "rb");
     if(!fp)
         return false;
@@ -77,21 +77,11 @@ bool BankFormats::LoadTMB(BanksDump &db, const char *fn, unsigned bank, const st
         sprintf(name2, "%s%c%u", prefix,
                 (gmno < 128 ? 'M' : 'P'), gmno & 127);
 
-//        size_t resno = InsertIns(tmp, tmp2, name, name2);
-//        SetBank(bank, gmno, resno);
-
         db.addInstrument(bnk, patchId, inst, ops, fn);
     }
 
     db.addMidiBank(bankDb, false, bnkMelodique);
     db.addMidiBank(bankDb, true, bnkPercussion);
-
-//    AdlBankSetup setup;
-//    setup.volumeModel = VOLUME_APOGEE;
-//    setup.deepTremolo = false;
-//    setup.deepVibrato = false;
-//    setup.scaleModulators = false;
-//    SetBankSetup(bank, setup);
 
     return true;
 }
