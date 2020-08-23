@@ -111,7 +111,7 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
             tmp[index].data[9] = src.scale_2 | src.level_2;
             tmp[index].data[10] = src.feedback;
             tmp[index].finetune = int8_t(src.basenote + 12);
-            inst.fbConn |= (uint_fast16_t(src.feedback) << (a == 1 ? 8 : 0));
+            inst.fbConn |= (uint_fast16_t(src.feedback) << (index == 1 ? 8 : 0));
             db.toOps(tmp[index], ops, index * 2);
         }
         struct ins tmp2;
