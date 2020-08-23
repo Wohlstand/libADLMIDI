@@ -670,20 +670,6 @@ void OPL3::touchNote(size_t c,
     //   63 + chanvol * (instrvol / 63.0 - 1)
 }
 
-/*
-void OPL3::Touch(unsigned c, unsigned volume) // Volume maxes at 127*127*127
-{
-    if(LogarithmicVolumes)
-        Touch_Real(c, volume * 127 / (127 * 127 * 127) / 2);
-    else
-    {
-        // The formula below: SOLVE(V=127^3 * 2^( (A-63.49999) / 8), A)
-        Touch_Real(c, volume > 8725 ? static_cast<unsigned int>(std::log(volume) * 11.541561 + (0.5 - 104.22845)) : 0);
-        // The incorrect formula below: SOLVE(V=127^3 * (2^(A/63)-1), A)
-        //Touch_Real(c, volume>11210 ? 91.61112 * std::log(4.8819E-7*volume + 1.0)+0.5 : 0);
-    }
-}*/
-
 void OPL3::setPatch(size_t c, const adldata &instrument)
 {
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;

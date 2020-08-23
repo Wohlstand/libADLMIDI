@@ -431,7 +431,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         {0, ains->adl[0], false},
         {0, (!is_2op) ? ains->adl[1] : ains->adl[0], pseudo_4op}
     };
-#else /* Unfortunately, WatCom can't brace-initialize structure that incluses structure fields */
+#else /* Unfortunately, Watcom can't brace-initialize structure that incluses structure fields */
     MIDIchannel::NoteInfo::Phys voices[MIDIchannel::NoteInfo::MaxNumPhysChans];
     voices[0].chip_chan = 0;
     voices[0].ains = ains->adl[0];
