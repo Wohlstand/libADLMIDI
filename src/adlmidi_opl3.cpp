@@ -315,7 +315,7 @@ void OPL3::setEmbeddedBank(uint32_t bank)
         {
             size_t bankIndex = g_embeddedBanksMidiIndex[banksOffset + bankID];
             const BanksDump::MidiBank &bankData = g_embeddedBanksMidi[bankIndex];
-            size_t bankMidiIndex = static_cast<size_t>((bankData.msb * 256) + bankData.lsb) + (ss ? PercussionTag : 0);
+            size_t bankMidiIndex = static_cast<size_t>((bankData.msb * 256) + bankData.lsb) + (ss ? static_cast<size_t>(PercussionTag) : 0);
             Bank &bankTarget = m_insBanks[bankMidiIndex];
 
             for(size_t instId = 0; instId < 128; instId++)
