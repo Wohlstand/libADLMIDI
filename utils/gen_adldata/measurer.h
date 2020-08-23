@@ -62,14 +62,14 @@ struct MeasureThreaded
 
     Semaphore           m_semaphore;
     std::mutex          m_durationInfo_mx;
-    DurationInfoCacheX  m_durationInfoX;
+    DurationInfoCacheX  m_durationInfo;
     std::atomic_bool    m_delete_tail;
     size_t              m_total = 0;
     std::atomic<size_t> m_done;
     std::atomic<size_t> m_cache_matches;
 
-    void LoadCacheX(const char *fileName);
-    void SaveCacheX(const char *fileName);
+    void LoadCache(const char *fileName);
+    void SaveCache(const char *fileName);
 
     struct destData
     {

@@ -212,7 +212,7 @@ int main(int argc, char**argv)
     MeasureThreaded measureCounter;
 
     {
-        measureCounter.LoadCacheX("fm_banks/adldata-cache.dat");
+        measureCounter.LoadCache("fm_banks/adldata-cache.dat");
         measureCounter.m_cache_matches = 0;
         measureCounter.m_done = 0;
         measureCounter.m_total = db.instruments.size();
@@ -225,7 +225,7 @@ int main(int argc, char**argv)
         }
         std::fflush(stdout);
         measureCounter.waitAll();
-        measureCounter.SaveCacheX("fm_banks/adldata-cache.dat");
+        measureCounter.SaveCache("fm_banks/adldata-cache.dat");
     }
 
     db.exportBanks(std::string(outFile_s));

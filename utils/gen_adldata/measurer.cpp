@@ -545,9 +545,9 @@ MeasureThreaded::MeasureThreaded() :
     DosBoxOPL3::globalPreInit();
 }
 
-void MeasureThreaded::LoadCacheX(const char *fileName)
+void MeasureThreaded::LoadCache(const char *fileName)
 {
-    m_durationInfoX.clear();
+    m_durationInfo.clear();
 
     FILE *in = std::fopen(fileName, "rb");
     if(!in)
@@ -626,7 +626,7 @@ void MeasureThreaded::LoadCacheX(const char *fileName)
         v.ms_sound_koff = static_cast<int_fast64_t>(toUint16LE(data_k + 2));
         v.nosound = (data_k[4] == 0x01);
 
-        m_durationInfoX.insert({k, v});
+        m_durationInfo.insert({k, v});
         itemsCount--;
     }
 
@@ -636,12 +636,12 @@ void MeasureThreaded::LoadCacheX(const char *fileName)
     std::fclose(in);
 }
 
-void MeasureThreaded::SaveCacheX(const char *fileName)
+void MeasureThreaded::SaveCache(const char *fileName)
 {
     FILE *out = std::fopen(fileName, "wb");
     std::fprintf(out, "ADLMIDI-DURATION-CACHE-FILE-V2.0");
 
-    uint_fast32_t itemsCount = static_cast<uint_fast32_t>(m_durationInfoX.size());
+    uint_fast32_t itemsCount = static_cast<uint_fast32_t>(m_durationInfo.size());
     uint8_t itemsCountA[4] =
     {
         static_cast<uint8_t>((itemsCount >>  0) & 0xFF),
@@ -651,7 +651,7 @@ void MeasureThreaded::SaveCacheX(const char *fileName)
     };
     std::fwrite(itemsCountA, 1, 4, out);
 
-    for(DurationInfoCacheX::iterator it = m_durationInfoX.begin(); it != m_durationInfoX.end(); it++)
+    for(DurationInfoCacheX::iterator it = m_durationInfo.begin(); it != m_durationInfo.end(); it++)
     {
         const OperatorsKey &k = it->first;
         const DurationInfo &v = it->second;
@@ -772,8 +772,8 @@ void MeasureThreaded::destData::callback(void *myself)
                        static_cast<int_fast32_t>(s->bd_ins->instFlags),
                        static_cast<int_fast32_t>(s->bd_ins->secondVoiceDetune)};
     s->myself->m_durationInfo_mx.lock();
-    DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfoX.find(ok);
-    bool atEnd = cachedEntry == s->myself->m_durationInfoX.end();
+    DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfo.find(ok);
+    bool atEnd = cachedEntry == s->myself->m_durationInfo.end();
     s->myself->m_durationInfo_mx.unlock();
 
     if(!atEnd)
@@ -788,7 +788,7 @@ void MeasureThreaded::destData::callback(void *myself)
     }
     info = MeasureDurations(*s->bd, *s->bd_ins, &chip);
     s->myself->m_durationInfo_mx.lock();
-    s->myself->m_durationInfoX.insert({ok, info});
+    s->myself->m_durationInfo.insert({ok, info});
     s->myself->m_durationInfo_mx.unlock();
 
 endWork:
