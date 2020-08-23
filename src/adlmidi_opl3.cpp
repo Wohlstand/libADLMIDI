@@ -546,8 +546,6 @@ void OPL3::touchNote(size_t c,
         }
         else
             volume = 0;
-        // The incorrect formula below: SOLVE(V=127^4 * (2^(A/63)-1), A)
-        //opl.Touch_Real(c, volume>(11210*127) ? 91.61112 * std::log((4.8819E-7/127)*volume + 1.0)+0.5 : 0);
     }
     break;
 
