@@ -578,7 +578,7 @@ DurationInfo MeasureDurations(BanksDump &db, const BanksDump::InstrumentEntry &i
     unsigned max_period_off = max_off * interval;
 
     const double min_coefficient_on = 0.008;
-    const double min_coefficient_off = 0.2;
+    const double min_coefficient_off = 0.003;
 
     unsigned windows_passed_on = 0;
     unsigned windows_passed_off = 0;
