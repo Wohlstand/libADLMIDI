@@ -37,6 +37,8 @@ public:
     explicit AdlInstrumentTester(ADL_MIDIPlayer *device);
     virtual ~AdlInstrumentTester();
 
+    void start();
+
     // Find list of adlib instruments that supposedly implement this GM
     void FindAdlList();
     void DoNote(int note);

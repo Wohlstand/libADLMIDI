@@ -1888,8 +1888,6 @@ ADLMIDI_EXPORT AdlInstrumentTester::AdlInstrumentTester(ADL_MIDIPlayer *device)
     p->cur_note = -1;
     p->play = play;
     p->opl = play ? play->m_synth.get() : NULL;
-
-    NextGM(0);
 #else
     ADL_UNUSED(device);
 #endif
@@ -1898,6 +1896,11 @@ ADLMIDI_EXPORT AdlInstrumentTester::AdlInstrumentTester(ADL_MIDIPlayer *device)
 ADLMIDI_EXPORT AdlInstrumentTester::~AdlInstrumentTester()
 {
     delete p;
+}
+
+ADLMIDI_EXPORT void AdlInstrumentTester::start()
+{
+    NextGM(0);
 }
 
 ADLMIDI_EXPORT void AdlInstrumentTester::FindAdlList()
