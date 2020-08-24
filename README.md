@@ -127,6 +127,7 @@ You need to make in the any IDE a library project and put into it next files
 * chips/*       - Various OPL3 chip emulators and commonized interface over them
 * wopl/*        - WOPL bank format library
 * adldata.hh    - bank structures definition
+* adldata_db.h  - Embedded banks database structures and containers definitions
 * adlmidi_private.hpp - header of internal private APIs
 * adlmidi_bankmap.h - MIDI bank hash table
 * adlmidi_bankmap.tcc - MIDI bank hash table (Implementation)
@@ -134,8 +135,8 @@ You need to make in the any IDE a library project and put into it next files
 * adlmidi_ptr.hpp - Custom implementations of smart pointers for C++98
 * file_reader.hpp - Generic file and memory reader
 
-* adldata.cpp	 - Automatically generated database of FM banks from "fm_banks" directory via "gen_adldata" tool. **Don't build it if you have defined `DISABLE_EMBEDDED_BANKS` macro!**
-* adlmidi.cpp   - code of library
+* adldata.cpp	  - Automatically generated database of FM banks from "fm_banks" directory via "gen_adldata" tool. **Don't build it if you defined the `DISABLE_EMBEDDED_BANKS` macro!**
+* adlmidi.cpp     - code of library
 * adlmidi_load.cpp	- Source of file loading and parsing processing
 * adlmidi_midiplay.cpp	- MIDI event sequencer
 * adlmidi_opl3.cpp	- OPL3 chips manager
@@ -184,6 +185,7 @@ To build that example you will need to have installed SDL2 library.
  * Added Public Domain Opal OPL3 emulator made by Reality (a team who originally made the Reality Adlib Tracker) (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Added LGPL licensed JavaOPL3 emulator made by Robson Cozendey in Java and later rewritten into C++ for GZDoom (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Fixed an accuracy of the DMX volume model
+ * Fully rewritten an embedded banks database
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
