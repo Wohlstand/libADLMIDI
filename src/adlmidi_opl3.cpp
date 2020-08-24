@@ -320,7 +320,10 @@ void OPL3::setEmbeddedBank(uint32_t bank)
 
             for(size_t instId = 0; instId < 128; instId++)
             {
-                BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[bankData.insts[instId]];
+                midi_bank_idx_t instIndex = bankData.insts[instId];
+                if(instIndex < 0)
+                    continue;
+                BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIndex];
                 adlinsdata2 &instOut = bankTarget.ins[instId];
 
                 adlFromInstrument(instIn, instOut);

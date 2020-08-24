@@ -38,6 +38,7 @@
 #endif
 
 typedef uint16_t bank_count_t;
+typedef int16_t midi_bank_idx_t;
 
 #ifndef DISABLE_EMBEDDED_BANKS
 extern const size_t g_embeddedBanksCount;
@@ -60,7 +61,7 @@ struct MidiBank
 {
     uint8_t msb;
     uint8_t lsb;
-    int16_t insts[128];
+    midi_bank_idx_t insts[128];
 } ATTRIB_PACKED;
 
 struct InstrumentEntry

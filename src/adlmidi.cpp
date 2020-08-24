@@ -411,10 +411,10 @@ ADLMIDI_EXPORT int adl_loadEmbeddedBank(struct ADL_MIDIPlayer *device, ADL_Bank 
 
     for (unsigned i = 0; i < 128; ++i)
     {
-//        size_t insno = i + ((id & Synth::PercussionTag) ? 128 : 0);
-//        size_t adlmeta = ::banks[num][insno];
-//        it->second.ins[i] = adlinsdata2::from_adldata(::adlins[adlmeta]);
-        BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[bankData.insts[i]];
+        midi_bank_idx_t instIdx = bankData.insts[i];
+        if(instIdx < 0)
+            continue;
+        BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIdx];
         adlFromInstrument(instIn, it->second.ins[i]);
     }
     return 0;
