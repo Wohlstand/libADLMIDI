@@ -94,7 +94,6 @@ static const unsigned OPLBase = 0x388;
 #endif
 static unsigned NumCards   = 2;
 static bool AdlPercussionMode = false;
-static bool ReverbIsOn = true;
 static bool QuitFlag = false, FakeDOSshell = false;
 static bool DoingInstrumentTesting = false;
 static bool WritePCMfile = false;
@@ -765,10 +764,10 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
     std::vector<float> out[2];
     std::deque<float> input_fifo;
 
-    void Create(double sample_rate_Hz,
-                double wet_gain_dB,
-                double room_scale, double reverberance, double fhf_damping, /* 0..1 */
-                double pre_delay_s, double stereo_depth,
+    void Create(float sample_rate_Hz,
+                float wet_gain_dB,
+                float room_scale, float reverberance, float fhf_damping, /* 0..1 */
+                float pre_delay_s, float stereo_depth,
                 size_t buffer_size)
     {
         size_t delay = static_cast<size_t>(pre_delay_s  * sample_rate_Hz + .5);
@@ -796,24 +795,115 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
         input_fifo.erase(input_fifo.begin(), input_fifo.begin() + length);
     }
 };
+static union ReverbSpecs
+{
+    float array[7];
+    struct byname
+    {
+        float do_reverb;        // boolean...
+        float wet_gain_db;      // wet_gain_dB  (-10..10)
+        float room_scale;       // room_scale   (0..1)
+        float reverberance;     // reverberance (0..1)
+        float hf_damping;       // hf_damping   (0..1)
+        float pre_delay_s;      // pre_delay_s  (0.. 0.5)
+        float stereo_depth;     // stereo_depth (0..1)
+    } byname = {1.f, 6.f, .7f, .6f, .8f, 0.f, 1.f};
+} ReverbSpecs;
 static struct MyReverbData
 {
-    bool wetonly;
+    float  wetonly;
     Reverb chan[2];
 
-    MyReverbData() : wetonly(false)
+    MyReverbData()
     {
-        for(size_t i = 0; i < 2; ++i)
+        ReInit();
+    }
+    void ReInit()
+    {
+        wetonly = ReverbSpecs.byname.do_reverb;
+        for(std::size_t i=0; i<2; ++i)
+        {
             chan[i].Create(PCM_RATE,
-                           6.0,  // wet_gain_dB  (-10..10)
-                           .7,   // room_scale   (0..1)
-                           .6,   // reverberance (0..1)
-                           .8,   // hf_damping   (0..1)
-                           .000, // pre_delay_s  (0.. 0.5)
-                           1,   // stereo_depth (0..1)
-                           MaxSamplesAtTime);
+                ReverbSpecs.byname.wet_gain_db,
+                ReverbSpecs.byname.room_scale,
+                ReverbSpecs.byname.reverberance,
+                ReverbSpecs.byname.hf_damping,
+                ReverbSpecs.byname.pre_delay_s,
+                ReverbSpecs.byname.stereo_depth,
+                MaxSamplesAtTime);
+        }
     }
 } reverb_data;
+
+static void ParseReverb(std::string specs)
+{
+    while(!specs.empty())
+    {
+        std::size_t colon = specs.find(':');
+        if(colon == 0)
+        {
+            specs.erase(0, 1);
+            continue;
+        }
+        if(colon == specs.npos)
+        {
+            colon = specs.size();
+        }
+        std::string term(&specs[0], colon);
+        if(!term.empty())
+        {
+            std::size_t eq = specs.find('=');
+            std::size_t key_end     = (eq == specs.npos) ? specs.size() : eq;
+            std::size_t value_begin = (eq == specs.npos) ? specs.size() : (eq+1);
+            std::string key(&term[0], key_end);
+            std::string value(&term[value_begin], term.size()-value_begin);
+            float floatvalue = std::strtof(&value[0], nullptr); // FIXME: Requires specs to be nul-terminated
+            //if(!value.empty())
+            //    std::from_chars(&value[0], &value[value.size()], floatvalue); // Not implemented in GCC
+
+            // Create a hash of the key
+            //Good: start=0x266191FB6907,mul=0x1,add=0x3238000,perm=0xF3B47F00, mod=21,shift=12   distance = 21  min=0 max=20
+            std::uint_fast64_t a=0xF5A9AADABAC7, b=0xC08F0800, c=0xA06C000, d=0x336A683E37B6, result=a + d*key.size();
+            unsigned mod=19, shift=3;
+            for(unsigned char ch: key)
+            {
+                result += ch;
+                result = (result ^ (result >> (1 + 1 * ((shift>>0) & 7)))) * b;
+                result = (result ^ (result >> (1 + 1 * ((shift>>3) & 7)))) * c;
+            }
+            unsigned index = result % mod;
+            // switch(index) {
+            // case 0: index = 2; break; // room, room_scale, scale, room-scale, roomscale
+            // case 1: index = 1; break; // g
+            // case 2: index = 6; break; // stereo, depth, stereo_depth, stereo-depth, stereodepth, width, s
+            // case 3: index = 3; break; // reverberance, factor, f
+            // case 4: index = 0; break; // none, off
+            // case 5: index = 0; break; // false
+            // case 6: index = 4; break; // hf, hf_damping, hf-damping, damping, dampening
+            // case 7: index = 0; break; // no
+            // case 8: index = 6; break; // wide
+            // case 9: index = 5; break; // delay, pre_delay, pre-delay, predelay, seconds, wait
+            // case 10: index = 4; break; // damp, d
+            // case 11: index = 1; break; // gain, wet_gain, wetgain, wet
+            // case 13: index = 2; break; // r
+            // case 15: index = 3; break; // amount
+            // case 16: index = 3; break; // reverb
+            // case 18: index = 5; break; // w
+            // }
+            index = (05733727145604003612 >> (index * 3)) & 7;
+            if(index < 7) ReverbSpecs.array[index] = floatvalue;
+        }
+        specs.erase(specs.begin(), specs.begin() + colon);
+    }
+    std::fprintf(stderr, "Reverb settings: Wet-dry=%g gain=%g room=%g reverb=%g damping=%g delay=%g stereo=%g\n",
+        ReverbSpecs.array[0],
+        ReverbSpecs.byname.wet_gain_db,
+        ReverbSpecs.byname.room_scale,
+        ReverbSpecs.byname.reverberance,
+        ReverbSpecs.byname.hf_damping,
+        ReverbSpecs.byname.pre_delay_s,
+        ReverbSpecs.byname.stereo_depth);
+}
 
 #ifdef _WIN32
 namespace WindowsAudio
@@ -989,16 +1079,15 @@ struct FourChars
 };
 
 
-
-static void SendStereoAudio(unsigned long count, short *samples)
+static void SendStereoAudio(unsigned long count, short* samples)
 {
     if(count > MaxSamplesAtTime)
     {
         SendStereoAudio(MaxSamplesAtTime, samples);
-        SendStereoAudio(count - MaxSamplesAtTime, samples + MaxSamplesAtTime);
+        SendStereoAudio(count-MaxSamplesAtTime, samples+MaxSamplesAtTime);
         return;
     }
-    #if 0
+#if 0
     if(count % 2 == 1)
     {
         // An uneven number of samples? To avoid complicating matters,
@@ -1006,22 +1095,21 @@ static void SendStereoAudio(unsigned long count, short *samples)
         count   -= 1;
         samples += 1;
     }
-    #endif
+#endif
     if(!count) return;
 
     // Attempt to filter out the DC component. However, avoid doing
     // sudden changes to the offset, for it can be audible.
-    double average[2] = {0, 0};
-    for(unsigned w = 0; w < 2; ++w)
+    double average[2]={0,0};
+    for(unsigned w=0; w<2; ++w)
         for(unsigned long p = 0; p < count; ++p)
-            average[w] += samples[p * 2 + w];
-    static float prev_avg_flt[2] = {0, 0};
+            average[w] += samples[p*2+w];
+    static float prev_avg_flt[2] = {0,0};
     float average_flt[2] =
     {
-        prev_avg_flt[0] = (float)((double(prev_avg_flt[0]) + average[0] * 0.04 / double(count)) / 1.04),
-        prev_avg_flt[1] = (float)((double(prev_avg_flt[1]) + average[1] * 0.04 / double(count)) / 1.04)
+        prev_avg_flt[0] = (prev_avg_flt[0] + average[0]*0.04/double(count)) / 1.04,
+        prev_avg_flt[1] = (prev_avg_flt[1] + average[1]*0.04/double(count)) / 1.04
     };
-
     // Figure out the amplitude of both channels
     if(!DoingInstrumentTesting)
     {
@@ -1029,17 +1117,17 @@ static void SendStereoAudio(unsigned long count, short *samples)
         if(!amplitude_display_counter--)
         {
             amplitude_display_counter = (PCM_RATE / count) / 24;
-            double amp[2] = {0, 0};
-            for(unsigned w = 0; w < 2; ++w)
+            double amp[2]={0,0};
+            for(unsigned w=0; w<2; ++w)
             {
                 average[w] /= double(count);
                 for(unsigned long p = 0; p < count; ++p)
-                    amp[w] += std::fabs(samples[p * 2 + w] - average[w]);
+                    amp[w] += std::fabs(samples[p*2+w] - average[w]);
                 amp[w] /= double(count);
                 // Turn into logarithmic scale
-                const double dB = std::log(amp[w] < 1 ? 1 : amp[w]) * 4.328085123;
-                const double maxdB = 3 * 16; // = 3 * log2(65536)
-                amp[w] = dB / maxdB;
+                const double dB = std::log(amp[w]<1 ? 1 : amp[w]) * 4.328085123;
+                const double maxdB = 3*16; // = 3 * log2(65536)
+                amp[w] = dB/maxdB;
             }
             UI.IllustrateVolumes(amp[0], amp[1]);
         }
@@ -1047,108 +1135,87 @@ static void SendStereoAudio(unsigned long count, short *samples)
 
     //static unsigned counter = 0; if(++counter < 8000)  return;
 
-    #if defined(_WIN32) && 0
+#if defined(__WIN32__) && 0
     // Cheat on dosbox recording: easier on the cpu load.
-    {
-        count *= 2;
-        std::vector<short> AudioBuffer(count);
-        for(unsigned long p = 0; p < count; ++p)
-            AudioBuffer[p] = samples[p];
-        WindowsAudio::Write((const unsigned char *) &AudioBuffer[0], count * 2);
-        return;
-    }
-    #endif
+   {count*=2;
+    std::vector<short> AudioBuffer(count);
+    for(unsigned long p = 0; p < count; ++p)
+        AudioBuffer[p] = samples[p];
+    WindowsAudio::Write( (const unsigned char*) &AudioBuffer[0], count*2);
+    return;}
+#endif
 
-    #ifdef _WIN32
-    std::vector<short> AudioBuffer(count * 2);
+    // Convert input to float format
+    std::vector<float> dry[2];
+    for(unsigned w=0; w<2; ++w)
+    {
+        dry[w].resize(count);
+        float a = average_flt[w];
+        for(unsigned long p = 0; p < count; ++p)
+        {
+            int   s = samples[p*2+w];
+            dry[w][p] = (s - a) * double(0.3/32768.0);
+        }
+        // ^  Note: ftree-vectorize causes an error in this loop on g++-4.4.5
+        reverb_data.chan[w].input_fifo.insert(
+        reverb_data.chan[w].input_fifo.end(),
+            dry[w].begin(), dry[w].end());
+    }
+    // Reverbify it
+    for(unsigned w=0; w<2; ++w)
+        reverb_data.chan[w].Process(count);
+
+    // Convert to signed 16-bit int format and put to playback queue
+#ifdef __WIN32__
+    std::vector<short> AudioBuffer(count*2);
     const size_t pos = 0;
-    #else
+#else
     AudioBuffer_lock.Lock();
     size_t pos = AudioBuffer.size();
-    AudioBuffer.resize(pos + count * 2);
-    #endif
-
-    if(ReverbIsOn)
-    {
-        // Convert input to float format
-        std::vector<float> dry[2];
-        for(unsigned w = 0; w < 2; ++w)
+    AudioBuffer.resize(pos + count*2);
+#endif
+    for(unsigned long p = 0; p < count; ++p)
+        for(unsigned w=0; w<2; ++w)
         {
-            dry[w].resize(count);
-            float a = average_flt[w];
-            for(unsigned long p = 0; p < count; ++p)
-            {
-                int   s = samples[p * 2 + w];
-                dry[w][p] = static_cast<float>((s - a) * double(0.3 / 32768.0));
-            }
-            // ^  Note: ftree-vectorize causes an error in this loop on g++-4.4.5
-            reverb_data.chan[w].input_fifo.insert(
-                reverb_data.chan[w].input_fifo.end(),
-                dry[w].begin(), dry[w].end());
+            float out = ((1 - reverb_data.wetonly) * dry[w][p] +
+                          reverb_data.wetonly * (
+                .5 * (reverb_data.chan[0].out[w][p]
+                    + reverb_data.chan[1].out[w][p]))
+                        ) * 32768.0f
+                 + average_flt[w];
+            AudioBuffer[pos+p*2+w] =
+                out<-32768.f ? -32768 :
+                out>32767.f ?  32767 : out;
         }
-        // Reverbify it
-        for(unsigned w = 0; w < 2; ++w)
-            reverb_data.chan[w].Process(count);
-
-        // Convert to signed 16-bit int format and put to playback queue
-        for(unsigned long p = 0; p < count; ++p)
-            for(unsigned w = 0; w < 2; ++w)
-            {
-                float out = static_cast<float>((1 - reverb_data.wetonly) * dry[w][p] +
-                             .5 * (reverb_data.chan[0].out[w][p]
-                                   + reverb_data.chan[1].out[w][p])) * 32768.0f
-                            + average_flt[w];
-                AudioBuffer[pos + p * 2 + w] =
-                    static_cast<short>(
-                        out < -32768.f ? -32768 :
-                        out > 32767.f ?  32767 : out
-                    );
-            }
-    }
-    else
-    {
-        for(unsigned long p = 0; p < count; ++p)
-            for(unsigned w = 0; w < 2; ++w)
-            {
-//                float out = ((1 - reverb_data.wetonly) * dry[w][p] +
-//                             .5 * (reverb_data.chan[0].out[w][p]
-//                                   + reverb_data.chan[1].out[w][p])) * 32768.0f
-//                            + average_flt[w];
-                AudioBuffer[pos + p * 2 + w] = samples[p * 2 + w];
-            }
-    }
-
-
     if(WritePCMfile)
     {
         /* HACK: Cheat on DOSBox recording: Record audio separately on Windows. */
-        static FILE *fp = nullptr;
+        static FILE* fp = nullptr;
         if(!fp)
         {
             fp = PCMfilepath == "-" ? stdout
-                 : fopen(PCMfilepath.c_str(), "wb");
+                                    : fopen(PCMfilepath.c_str(), "wb");
             if(fp)
             {
-                FourChars Bufs[] =
-                {
+                FourChars Bufs[] = {
                     "RIFF", (0x24u),  // RIFF type, file length - 8
                     "WAVE",           // WAVE file
                     "fmt ", (0x10u),  // fmt subchunk, which is 16 bytes:
-                    "\1\0\2\0",     // PCM (1) & stereo (2)
-                    (48000u),     // sampling rate
-                    (48000u * 2 * 2), // byte rate
-                    "\2\0\20\0",    // block align & bits per sample
+                      "\1\0\2\0",     // PCM (1) & stereo (2)
+                      (48000u    ), // sampling rate
+                      (48000u*2*2), // byte rate
+                      "\2\0\20\0",    // block align & bits per sample
                     "data", (0x00u)  //  data subchunk, which is so far 0 bytes.
                 };
-                for(unsigned c = 0; c < sizeof(Bufs) / sizeof(*Bufs); ++c)
+                for(unsigned c=0; c<sizeof(Bufs)/sizeof(*Bufs); ++c)
                     std::fwrite(Bufs[c].ret, 1, 4, fp);
             }
         }
 
         // Using a loop, because our data type is a deque, and
         // the data might not be contiguously stored in memory.
-        for(unsigned long p = 0; p < 2 * count; ++p)
-            std::fwrite(&AudioBuffer[pos + p], 1, 2, fp);
+        for(unsigned long p = 0; p < 2*count; ++p)
+            std::fwrite(&AudioBuffer[pos+p], 1, 2, fp);
 
         /* Update the WAV header */
         if(true)
@@ -1158,9 +1225,9 @@ static void SendStereoAudio(unsigned long count, short *samples)
             {
                 long datasize = pos - 0x2C;
                 if(std::fseek(fp, 4,  SEEK_SET) == 0) // Patch the RIFF length
-                    std::fwrite(FourChars(0x24u + datasize).ret, 1, 4, fp);
+                    std::fwrite( FourChars(0x24u+datasize).ret, 1,4, fp);
                 if(std::fseek(fp, 40, SEEK_SET) == 0) // Patch the data length
-                    std::fwrite(FourChars(datasize).ret, 1, 4, fp);
+                    std::fwrite( FourChars(datasize).ret, 1,4, fp);
                 std::fseek(fp, pos, SEEK_SET);
             }
         }
@@ -1170,12 +1237,11 @@ static void SendStereoAudio(unsigned long count, short *samples)
         //if(std::ftell(fp) >= 48000*4*10*60)
         //    raise(SIGINT);
     }
-
-    #ifdef SUPPORT_VIDEO_OUTPUT
+#ifdef SUPPORT_VIDEO_OUTPUT
     if(WriteVideoFile)
     {
         static constexpr unsigned framerate = 15;
-        static FILE *fp = nullptr;
+        static FILE* fp = nullptr;
         static unsigned long samples_carry = 0;
 
         if(!fp)
@@ -1200,7 +1266,7 @@ static void SendStereoAudio(unsigned long count, short *samples)
             {
                 UI.VidRender();
 
-                const unsigned char *source = (const unsigned char *)&UI.PixelBuffer;
+                const unsigned char* source = (const unsigned char*)&UI.PixelBuffer;
                 std::size_t bytes_remain    = sizeof(UI.PixelBuffer);
                 while(bytes_remain)
                 {
@@ -1213,14 +1279,13 @@ static void SendStereoAudio(unsigned long count, short *samples)
             }
         }
     }
-    #endif
-
-    #ifndef _WIN32
+#endif
+#ifndef __WIN32__
     AudioBuffer_lock.Unlock();
-    #else
+#else
     if(!WritePCMfile)
-        WindowsAudio::Write((const unsigned char *) &AudioBuffer[0], static_cast<unsigned>(2 * AudioBuffer.size()));
-    #endif
+        WindowsAudio::Write( (const unsigned char*) &AudioBuffer[0], 2*AudioBuffer.size());
+#endif
 }
 #endif /* not DJGPP */
 
@@ -1605,21 +1670,26 @@ int main(int argc, char **argv)
             "\n\n"
             "Usage: adlmidi <midifilename> [ <options> ] [ <banknumber> [ <numcards> [ <numfourops>] ] ]\n"
             "       adlmidi <midifilename> -1   To enter instrument tester\n"
-            // " -p Enables adlib percussion instrument mode (use with CMF files)\n"
-            " -t Enables tremolo amplification mode\n"
-            " -v Enables vibrato amplification mode\n"
-            " -s Enables scaling of modulator volumes\n"
-            " -frb Enables full-ranged CC74 XG Brightness controller\n"
-            " -nl Quit without looping\n"
-            " -nr Disables the reverb effect\n"
-            " -w [<filename>] Write WAV file rather than playing\n"
-            " -d [<filename>] Write video file using ffmpeg\n"
-            #ifndef HARDWARE_OPL3
-            " -fp Enables full-panning stereo support\n"
-            " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
-            " --emu-nuked7 Uses Nuked OPL3 v 1.7.4 emulator\n"
-            " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
-            #endif
+            // " -p              Enables adlib percussion instrument mode (use with CMF files)\n"
+            " -t              Enables tremolo amplification mode\n"
+            " -v              Enables vibrato amplification mode\n"
+            " -s              Enables scaling of modulator volumes\n"
+            " -frb            Enables full-ranged CC74 XG Brightness controller\n"
+            " -nl             Quit without looping\n"
+#ifndef HARDWARE_OPL3
+            " -reverb <specs> Controls reverb (default: gain=6:room=.7:factor=.6:damping=.8:predelay=0:stereo=1)\n"
+            " -reverb none    Disables reverb (also -nr)\n"
+#endif
+            " -w              [<filename>] Write WAV file rather than playing\n"
+#ifdef SUPPORT_VIDEO_OUTPUT
+            " -d              [<filename>] Write video file using ffmpeg\n"
+#endif
+#ifndef HARDWARE_OPL3
+            " -fp             Enables full-panning stereo support\n"
+            " --emu-nuked     Uses Nuked OPL3 v 1.8 emulator\n"
+            " --emu-nuked7    Uses Nuked OPL3 v 1.7.4 emulator\n"
+            " --emu-dosbox    Uses DosBox 0.74 OPL3 emulator\n"
+#endif
         );
         int banksCount = adl_getBanksCount();
         const char *const *bankNames = adl_getBankNames();
@@ -1694,6 +1764,15 @@ int main(int argc, char **argv)
         else if(!std::strcmp("--emu-dosbox", argv[2]))
             emulator = ADLMIDI_EMU_DOSBOX;
 #endif
+#ifndef __DJGPP__
+        else if(!std::strcmp("-nr", argv[2]))
+            ParseReverb("none");
+        else if(!std::strcmp("-reverb", argv[2]))
+        {
+            ParseReverb(argv[3]);
+            had_option = true;
+        }
+#endif
         else if(!std::strcmp("-w", argv[2]))
         {
             loopEnabled = 0;
@@ -1712,7 +1791,7 @@ int main(int argc, char **argv)
                 }
             }
         }
-        #ifdef SUPPORT_VIDEO_OUTPUT
+#ifdef SUPPORT_VIDEO_OUTPUT
         else if(!std::strcmp("-d", argv[2]))
         {
             loopEnabled = 0;
@@ -1727,11 +1806,9 @@ int main(int argc, char **argv)
                 }
             }
         }
-        #endif
+#endif
         else if(!std::strcmp("-s", argv[2]))
             adl_setScaleModulators(myDevice, 1);
-        else if(!std::strcmp("-nr", argv[2]))
-            ReverbIsOn = false;
         else break;
 
         std::copy(argv + (had_option ? 4 : 3), argv + argc, argv + 2);
@@ -1878,7 +1955,7 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    #ifdef __DJGPP__
+#ifdef __DJGPP__
 
     unsigned TimerPeriod = 0x1234DDul / NewTimerFreq;
     //disable();
@@ -1888,29 +1965,30 @@ int main(int argc, char **argv)
     //enable();
     unsigned long BIOStimer_begin = BIOStimer;
 
-    #else
+#else
 
     //const double maxdelay = MaxSamplesAtTime / (double)PCM_RATE;
+    reverb_data.ReInit();
 
-    #ifdef _WIN32
+#ifdef _WIN32
     WindowsAudio::Open(PCM_RATE, 2, 16);
-    #else
+#else
     SDL_PauseAudio(0);
-    #endif
+#endif
 
-    #endif /* djgpp */
+#endif /* djgpp */
 
     AdlInstrumentTester InstrumentTester(myDevice);
 
     //static std::vector<int> sample_buf;
-    #ifdef __DJGPP__
+#ifdef __DJGPP__
     double tick_delay = 0.0;
-    #endif
+#endif
 
-    #ifndef __DJGPP__
+#ifndef __DJGPP__
     //sample_buf.resize(1024);
     short buff[1024];
-    #endif
+#endif
 
     UI.TetrisLaunched = true;
     while(!QuitFlag)
