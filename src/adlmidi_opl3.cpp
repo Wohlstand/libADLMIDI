@@ -501,7 +501,8 @@ void OPL3::touchNote(size_t c,
     uint_fast32_t modulator;
     uint_fast32_t carrier;
 
-    uint_fast32_t volume;
+    uint_fast32_t volume = 0;
+    uint_fast32_t midiVolume = 0;
 
     bool do_modulator;
     bool do_carrier;
@@ -520,6 +521,8 @@ void OPL3::touchNote(size_t c,
         { true,  true  }  /* 4 op AM-AM ops 3&4 */
     };
 
+
+    // ------ Mix volumes and compute average ------
 
     switch(m_volumeScale)
     {
@@ -570,8 +573,8 @@ void OPL3::touchNote(size_t c,
 
     case Synth::VOLUME_APOGEE:
     {
-        volume = (channelVolume * channelExpression * m_masterVolume / 16129);
-        volume = ((64 * (velocity + 0x80)) * volume) >> 15;
+        volume = 0;
+        midiVolume = (channelVolume * channelExpression * m_masterVolume / 16129);
     }
     break;
 
@@ -585,6 +588,9 @@ void OPL3::touchNote(size_t c,
 
     if(volume > 63)
         volume = 63;
+
+    if(midiVolume > 127)
+        midiVolume = 127;
 
 
     if(m_channelCategory[c] == ChanCat_Regular ||
@@ -614,9 +620,43 @@ void OPL3::touchNote(size_t c,
     }
 
 
+
+    // ------ Compute the total level register output data ------
+
     if(m_musicMode == MODE_RSXX)
     {
         tlCar -= volume / 2;
+    }
+    else if(m_volumeScale == Synth::VOLUME_APOGEE && mode <= 1)
+    {
+        // volume = ((64 * (velocity + 0x80)) * volume) >> 15;
+        do_modulator = do_ops[mode][ 0 ] || m_scaleModulators;
+
+        tlCar = 63 - tlCar;
+
+        tlCar *= velocity + 0x80;
+        tlCar = (midiVolume * tlCar) >> 15;
+        tlCar = tlCar ^ 63;
+
+        if(do_modulator)
+        {
+            tlMod = 63 - tlMod;
+            tlMod *= velocity + 0x80;
+            // NOTE: Here is a bug of Apogee Sound System that makes modulator
+            // to not work properly on AM instruments
+            // The fix of this bug is just replacing of tlCar with tmMod
+            // in this formula
+            tlMod = (midiVolume * tlCar) >> 15;
+
+            tlMod ^= 63;
+        }
+
+        if(brightness != 127)
+        {
+            brightness = static_cast<uint8_t>(::round(127.0 * ::sqrt((static_cast<double>(brightness)) * (1.0 / 127.0))) / 2.0);
+            if(!do_modulator)
+                tlMod = 63 - brightness + (brightness * tlMod) / 63;
+        }
     }
     else if(m_volumeScale == Synth::VOLUME_DMX && mode <= 1)
     {
