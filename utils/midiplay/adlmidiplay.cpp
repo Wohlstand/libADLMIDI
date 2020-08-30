@@ -201,6 +201,29 @@ const char* audio_format_to_str(int format, int is_msb)
 
 #endif //HARDWARE_OPL3
 
+const char* volume_model_to_str(int vm)
+{
+    switch(vm)
+    {
+    default:
+    case ADLMIDI_VolumeModel_Generic:
+        return "Generic";
+    case ADLMIDI_VolumeModel_NativeOPL3:
+        return "Native OPL3";
+    case ADLMIDI_VolumeModel_DMX:
+        return "DMX";
+    case ADLMIDI_VolumeModel_APOGEE:
+        return "Apogee";
+    case ADLMIDI_VolumeModel_9X:
+        return "9X";
+    case ADLMIDI_VolumeModel_DMX_Fixed:
+        return "DMX (fixed)";
+    case ADLMIDI_VolumeModel_APOGEE_Fixed:
+        return "Apogee (fixed)";
+    }
+}
+
+
 static bool is_number(const std::string &s)
 {
     std::string::const_iterator it = s.begin();
@@ -328,6 +351,15 @@ int main(int argc, char **argv)
             " -t Enables tremolo amplification mode\n"
             " -v Enables vibrato amplification mode\n"
             " -s Enables scaling of modulator volumes\n"
+            " -vm <num> Chooses one of volume models: \n"
+            "    0 auto (default)\n"
+            "    1 Generic\n"
+            "    2 Native\n"
+            "    3 DMX\n"
+            "    4 Apogee\n"
+            "    5 9x\n"
+            "    6 DMX (Fixed AM voices)\n"
+            "    7 Apogee (Fixed AM voices)\n"
             " -frb Enables full-ranged CC74 XG Brightness controller\n"
             " -nl Quit without looping\n"
             " -w Write WAV file rather than playing\n"
@@ -420,6 +452,7 @@ int main(int argc, char **argv)
     int emulator = ADLMIDI_EMU_NUKED;
 #endif
 
+    int volumeModel = ADLMIDI_VolumeModel_AUTO;
     size_t soloTrack = ~(size_t)0;
     std::vector<size_t> onlyTracks;
 
@@ -511,7 +544,16 @@ int main(int argc, char **argv)
             had_option = true;
         }
 #endif
-
+        else if(!std::strcmp("-vm", argv[2]))
+        {
+            if(argc <= 3)
+            {
+                printError("The option --solo requires an argument!\n");
+                return 1;
+            }
+            volumeModel = std::strtol(argv[3], NULL, 10);
+            had_option = true;
+        }
         else if(!std::strcmp("--solo", argv[2]))
         {
             if(argc <= 3)
@@ -519,7 +561,7 @@ int main(int argc, char **argv)
                 printError("The option --solo requires an argument!\n");
                 return 1;
             }
-            soloTrack = std::strtoul(argv[3], NULL, 0);
+            soloTrack = std::strtoul(argv[3], NULL, 10);
             had_option = true;
         }
         else if(!std::strcmp("--only", argv[2]))
@@ -716,6 +758,9 @@ int main(int argc, char **argv)
     adl_setNumChips(myDevice, numOfChips);
 #endif
 
+    if(volumeModel != ADLMIDI_VolumeModel_AUTO)
+        adl_setVolumeRangeModel(myDevice, volumeModel);
+
     if(argc >= 5)
     {
         //Set total count of 4-operator channels between all emulated chips
@@ -738,6 +783,7 @@ int main(int argc, char **argv)
     std::fprintf(stdout, " - Number of chips %d\n", adl_getNumChipsObtained(myDevice));
     std::fprintf(stdout, " - Number of four-ops %d\n", adl_getNumFourOpsChnObtained(myDevice));
     std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
+    std::fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
 
     if(soloTrack != ~static_cast<size_t>(0))
     {
