@@ -37,6 +37,11 @@ DosBoxOPL3::~DosBoxOPL3()
     delete chip_r;
 }
 
+void DosBoxOPL3::globalPreInit()
+{
+    DBOPL::InitTables();
+}
+
 void DosBoxOPL3::setRate(uint32_t rate)
 {
     OPLChipBaseBufferedT::setRate(rate);

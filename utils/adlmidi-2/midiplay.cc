@@ -1980,6 +1980,9 @@ int main(int argc, char **argv)
 
     AdlInstrumentTester InstrumentTester(myDevice);
 
+    if(DoingInstrumentTesting)
+        InstrumentTester.start();
+
     //static std::vector<int> sample_buf;
 #ifdef __DJGPP__
     double tick_delay = 0.0;

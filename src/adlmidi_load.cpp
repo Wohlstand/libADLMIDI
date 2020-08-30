@@ -238,6 +238,7 @@ bool MIDIplay::LoadMIDI_post()
     {
         //std::fprintf(stderr, "Done reading IMF file\n");
         synth.m_numFourOps  = 0; //Don't use 4-operator channels for IMF playing!
+        synth.m_rhythmMode = false;//Don't enforce rhythm-mode when it's unneeded
         synth.m_musicMode = Synth::MODE_IMF;
 
         synth.m_numChips = 1;

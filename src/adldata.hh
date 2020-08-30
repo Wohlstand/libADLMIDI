@@ -76,7 +76,6 @@ struct adlinsdata2
     uint16_t    ms_sound_koff;
     int8_t      midi_velocity_offset;
     double      voice2_fine_tune;
-    static adlinsdata2 from_adldata(const adlinsdata &d);
 };
 ADLDATA_BYTE_COMPARABLE(struct adlinsdata2)
 
@@ -93,36 +92,6 @@ struct AdlBankSetup
     bool    deepVibrato;
     bool    scaleModulators;
 };
-
-#ifndef DISABLE_EMBEDDED_BANKS
-int maxAdlBanks();
-extern const adldata adl[];
-extern const adlinsdata adlins[];
-extern const unsigned short banks[][256];
-extern const char* const banknames[];
-extern const AdlBankSetup adlbanksetup[];
-#endif
-
-/**
- * @brief Conversion of storage formats
- */
-inline adlinsdata2 adlinsdata2::from_adldata(const adlinsdata &d)
-{
-    adlinsdata2 ins;
-    ins.tone = d.tone;
-    ins.flags = d.flags;
-    ins.ms_sound_kon = d.ms_sound_kon;
-    ins.ms_sound_koff = d.ms_sound_koff;
-    ins.midi_velocity_offset = d.midi_velocity_offset;
-    ins.voice2_fine_tune = d.voice2_fine_tune;
-#ifdef DISABLE_EMBEDDED_BANKS
-    std::memset(ins.adl, 0, sizeof(adldata) * 2);
-#else
-    ins.adl[0] = ::adl[d.adlno1];
-    ins.adl[1] = ::adl[d.adlno2];
-#endif
-    return ins;
-}
 
 /**
  * @brief Convert external instrument to internal instrument

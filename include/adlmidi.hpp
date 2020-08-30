@@ -31,16 +31,18 @@ struct ADL_MIDIPlayer;
 class ADLMIDI_DECLSPEC AdlInstrumentTester
 {
     struct Impl;
-    Impl *P;
+    Impl *p;
 
 public:
     explicit AdlInstrumentTester(ADL_MIDIPlayer *device);
     virtual ~AdlInstrumentTester();
 
+    void start();
+
     // Find list of adlib instruments that supposedly implement this GM
     void FindAdlList();
-    void Touch(unsigned c, unsigned volume);
     void DoNote(int note);
+    void DoNoteOff();
     void NextGM(int offset);
     void NextAdl(int offset);
     bool HandleInputChar(char ch);

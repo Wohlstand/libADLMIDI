@@ -30,6 +30,8 @@ public:
     DosBoxOPL3();
     ~DosBoxOPL3() override;
 
+    static void globalPreInit();
+
     bool canRunAtPcmRate() const override { return true; }
     void setRate(uint32_t rate) override;
     void reset() override;

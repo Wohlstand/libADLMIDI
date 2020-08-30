@@ -198,7 +198,9 @@ function(handle_options targetLib)
     endif()
 
     if(WITH_EMBEDDED_BANKS)
-        target_sources(${targetLib} PRIVATE ${libADLMIDI_SOURCE_DIR}/src/adldata.cpp)
+        target_sources(${targetLib} PRIVATE
+            ${libADLMIDI_SOURCE_DIR}/src/adldata.cpp
+        )
     else()
         target_compile_definitions(${targetLib} PUBLIC DISABLE_EMBEDDED_BANKS)
     endif()

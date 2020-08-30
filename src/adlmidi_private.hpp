@@ -146,6 +146,7 @@ class OPLChipBase;
 typedef class OPL3 Synth;
 
 #include "adldata.hh"
+#include "adlmidi_db.h"
 
 #define ADLMIDI_BUILD
 #include "adlmidi.h"    //Main API
@@ -229,5 +230,9 @@ extern void adl_audioTickHandler(void *instance, uint32_t chipId, uint32_t rate)
  * @return Always 0
  */
 extern int adlCalculateFourOpChannels(MIDIplay *play, bool silent = false);
+
+#ifndef DISABLE_EMBEDDED_BANKS
+extern void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, adlinsdata2 &instOut);
+#endif
 
 #endif // ADLMIDI_PRIVATE_HPP

@@ -78,17 +78,11 @@ static void cvt_FMIns_to_generic(WOPLI &ins, const adlinsdata2 &in)
     double voice2_fine_tune = in.voice2_fine_tune;
     if(voice2_fine_tune != 0)
     {
-        if(voice2_fine_tune > 0 && voice2_fine_tune <= 0.000025)
-            ins.second_voice_detune = 1;
-        else if(voice2_fine_tune < 0 && voice2_fine_tune >= -0.000025)
-            ins.second_voice_detune = -1;
-        else
-        {
-            long value = static_cast<long>(round(voice2_fine_tune * (1000.0 / 15.625)));
-            value = (value < -128) ? -128 : value;
-            value = (value > +127) ? +127 : value;
-            ins.second_voice_detune = static_cast<int8_t>(value);
-        }
+        int m = (int)(voice2_fine_tune * 32.0);
+        m += 64;
+        m <<= 1;
+        m -= 128;
+        ins.second_voice_detune = (uint8_t)m;
     }
 
     ins.midi_velocity_offset = in.midi_velocity_offset;

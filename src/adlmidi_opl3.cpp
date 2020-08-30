@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <cassert>
 
+#ifndef DISABLE_EMBEDDED_BANKS
+#include "wopl/wopl_file.h"
+#endif
+
 #ifdef ADLMIDI_HW_OPL
 static const unsigned OPLBase = 0x388;
 #else
@@ -293,21 +297,40 @@ void OPL3::setEmbeddedBank(uint32_t bank)
     //Embedded banks are supports 128:128 GM set only
     m_insBanks.clear();
 
-    if(bank >= static_cast<unsigned int>(maxAdlBanks()))
+    if(bank >= static_cast<uint32_t>(g_embeddedBanksCount))
         return;
 
-    Bank *bank_pair[2] =
-    {
-        &m_insBanks[0],
-        &m_insBanks[PercussionTag]
-    };
+    const BanksDump::BankEntry &bankEntry = g_embeddedBanks[m_embeddedBank];
+    m_insBankSetup.deepTremolo = ((bankEntry.bankSetup >> 8) & 0x01) != 0;
+    m_insBankSetup.deepVibrato = ((bankEntry.bankSetup >> 8) & 0x02) != 0;
+    m_insBankSetup.volumeModel = (bankEntry.bankSetup & 0xFF);
+    m_insBankSetup.scaleModulators = false;
 
-    for(unsigned i = 0; i < 256; ++i)
+    for(int ss = 0; ss < 2; ss++)
     {
-        size_t meta = banks[bank][i];
-        adlinsdata2 &ins = bank_pair[i / 128]->ins[i % 128];
-        ins = adlinsdata2::from_adldata(::adlins[meta]);
+        bank_count_t maxBanks = ss ? bankEntry.banksPercussionCount : bankEntry.banksMelodicCount;
+        bank_count_t banksOffset = ss ? bankEntry.banksOffsetPercussive : bankEntry.banksOffsetMelodic;
+
+        for(bank_count_t bankID = 0; bankID < maxBanks; bankID++)
+        {
+            size_t bankIndex = g_embeddedBanksMidiIndex[banksOffset + bankID];
+            const BanksDump::MidiBank &bankData = g_embeddedBanksMidi[bankIndex];
+            size_t bankMidiIndex = static_cast<size_t>((bankData.msb * 256) + bankData.lsb) + (ss ? static_cast<size_t>(PercussionTag) : 0);
+            Bank &bankTarget = m_insBanks[bankMidiIndex];
+
+            for(size_t instId = 0; instId < 128; instId++)
+            {
+                midi_bank_idx_t instIndex = bankData.insts[instId];
+                if(instIndex < 0)
+                    continue;
+                BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIndex];
+                adlinsdata2 &instOut = bankTarget.ins[instId];
+
+                adlFromInstrument(instIn, instOut);
+            }
+        }
     }
+
 #else
     ADL_UNUSED(bank);
 #endif
@@ -503,7 +526,8 @@ void OPL3::touchNote(size_t c,
     default:
     case Synth::VOLUME_Generic:
     {
-        volume = velocity * m_masterVolume * channelVolume * channelExpression;
+        volume = velocity * m_masterVolume *
+                 channelVolume * channelExpression;
 
         /* If the channel has arpeggio, the effective volume of
              * *this* instrument is actually lower due to timesharing.
@@ -513,18 +537,25 @@ void OPL3::touchNote(size_t c,
              * increment sounds wrong. Therefore, using the square root.
              */
         //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
+        const double c1 = 11.541560327111707;
+        const double c2 = 1.601379199767093e+02;
+        uint_fast32_t minVolume = 8725 * 127;
 
         // The formula below: SOLVE(V=127^4 * 2^( (A-63.49999) / 8), A)
-        volume = volume > (8725 * 127) ? static_cast<uint_fast32_t>(std::log(static_cast<double>(volume)) * 11.541560327111707 - 1.601379199767093e+02) : 0;
-        // The incorrect formula below: SOLVE(V=127^4 * (2^(A/63)-1), A)
-        //opl.Touch_Real(c, volume>(11210*127) ? 91.61112 * std::log((4.8819E-7/127)*volume + 1.0)+0.5 : 0);
+        if(volume > minVolume)
+        {
+            double lv = std::log(static_cast<double>(volume));
+            volume = static_cast<uint_fast32_t>(lv * c1 - c2);
+        }
+        else
+            volume = 0;
     }
     break;
 
     case Synth::VOLUME_NATIVE:
     {
         volume = velocity * channelVolume * channelExpression;
-        // volume = volume * m_masterVolume / (127 * 127 * 127) / 2;
+        // 4096766 = (127 * 127 * 127) / 2
         volume = (volume * m_masterVolume) / 4096766;
     }
     break;
@@ -541,15 +572,13 @@ void OPL3::touchNote(size_t c,
     {
         volume = (channelVolume * channelExpression * m_masterVolume / 16129);
         volume = ((64 * (velocity + 0x80)) * volume) >> 15;
-        //volume = ((63 * (velocity + 0x80)) * Ch[MidCh].volume) >> 15;
     }
     break;
 
     case Synth::VOLUME_9X:
     {
-        //volume = 63 - W9X_volume_mapping_table[(((velocity * Ch[MidCh].volume /** Ch[MidCh].expression*/) * m_masterVolume / 16129 /*2048383*/) >> 2)];
-        volume = 63 - W9X_volume_mapping_table[((velocity * channelVolume * channelExpression * m_masterVolume / 2048383) >> 2)];
-        //volume = W9X_volume_mapping_table[vol >> 2] + volume;
+        volume = velocity * channelVolume * channelExpression * m_masterVolume;
+        volume = 63 - W9X_volume_mapping_table[(volume / 2048383) >> 2];
     }
     break;
     }
@@ -643,20 +672,6 @@ void OPL3::touchNote(size_t c,
     // Also (slower, floats):
     //   63 + chanvol * (instrvol / 63.0 - 1)
 }
-
-/*
-void OPL3::Touch(unsigned c, unsigned volume) // Volume maxes at 127*127*127
-{
-    if(LogarithmicVolumes)
-        Touch_Real(c, volume * 127 / (127 * 127 * 127) / 2);
-    else
-    {
-        // The formula below: SOLVE(V=127^3 * 2^( (A-63.49999) / 8), A)
-        Touch_Real(c, volume > 8725 ? static_cast<unsigned int>(std::log(volume) * 11.541561 + (0.5 - 104.22845)) : 0);
-        // The incorrect formula below: SOLVE(V=127^3 * (2^(A/63)-1), A)
-        //Touch_Real(c, volume>11210 ? 91.61112 * std::log(4.8819E-7*volume + 1.0)+0.5 : 0);
-    }
-}*/
 
 void OPL3::setPatch(size_t c, const adldata &instrument)
 {
