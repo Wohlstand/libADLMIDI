@@ -113,7 +113,11 @@ enum ADLMIDI_VolumeModels
     /*! Logarithmic volume scale, used in Apogee Sound System. */
     ADLMIDI_VolumeModel_APOGEE = 4,
     /*! Aproximated and shorted volume map table. Similar to general, but has less granularity. */
-    ADLMIDI_VolumeModel_9X = 5
+    ADLMIDI_VolumeModel_9X = 5,
+    /*! DMX model with a fixed bug of AM voices */
+    ADLMIDI_VolumeModel_DMX_Fixed = 6,
+    /*! Apogee model with a fixed bug of AM voices*/
+    ADLMIDI_VolumeModel_APOGEE_Fixed = 7,
 };
 
 /**

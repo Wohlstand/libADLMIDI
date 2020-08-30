@@ -564,6 +564,7 @@ void OPL3::touchNote(size_t c,
     break;
 
     case Synth::VOLUME_DMX:
+    case Synth::VOLUME_DMX_FIXED:
     {
         volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
         volume = (DMX_volume_mapping_table[volume] + 1) << 1;
@@ -572,6 +573,7 @@ void OPL3::touchNote(size_t c,
     break;
 
     case Synth::VOLUME_APOGEE:
+    case Synth::VOLUME_APOGEE_FIXED:
     {
         volume = 0;
         midiVolume = (channelVolume * channelExpression * m_masterVolume / 16129);
@@ -627,7 +629,9 @@ void OPL3::touchNote(size_t c,
     {
         tlCar -= volume / 2;
     }
-    else if(m_volumeScale == Synth::VOLUME_APOGEE && mode <= 1)
+    else if((m_volumeScale == Synth::VOLUME_APOGEE ||
+             m_volumeScale == Synth::VOLUME_APOGEE_FIXED) &&
+            mode <= 1)
     {
         // volume = ((64 * (velocity + 0x80)) * volume) >> 15;
         do_modulator = do_ops[mode][ 0 ] || m_scaleModulators;
@@ -646,7 +650,10 @@ void OPL3::touchNote(size_t c,
             // to not work properly on AM instruments
             // The fix of this bug is just replacing of tlCar with tmMod
             // in this formula
-            tlMod = (midiVolume * tlCar) >> 15;
+            if(m_volumeScale == Synth::VOLUME_APOGEE_FIXED)
+                tlMod = (midiVolume * tlMod) >> 15;
+            else
+                tlMod = (midiVolume * tlCar) >> 15;
 
             tlMod ^= 63;
         }
@@ -891,6 +898,14 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
     case ADLMIDI_VolumeModel_9X:
         m_volumeScale = OPL3::VOLUME_9X;
         break;
+
+    case ADLMIDI_VolumeModel_DMX_Fixed:
+        m_volumeScale = OPL3::VOLUME_DMX_FIXED;
+        break;
+
+    case ADLMIDI_VolumeModel_APOGEE_Fixed:
+        m_volumeScale = OPL3::VOLUME_APOGEE_FIXED;
+        break;
     }
 }
 
@@ -909,6 +924,10 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
         return ADLMIDI_VolumeModel_APOGEE;
     case OPL3::VOLUME_9X:
         return ADLMIDI_VolumeModel_9X;
+    case OPL3::VOLUME_DMX_FIXED:
+        return ADLMIDI_VolumeModel_DMX_Fixed;
+    case OPL3::VOLUME_APOGEE_FIXED:
+        return ADLMIDI_VolumeModel_APOGEE_Fixed;
     }
 }
 
