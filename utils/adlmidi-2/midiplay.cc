@@ -325,6 +325,15 @@ public:
         std::fflush(stderr);
 #endif
     }
+    void ColorReset()
+    {
+#ifdef __DJGPP__
+        Color(7);
+#else
+        std::fprintf(stderr, "\e[0m");
+        std::fflush(stderr);
+#endif
+    }
     void VidPut(char c)
     {
 #ifndef SUPPORT_VIDEO_OUTPUT
@@ -1477,6 +1486,7 @@ bool AdlInstrumentTester::HandleInputChar(char ch)
         p->is_drums = !p->is_drums;
         p->play_chan = p->is_drums ? 9 : 0;
         NextAdl(0);
+        break;
     case ' ':
         DoNoteOff();
         break;
@@ -1738,6 +1748,8 @@ int main(int argc, char **argv)
             "\n"
         );
         UI.ShowCursor();
+        UI.ColorReset();
+        std::printf("\n");
         return 0;
     }
 
@@ -1883,6 +1895,8 @@ int main(int argc, char **argv)
                 {
                     std::fprintf(stderr, "ERROR: %s\n", adl_errorInfo(myDevice));
                     UI.ShowCursor();
+                    UI.ColorReset();
+                    std::printf("\n");
                     return 1;
                 }
             }
@@ -1895,6 +1909,8 @@ int main(int argc, char **argv)
             {
                 std::fprintf(stdout, "FAILED: %s\n", adl_errorInfo(myDevice));
                 UI.ShowCursor();
+                UI.ColorReset();
+                std::printf("\n");
                 return 1;
             }
 
@@ -1927,6 +1943,8 @@ int main(int argc, char **argv)
         {
             std::fprintf(stderr, "ERROR: %s\n", adl_errorInfo(myDevice));
             UI.ShowCursor();
+            UI.ColorReset();
+            std::printf("\n");
             return 0;
         }
     }
@@ -1938,6 +1956,8 @@ int main(int argc, char **argv)
         {
             std::fprintf(stderr, "ERROR: %s\n", adl_errorInfo(myDevice));
             UI.ShowCursor();
+            UI.ColorReset();
+            std::printf("\n");
             return 0;
         }
     }
@@ -1970,6 +1990,8 @@ int main(int argc, char **argv)
     {
         std::fprintf(stderr, "%s\n", adl_errorInfo(myDevice));
         UI.ShowCursor();
+        UI.ColorReset();
+        std::printf("\n");
         return 2;
     }
 
@@ -2172,6 +2194,8 @@ int main(int argc, char **argv)
 #endif /* djgpp */
 
     UI.ClearScreen();
+    UI.ColorReset();
+    UI.ShowCursor();
 
     adl_close(myDevice);
 
