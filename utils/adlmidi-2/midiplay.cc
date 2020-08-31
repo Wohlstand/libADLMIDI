@@ -315,6 +315,16 @@ public:
         RawPrn("\33[?25h"); // show cursor
         std::fflush(stderr);
     }
+    void ClearScreen()
+    {
+#ifdef __DJGPP__
+        Color(7);
+        clrscr();
+#else
+        std::fprintf(stderr, "\e[0m\033[0;0H\033[2J");
+        std::fflush(stderr);
+#endif
+    }
     void VidPut(char c)
     {
 #ifndef SUPPORT_VIDEO_OUTPUT
@@ -1502,17 +1512,12 @@ static void TidyupAndExit(int sig)
 {
     bool hookSignal = false;
     hookSignal |= (sig == SIGINT);
-    #ifdef __DJGPP__
-        hookSignal |= (sig == SIGQUIT);
-    #endif
+#ifdef __DJGPP__
+    hookSignal |= (sig == SIGQUIT);
+#endif
     if(hookSignal)
     {
         UI.ShowCursor();
-        UI.Color(7);
-        std::fflush(stderr);
-        //signal(SIGINT, SIG_DFL);
-        //raise(SIGINT);
-        std::printf("\nBye!\n");
         QuitFlag = true;
     }
 }
@@ -2166,7 +2171,11 @@ int main(int argc, char **argv)
 
 #endif /* djgpp */
 
+    UI.ClearScreen();
+
     adl_close(myDevice);
+
+    std::printf("Bye!\n");
 
     if(FakeDOSshell)
     {
