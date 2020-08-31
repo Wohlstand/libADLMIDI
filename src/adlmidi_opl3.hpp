@@ -149,7 +149,7 @@ public:
         //! DMX model with a fixed bug of AM voices
         VOLUME_DMX_FIXED,
         //! Apogee model with a fixed bug of AM voices
-        VOLUME_APOGEE_FIXED,
+        VOLUME_APOGEE_FIXED
     } m_volumeScale;
 
     //! Reserved
