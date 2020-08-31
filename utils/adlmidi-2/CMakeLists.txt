@@ -53,10 +53,6 @@ elseif(NOT ADLMIDI_DOS)
     target_link_libraries(adlmidi2 PRIVATE pthread m)
 endif()
 
-if(NOT WITH_CPP_EXTRAS)
-    message(FATAL_ERROR "ADLMIDI2 Requires C++ Extras. Please enable WITH_CPP_EXTRAS option!")
-endif()
-
 if(MSVC)
     message("Turned on C++11 on MSVC")
     target_compile_options(adlmidi2 PUBLIC "/std:c++latest")
