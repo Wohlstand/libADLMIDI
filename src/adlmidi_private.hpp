@@ -151,10 +151,6 @@ typedef class OPL3 Synth;
 #define ADLMIDI_BUILD
 #include "adlmidi.h"    //Main API
 
-#ifndef ADLMIDI_DISABLE_CPP_EXTRAS
-#include "adlmidi.hpp"  //Extra C++ API
-#endif
-
 #include "adlmidi_ptr.hpp"
 
 class MIDIplay;

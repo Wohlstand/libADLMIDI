@@ -113,7 +113,6 @@ endfunction()
 option(libADLMIDI_STATIC   "Build static library of libADLMIDI" ON)
 option(libADLMIDI_SHARED   "Build shared library of libADLMIDI" OFF)
 
-option(WITH_CPP_EXTRAS      "Build with support for C++ extras (features can be found in 'adlmidi.hpp' header)" OFF)
 option(WITH_MIDI_SEQUENCER  "Build with embedded MIDI sequencer. Disable this if you want use library in real-time MIDI drivers or plugins." ON)
 option(WITH_EMBEDDED_BANKS  "Use embedded banks" ON)
 option(WITH_HQ_RESAMPLER    "Build with support for high quality resampling" OFF)
@@ -207,10 +206,6 @@ function(handle_options targetLib)
 
     if(NOT WITH_MIDI_SEQUENCER)
         target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_MIDI_SEQUENCER)
-    endif()
-
-    if(NOT WITH_CPP_EXTRAS)
-        target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_CPP_EXTRAS)
     endif()
 
     if(WITH_EMBEDDED_BANKS AND WITH_GENADLDATA AND NOT ADLMIDI_DOS)
@@ -365,7 +360,6 @@ install(TARGETS ${libADLMIDI_INSTALLS}
 
 install(FILES
         include/adlmidi.h
-        include/adlmidi.hpp
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 file(GLOB DOCTXT_FILES
@@ -406,7 +400,6 @@ message("libADLMIDI_STATIC        = ${libADLMIDI_STATIC}")
 message("libADLMIDI_SHARED        = ${libADLMIDI_SHARED}")
 message("WITH_UNIT_TESTS          = ${WITH_UNIT_TESTS}")
 
-message("WITH_CPP_EXTRAS          = ${WITH_CPP_EXTRAS}")
 message("WITH_MIDI_SEQUENCER      = ${WITH_MIDI_SEQUENCER}")
 message("WITH_EMBEDDED_BANKS      = ${WITH_EMBEDDED_BANKS}")
 message("WITH_HQ_RESAMPLER        = ${WITH_HQ_RESAMPLER}")

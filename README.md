@@ -83,7 +83,6 @@ The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT
 * **libADLMIDI_SHARED** - (ON/OFF, default OFF) Build shared library
 * **WITH_UNIT_TESTS** - (ON/OFF, default OFF) Enable unit testing
 
-* **WITH_CPP_EXTRAS** - (ON/OFF, default OFF) Build libADLMIDI with some extra public features for C++ language (for example, instrument testing API is available for C++ only).
 * **WITH_MIDI_SEQUENCER** - (ON/OFF, default ON) Build with embedded MIDI sequencer. Disable this if you want use library in real-time MIDI drivers or plugins.)
 * **WITH_EMBEDDED_BANKS** - (ON/OFF, default ON) Enable or disable embedded banks (Original ADLMIDI and older versions of libADLMIDI are had embedded-only banks with no ability to load custom banks in runtime).
 * **WITH_HQ_RESAMPLER** - (ON/OFF, default OFF) Build with support for high quality resampling (requires zita-resampler to be installed)
@@ -101,7 +100,7 @@ The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT
 
 * **WITH_MIDIPLAY** - (ON/OFF, default OFF) Build demo MIDI player (Requires SDL2 and also pthread on Windows with MinGW)
 * **MIDIPLAY_WAVE_ONLY** - (ON/OFF, default OFF) Build Demo MIDI player without support of real time playing. It will output into WAV only.
-* **WITH_ADLMIDI2** - (ON/OFF, default OFF) Build Classic ADLMIDI MIDI player (Requires SDL2 on Linux and macOS, requires pthread on Windows with MinGW, SDL doesn't required on Windows. Also, the **WITH_CPP_EXTRAS** flag must be enabled)
+* **WITH_ADLMIDI2** - (ON/OFF, default OFF) Build Classic ADLMIDI MIDI player (Requires SDL2 on Linux and macOS, requires pthread on Windows with MinGW, SDL doesn't required on Windows).
 * **WITH_VLC_PLUGIN** - (ON/OFF, default OFF) Compile VLC plugin. For now, works on Linux and VLC. Support for other platforms comming soon!
 * **WITH_OLD_UTILS** - (ON/OFF, default OFF) Build old utilities to dump some bank formats, made by original creator of ADLMIDI
 * **EXAMPLE_SDL2_AUDIO** - (ON/OFF, default OFF) Build also a simple SDL2 demo MIDI player
@@ -121,7 +120,6 @@ You need to make in the any IDE a library project and put into it next files
 
 ### Public header (include)
 * adlmidi.h     - Library Public API header, use it to control library
-* adlmidi.hpp   - Public additional C++ API header, optional
 
 ### Internal code (src)
 * chips/*       - Various OPL3 chip emulators and commonized interface over them
@@ -187,6 +185,7 @@ To build that example you will need to have installed SDL2 library.
  * Fixed an accuracy of the DMX volume model, include the buggy AM intepretation
  * Fully rewritten an embedded banks database
  * Improved an accuracy of Apogee volume model, include the bug of AM instruments
+ * Removed C++ extras. C++-binded instruments tester is useless since a real-time MIDI API can completely replace it.
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
