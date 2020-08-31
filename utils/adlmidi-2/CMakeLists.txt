@@ -7,8 +7,8 @@ if(OPENMP_FOUND)
 endif()
 
 if(NOT WIN32 AND NOT ADLMIDI_DOS)
-    set(ADLMIDI2_HAS_PUZZLE_GAME TRUE)
-    set(ADLMIDI2_VIDEO_OUT_SUPPORT TRUE)
+    option(ADLMIDI2_HAS_PUZZLE_GAME     "Enable the built-in puzzle game" ON)
+    option(ADLMIDI2_VIDEO_OUT_SUPPORT   "Allow video recording with using of FFMPEG" ON)
 endif()
 
 set(adlmidi2_src)
