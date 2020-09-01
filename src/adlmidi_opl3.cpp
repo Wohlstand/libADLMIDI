@@ -479,6 +479,13 @@ void OPL3::noteOn(size_t c1, size_t c2, double hertz) // Hertz range: 0..131071
     }
 }
 
+static inline uint_fast32_t brightnessToOPL(uint_fast32_t brightness)
+{
+    double b = static_cast<double>(brightness);
+    double ret = ::round(127.0 * ::sqrt(b * (1.0 / 127.0))) / 2.0;
+    return static_cast<uint_fast32_t>(ret);
+}
+
 void OPL3::touchNote(size_t c,
                      uint_fast32_t velocity,
                      uint_fast32_t channelVolume,
@@ -504,8 +511,8 @@ void OPL3::touchNote(size_t c,
     uint_fast32_t volume = 0;
     uint_fast32_t midiVolume = 0;
 
-    bool do_modulator;
-    bool do_carrier;
+    bool do_modulator = false;
+    bool do_carrier = true;
 
     static const bool do_ops[10][2] =
     {
@@ -657,13 +664,6 @@ void OPL3::touchNote(size_t c,
 
             tlMod ^= 63;
         }
-
-        if(brightness != 127)
-        {
-            brightness = static_cast<uint8_t>(::round(127.0 * ::sqrt((static_cast<double>(brightness)) * (1.0 / 127.0))) / 2.0);
-            if(!do_modulator)
-                tlMod = 63 - brightness + (brightness * tlMod) / 63;
-        }
     }
     else if(m_volumeScale == Synth::VOLUME_DMX && mode <= 1)
     {
@@ -676,13 +676,6 @@ void OPL3::touchNote(size_t c,
             if(tlMod < tlCar)
                 tlMod = tlCar;
         }
-
-        if(brightness != 127)
-        {
-            brightness = static_cast<uint8_t>(::round(127.0 * ::sqrt((static_cast<double>(brightness)) * (1.0 / 127.0))) / 2.0);
-            if(!do_modulator)
-                tlMod = 63 - brightness + (brightness * tlMod) / 63;
-        }
     }
     else
     {
@@ -693,15 +686,15 @@ void OPL3::touchNote(size_t c,
             tlMod = 63 - volume + (volume * tlMod) / 63;
         if(do_carrier)
             tlCar = 63 - volume + (volume * tlCar) / 63;
+    }
 
-        if(brightness != 127)
-        {
-            brightness = static_cast<uint8_t>(::round(127.0 * ::sqrt((static_cast<double>(brightness)) * (1.0 / 127.0))) / 2.0);
-            if(!do_modulator)
-                tlMod = 63 - brightness + (brightness * tlMod) / 63;
-            if(!do_carrier)
-                tlCar = 63 - brightness + (brightness * tlCar) / 63;
-        }
+    if(brightness != 127)
+    {
+        brightness = brightnessToOPL(brightness);
+        if(!do_modulator)
+            tlMod = 63 - brightness + (brightness * tlMod) / 63;
+        if(!do_carrier)
+            tlCar = 63 - brightness + (brightness * tlCar) / 63;
     }
 
     modulator = (kslMod & 0xC0) | (tlMod & 63);
