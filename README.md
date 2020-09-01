@@ -182,10 +182,11 @@ To build that example you will need to have installed SDL2 library.
  * Reworked rhythm-mode percussions system, WOPL banks with rhythm-mode percussions
  * Added Public Domain Opal OPL3 emulator made by Reality (a team who originally made the Reality Adlib Tracker) (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Added LGPL licensed JavaOPL3 emulator made by Robson Cozendey in Java and later rewritten into C++ for GZDoom (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
- * Fixed an accuracy of the DMX volume model, include the buggy AM intepretation
- * Fully rewritten an embedded banks database
+ * Fully rewritten an embedded bank database format, embedded banks now supports a wider set (more than 127:127 instruments in one bank)
+ * Improved an accuracy of the DMX volume model, include the buggy AM intepretation
  * Improved an accuracy of Apogee volume model, include the bug of AM instruments
- * Removed C++ extras. C++-binded instruments tester is useless since a real-time MIDI API can completely replace it.
+ * Improved an accuracy of Win9X volume model
+ * Removed C++ extras. C++-binded instruments tester is useless since a real-time MIDI API can completely replace it
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
