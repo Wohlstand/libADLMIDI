@@ -1357,7 +1357,7 @@ AdlInstrumentTester::AdlInstrumentTester(ADL_MIDIPlayer *device)
     p->cur_note = -1;
     p->device = device;
 #else
-    ADL_UNUSED(device);
+    (void)(device);
 #endif
 }
 
@@ -1387,7 +1387,7 @@ void AdlInstrumentTester::DoNote(int note)
     adl_rt_noteOn(p->device, p->play_chan, note, 127);
     p->cur_note = note;
 #else
-    ADL_UNUSED(note);
+    (void)(note);
 #endif
 }
 
@@ -1417,7 +1417,7 @@ void AdlInstrumentTester::NextGM(int offset)
 
     printIntst();
 #else
-    ADL_UNUSED(offset);
+    (void)(offset);
 #endif
 }
 
@@ -1451,7 +1451,7 @@ void AdlInstrumentTester::NextAdl(int offset)
 
     printIntst();
 #else
-    ADL_UNUSED(offset);
+    (void)(offset);
 #endif
 }
 
@@ -1501,7 +1501,7 @@ bool AdlInstrumentTester::HandleInputChar(char ch)
             DoNote((int)(p - notes) + 48);
     }
 #else
-    ADL_UNUSED(ch);
+    (void)(ch);
 #endif
     return true;
 }
