@@ -225,6 +225,13 @@ static const uint_fast32_t W9X_volume_mapping_table[32] =
     3,  3,  2,  2,  1,  1,  0,  0
 };
 
+static const uint_fast32_t AIL_vel_graph[16] =
+{
+    82,   85,  88,  91,  94,  97, 100, 103,
+    106, 109, 112, 115, 118, 121, 124, 127
+};
+
+
 enum
 {
     MasterVolumeDefault = 127
@@ -497,13 +504,14 @@ void OPL3::touchNote(size_t c,
     size_t cmf_offset = ((m_musicMode == MODE_CMF) && cc >= OPL3_CHANNELS_RHYTHM_BASE) ? 10 : 0;
     uint16_t o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
     uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
-    uint8_t  x = adli.modulator_40, y = adli.carrier_40;
+    uint8_t  srcMod = adli.modulator_40,
+             srcCar = adli.carrier_40;
     uint32_t mode = 1; // 2-op AM
 
-    uint_fast32_t kslMod = x & 0xC0;
-    uint_fast32_t kslCar = y & 0xC0;
-    uint_fast32_t tlMod = x & 0x3F;
-    uint_fast32_t tlCar = y & 0x3F;
+    uint_fast32_t kslMod = srcMod & 0xC0;
+    uint_fast32_t kslCar = srcCar & 0xC0;
+    uint_fast32_t tlMod = srcMod & 0x3F;
+    uint_fast32_t tlCar = srcCar & 0x3F;
 
     uint_fast32_t modulator;
     uint_fast32_t carrier;
@@ -582,7 +590,6 @@ void OPL3::touchNote(size_t c,
     case Synth::VOLUME_APOGEE:
     case Synth::VOLUME_APOGEE_FIXED:
     {
-        volume = 0;
         midiVolume = (channelVolume * channelExpression * m_masterVolume / 16129);
     }
     break;
@@ -591,6 +598,26 @@ void OPL3::touchNote(size_t c,
     {
         volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
         volume = W9X_volume_mapping_table[volume >> 2];
+    }
+    break;
+
+    case Synth::VOLUME_AIL:
+    {
+        midiVolume = (channelVolume * channelExpression) * 2;
+        midiVolume >>= 8;
+        if(midiVolume != 0)
+            midiVolume++;
+
+        velocity = (velocity & 0x7F) >> 3;
+        velocity = AIL_vel_graph[velocity];
+
+        midiVolume = (midiVolume * velocity) * 2;
+        midiVolume >>= 8;
+        if(midiVolume != 0)
+            midiVolume++;
+
+        if(m_masterVolume < 127)
+            midiVolume = (midiVolume * m_masterVolume) / 127;
     }
     break;
     }
@@ -689,6 +716,19 @@ void OPL3::touchNote(size_t c,
             tlCar = 0x3F;
         if(tlMod > 0x3F)
             tlMod = 0x3F;
+    }
+    else if(m_volumeScale == Synth::VOLUME_AIL)
+    {
+        uint_fast32_t v0_val = (~srcMod) & 0x3f;
+        uint_fast32_t v1_val = (~srcCar) & 0x3f;
+
+        if(do_modulator)
+            v0_val = (v0_val * midiVolume) / 127;
+        if(do_carrier)
+            v1_val = (v1_val * midiVolume) / 127;
+
+        tlMod = (~v0_val) & 0x3F;
+        tlCar = (~v1_val) & 0x3F;
     }
     else
     {
@@ -909,6 +949,9 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
     case ADLMIDI_VolumeModel_APOGEE_Fixed:
         m_volumeScale = OPL3::VOLUME_APOGEE_FIXED;
         break;
+    case ADLMIDI_VolumeModel_AIL:
+        m_volumeScale = OPL3::VOLUME_AIL;
+        break;
     }
 }
 
@@ -931,6 +974,8 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
         return ADLMIDI_VolumeModel_DMX_Fixed;
     case OPL3::VOLUME_APOGEE_FIXED:
         return ADLMIDI_VolumeModel_APOGEE_Fixed;
+    case OPL3::VOLUME_AIL:
+        return ADLMIDI_VolumeModel_AIL;
     }
 }
 

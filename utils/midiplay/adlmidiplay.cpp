@@ -215,11 +215,13 @@ const char* volume_model_to_str(int vm)
     case ADLMIDI_VolumeModel_APOGEE:
         return "Apogee";
     case ADLMIDI_VolumeModel_9X:
-        return "9X";
+        return "9X (SB16)";
     case ADLMIDI_VolumeModel_DMX_Fixed:
         return "DMX (fixed)";
     case ADLMIDI_VolumeModel_APOGEE_Fixed:
         return "Apogee (fixed)";
+    case ADLMIDI_VolumeModel_AIL:
+        return "AIL";
     }
 }
 

@@ -110,7 +110,10 @@ struct BanksDump
             WOPL_VM_Native,
             WOPL_VM_DMX,
             WOPL_VM_Apogee,
-            WOPL_VM_Win9x
+            WOPL_VM_Win9x,
+            WOPL_VM_DMX_Fixed,
+            WOPL_VM_Apogee_Fixed,
+            WOPL_VM_AIL
         } WOPL_VolumeModel;
 
         /**
@@ -122,7 +125,7 @@ struct BanksDump
             SETUP_Win9X   = 0x0304,
             SETUP_DMX     = 0x0002,
             SETUP_Apogee  = 0x0003,
-            SETUP_AIL     = 0x0300,
+            SETUP_AIL     = 0x0307,
             SETUP_IBK     = 0x0301,
             SETUP_IMF     = 0x0200,
             SETUP_CMF     = 0x0201

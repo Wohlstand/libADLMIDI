@@ -81,7 +81,7 @@
 #define FULL_RANGE_CC74_LONGTEXT N_( \
     "Scale range of CC-74 \"Brightness\" with full 0~127 range. By default is only 0~64 affects the sounding.")
 
-static const int volume_models_values[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+static const int volume_models_values[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 static const char * const volume_models_descriptions[] =
 {
     N_("Auto (defined by bank)"),
@@ -92,6 +92,7 @@ static const char * const volume_models_descriptions[] =
     N_("Win9x driver"),
     N_("DMX (Fixed AM)"),
     N_("Apogee Sound System (Fixed AM)"),
+    N_("Audio Interfaces Library (AIL)"),
     NULL
 };
 
