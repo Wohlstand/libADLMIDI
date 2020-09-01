@@ -636,31 +636,35 @@ void OPL3::touchNote(size_t c,
     {
         tlCar -= volume / 2;
     }
-    else if((m_volumeScale == Synth::VOLUME_APOGEE ||
-             m_volumeScale == Synth::VOLUME_APOGEE_FIXED) &&
-            mode <= 1)
+    else if(m_volumeScale == Synth::VOLUME_APOGEE ||
+            m_volumeScale == Synth::VOLUME_APOGEE_FIXED)
     {
         // volume = ((64 * (velocity + 0x80)) * volume) >> 15;
         do_modulator = do_ops[mode][ 0 ] || m_scaleModulators;
+        do_carrier   = do_ops[mode][1] || m_scaleModulators;
 
-        tlCar = 63 - tlCar;
-
-        tlCar *= velocity + 0x80;
-        tlCar = (midiVolume * tlCar) >> 15;
-        tlCar = tlCar ^ 63;
+        if(do_carrier)
+        {
+            tlCar = 63 - tlCar;
+            tlCar *= velocity + 0x80;
+            tlCar = (midiVolume * tlCar) >> 15;
+            tlCar = tlCar ^ 63;
+        }
 
         if(do_modulator)
         {
+            uint_fast32_t mod = tlCar;
+
+            if(m_volumeScale == Synth::VOLUME_APOGEE_FIXED || mode > 1)
+                mod = tlMod; // Fix the AM voices bug
+
             tlMod = 63 - tlMod;
             tlMod *= velocity + 0x80;
             // NOTE: Here is a bug of Apogee Sound System that makes modulator
-            // to not work properly on AM instruments
-            // The fix of this bug is just replacing of tlCar with tmMod
-            // in this formula
-            if(m_volumeScale == Synth::VOLUME_APOGEE_FIXED)
-                tlMod = (midiVolume * tlMod) >> 15;
-            else
-                tlMod = (midiVolume * tlCar) >> 15;
+            // to not work properly on AM instruments. The fix of this bug, you
+            // need to replace the tlCar with tmMod in this formula.
+            // Don't do the bug on 4-op voices.
+            tlMod = (midiVolume * mod) >> 15;
 
             tlMod ^= 63;
         }
