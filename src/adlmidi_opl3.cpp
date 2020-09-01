@@ -219,7 +219,7 @@ static const uint_fast32_t DMX_volume_mapping_table[128] =
 
 static const uint_fast32_t W9X_volume_mapping_table[32] =
 {
-    63, 63, 40, 36, 32, 28, 23, 21,
+    80, 63, 40, 36, 32, 28, 23, 21,
     19, 17, 15, 14, 13, 12, 11, 10,
     9,  8,  7,  6,  5,  5,  4,  4,
     3,  3,  2,  2,  1,  1,  0,  0
@@ -502,8 +502,8 @@ void OPL3::touchNote(size_t c,
 
     uint_fast32_t kslMod = x & 0xC0;
     uint_fast32_t kslCar = y & 0xC0;
-    uint_fast32_t tlMod = x & 63;
-    uint_fast32_t tlCar = y & 63;
+    uint_fast32_t tlMod = x & 0x3F;
+    uint_fast32_t tlCar = y & 0x3F;
 
     uint_fast32_t modulator;
     uint_fast32_t carrier;
@@ -589,8 +589,8 @@ void OPL3::touchNote(size_t c,
 
     case Synth::VOLUME_9X:
     {
-        volume = velocity * channelVolume * channelExpression * m_masterVolume;
-        volume = 63 - W9X_volume_mapping_table[(volume / 2048383) >> 2];
+        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
+        volume = W9X_volume_mapping_table[volume >> 2];
     }
     break;
     }
@@ -676,6 +676,21 @@ void OPL3::touchNote(size_t c,
             if(tlMod < tlCar)
                 tlMod = tlCar;
         }
+    }
+    else if(m_volumeScale == Synth::VOLUME_9X)
+    {
+        do_modulator = do_ops[mode][0] || m_scaleModulators;
+        do_carrier   = do_ops[mode][1] || m_scaleModulators;
+
+        if(do_carrier)
+            tlCar += volume + W9X_volume_mapping_table[velocity >> 2];
+        if(do_modulator)
+            tlMod += volume + W9X_volume_mapping_table[velocity >> 2];
+
+        if(tlCar > 0x3F)
+            tlCar = 0x3F;
+        if(tlMod > 0x3F)
+            tlMod = 0x3F;
     }
     else
     {
