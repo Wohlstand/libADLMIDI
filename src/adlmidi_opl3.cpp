@@ -628,7 +628,8 @@ void OPL3::touchNote(size_t c,
         mode += (i0->feedconn & 1) + (i1->feedconn & 1) * 2;
     }
 
-
+    do_modulator = do_ops[mode][0] || m_scaleModulators;
+    do_carrier   = do_ops[mode][1] || m_scaleModulators;
 
     // ------ Compute the total level register output data ------
 
@@ -640,8 +641,6 @@ void OPL3::touchNote(size_t c,
             m_volumeScale == Synth::VOLUME_APOGEE_FIXED)
     {
         // volume = ((64 * (velocity + 0x80)) * volume) >> 15;
-        do_modulator = do_ops[mode][ 0 ] || m_scaleModulators;
-        do_carrier   = do_ops[mode][1] || m_scaleModulators;
 
         if(do_carrier)
         {
@@ -671,8 +670,6 @@ void OPL3::touchNote(size_t c,
     }
     else if(m_volumeScale == Synth::VOLUME_DMX && mode <= 1)
     {
-        do_modulator = do_ops[mode][ 0 ] || m_scaleModulators;
-
         tlCar = (63 - volume);
 
         if(do_modulator)
@@ -683,9 +680,6 @@ void OPL3::touchNote(size_t c,
     }
     else if(m_volumeScale == Synth::VOLUME_9X)
     {
-        do_modulator = do_ops[mode][0] || m_scaleModulators;
-        do_carrier   = do_ops[mode][1] || m_scaleModulators;
-
         if(do_carrier)
             tlCar += volume + W9X_volume_mapping_table[velocity >> 2];
         if(do_modulator)
@@ -698,9 +692,6 @@ void OPL3::touchNote(size_t c,
     }
     else
     {
-        do_modulator = do_ops[ mode ][ 0 ] || m_scaleModulators;
-        do_carrier   = do_ops[ mode ][ 1 ] || m_scaleModulators;
-
         if(do_modulator)
             tlMod = 63 - volume + (volume * tlMod) / 63;
         if(do_carrier)
