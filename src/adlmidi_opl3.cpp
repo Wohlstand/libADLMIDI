@@ -549,7 +549,7 @@ void OPL3::touchNote(size_t c,
         //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
         const double c1 = 11.541560327111707;
         const double c2 = 1.601379199767093e+02;
-        uint_fast32_t minVolume = 8725 * 127;
+        const uint_fast32_t minVolume = 1108075; // 8725 * 127
 
         // The formula below: SOLVE(V=127^4 * 2^( (A-63.49999) / 8), A)
         if(volume > minVolume)
