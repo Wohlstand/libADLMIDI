@@ -413,13 +413,10 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
     if(ains->tone)
     {
-        /*if(ains->tone < 20)
-            tone += ains->tone;
-        else*/
-        if(ains->tone < 128)
-            tone = ains->tone;
+        if(ains->tone >= 128)
+            tone = ains->tone - 128;
         else
-            tone -= ains->tone - 128;
+            tone = ains->tone;
     }
 
     //uint16_t i[2] = { ains->adlno1, ains->adlno2 };
