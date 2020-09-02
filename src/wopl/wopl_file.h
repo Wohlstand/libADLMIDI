@@ -59,7 +59,8 @@ typedef enum WOPL_VolumeModel
     WOPL_VM_Win9x,
     WOPL_VM_DMX_Fixed,
     WOPL_VM_Apogee_Fixed,
-    WOPL_VM_AIL
+    WOPL_VM_AIL,
+    WOPL_VM_Win9x_GenericFM
 } WOPL_VolumeModel;
 
 typedef enum WOPL_InstrumentFlags

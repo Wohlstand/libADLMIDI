@@ -197,7 +197,7 @@ static const uint16_t g_channelsMapPan[NUM_OF_CHANNELS] =
 
 // Mapping from MIDI volume level to OPL level value.
 
-static const uint_fast32_t DMX_volume_mapping_table[128] =
+static const uint_fast32_t s_dmx_volume_model[128] =
 {
     0,  1,  3,  5,  6,  8,  10, 11,
     13, 14, 16, 17, 19, 20, 22, 23,
@@ -217,7 +217,7 @@ static const uint_fast32_t DMX_volume_mapping_table[128] =
     124, 124, 125, 125, 126, 126, 127, 127,
 };
 
-static const uint_fast32_t W9X_volume_mapping_table[32] =
+static const uint_fast32_t s_w9x_sb16_volume_model[32] =
 {
     80, 63, 40, 36, 32, 28, 23, 21,
     19, 17, 15, 14, 13, 12, 11, 10,
@@ -225,7 +225,15 @@ static const uint_fast32_t W9X_volume_mapping_table[32] =
     3,  3,  2,  2,  1,  1,  0,  0
 };
 
-static const uint_fast32_t AIL_vel_graph[16] =
+static const uint_fast32_t s_w9x_generic_fm_volume_model[32] =
+{
+    40, 36, 32, 28, 23, 21, 19, 17,
+    15, 14, 13, 12, 11, 10, 9,  8,
+    7,  6,  5,  5,  4,  4,  3,  3,
+    2,  2,  1,  1,  1,  0,  0,  0
+};
+
+static const uint_fast32_t s_ail_vel_graph[16] =
 {
     82,   85,  88,  91,  94,  97, 100, 103,
     106, 109, 112, 115, 118, 121, 124, 127
@@ -582,8 +590,8 @@ void OPL3::touchNote(size_t c,
     case Synth::VOLUME_DMX_FIXED:
     {
         volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        volume = (DMX_volume_mapping_table[volume] + 1) << 1;
-        volume = (DMX_volume_mapping_table[(velocity < 128) ? velocity : 127] * volume) >> 9;
+        volume = (s_dmx_volume_model[volume] + 1) << 1;
+        volume = (s_dmx_volume_model[(velocity < 128) ? velocity : 127] * volume) >> 9;
     }
     break;
 
@@ -597,7 +605,14 @@ void OPL3::touchNote(size_t c,
     case Synth::VOLUME_9X:
     {
         volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        volume = W9X_volume_mapping_table[volume >> 2];
+        volume = s_w9x_sb16_volume_model[volume >> 2];
+    }
+    break;
+
+    case Synth::VOLUME_9X_GENERIC_FM:
+    {
+        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
+        volume = s_w9x_generic_fm_volume_model[volume >> 2];
     }
     break;
 
@@ -609,7 +624,7 @@ void OPL3::touchNote(size_t c,
             midiVolume++;
 
         velocity = (velocity & 0x7F) >> 3;
-        velocity = AIL_vel_graph[velocity];
+        velocity = s_ail_vel_graph[velocity];
 
         midiVolume = (midiVolume * velocity) * 2;
         midiVolume >>= 8;
@@ -709,9 +724,21 @@ void OPL3::touchNote(size_t c,
     else if(m_volumeScale == Synth::VOLUME_9X)
     {
         if(do_carrier)
-            tlCar += volume + W9X_volume_mapping_table[velocity >> 2];
+            tlCar += volume + s_w9x_sb16_volume_model[velocity >> 2];
         if(do_modulator)
-            tlMod += volume + W9X_volume_mapping_table[velocity >> 2];
+            tlMod += volume + s_w9x_sb16_volume_model[velocity >> 2];
+
+        if(tlCar > 0x3F)
+            tlCar = 0x3F;
+        if(tlMod > 0x3F)
+            tlMod = 0x3F;
+    }
+    else if(m_volumeScale == Synth::VOLUME_9X_GENERIC_FM)
+    {
+        if(do_carrier)
+            tlCar += volume + s_w9x_generic_fm_volume_model[velocity >> 2];
+        if(do_modulator)
+            tlMod += volume + s_w9x_generic_fm_volume_model[velocity >> 2];
 
         if(tlCar > 0x3F)
             tlCar = 0x3F;
@@ -950,8 +977,13 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
     case ADLMIDI_VolumeModel_APOGEE_Fixed:
         m_volumeScale = OPL3::VOLUME_APOGEE_FIXED;
         break;
+
     case ADLMIDI_VolumeModel_AIL:
         m_volumeScale = OPL3::VOLUME_AIL;
+        break;
+
+    case ADLMIDI_VolumeModel_9X_GENERIC_FM:
+        m_volumeScale = OPL3::VOLUME_9X_GENERIC_FM;
         break;
     }
 }
@@ -977,6 +1009,8 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
         return ADLMIDI_VolumeModel_APOGEE_Fixed;
     case OPL3::VOLUME_AIL:
         return ADLMIDI_VolumeModel_AIL;
+    case OPL3::VOLUME_9X_GENERIC_FM:
+        return ADLMIDI_VolumeModel_9X_GENERIC_FM;
     }
 }
 

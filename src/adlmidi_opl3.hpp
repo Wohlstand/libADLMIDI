@@ -144,14 +144,16 @@ public:
         VOLUME_DMX,
         //! Apoge Sound System volume scaling model
         VOLUME_APOGEE,
-        //! Windows 9x driver volume scale table
+        //! Windows 9x SB16 driver volume scale table
         VOLUME_9X,
         //! DMX model with a fixed bug of AM voices
         VOLUME_DMX_FIXED,
         //! Apogee model with a fixed bug of AM voices
         VOLUME_APOGEE_FIXED,
         //! Audio Interfaces Library volume scaling model
-        VOLUME_AIL
+        VOLUME_AIL,
+        //! Windows 9x Generic FM driver volume scale table
+        VOLUME_9X_GENERIC_FM
     } m_volumeScale;
 
     //! Reserved

@@ -222,6 +222,8 @@ const char* volume_model_to_str(int vm)
         return "Apogee (fixed)";
     case ADLMIDI_VolumeModel_AIL:
         return "AIL";
+    case ADLMIDI_VolumeModel_9X_GENERIC_FM:
+        return "9X (Generic FM)";
     }
 }
 
