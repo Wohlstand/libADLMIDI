@@ -93,7 +93,7 @@ bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
                 break;
             default:
                 // IBK logic: make non-percussion instrument be silent
-//                tmp = MakeNoSoundIns();
+                inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
                 break;
             }
         }

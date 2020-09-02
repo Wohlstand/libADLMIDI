@@ -188,6 +188,7 @@ To build that example you will need to have installed SDL2 library.
  * Improved an accuracy of Win9X volume model
  * Removed C++ extras. C++-binded instruments tester is useless since a real-time MIDI API can completely replace it
  * Added AIL volume model
+ * Added Generic FM variant of Win9X volume model
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
