@@ -76,7 +76,7 @@ class BW_MidiSequencer
             //! System Exclusive message, type 2
             T_SYSEX2        = 0xF7,//size == len
             //! Special event
-            T_SPECIAL       = 0xFF,
+            T_SPECIAL       = 0xFF
         };
         /**
          * @brief Special MIDI event sub-types
