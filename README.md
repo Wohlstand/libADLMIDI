@@ -189,6 +189,7 @@ To build that example you will need to have installed SDL2 library.
  * Removed C++ extras. C++-binded instruments tester is useless since a real-time MIDI API can completely replace it
  * Added AIL volume model
  * Added Generic FM variant of Win9X volume model
+ * Fixed an incorrect work of CC-121 (See https://github.com/Wohlstand/libADLMIDI/issues/227 for details)
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)

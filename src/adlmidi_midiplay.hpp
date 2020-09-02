@@ -327,11 +327,21 @@ public:
          */
         void resetAllControllers()
         {
+            volume  = def_volume;
+            brightness = 127;
+
+            resetAllControllers121();
+        }
+
+        /**
+         * @brief Reset all MIDI controllers into initial state (CC121)
+         */
+        void resetAllControllers121()
+        {
             bend = 0;
             bendsense_msb = def_bendsense_msb;
             bendsense_lsb = def_bendsense_lsb;
             updateBendSensitivity();
-            volume  = def_volume;
             expression = 127;
             sustain = false;
             softPedal = false;
@@ -347,7 +357,6 @@ public:
             portamentoEnable = false;
             portamentoSource = -1;
             portamentoRate = HUGE_VAL;
-            brightness = 127;
         }
 
         /**

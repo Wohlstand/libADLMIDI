@@ -206,6 +206,7 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
         else if((events[i].type == MidiEvent::T_SPECIAL) && (
             (events[i].subtype == MidiEvent::ST_MARKER) ||
             (events[i].subtype == MidiEvent::ST_DEVICESWITCH) ||
+            (events[i].subtype == MidiEvent::ST_SONG_BEGIN_HOOK) ||
             (events[i].subtype == MidiEvent::ST_LOOPSTART) ||
             (events[i].subtype == MidiEvent::ST_LOOPEND) ||
             (events[i].subtype == MidiEvent::ST_LOOPSTACK_BEGIN) ||
@@ -566,13 +567,11 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
             }
 
             // HACK: Begin every track with "Reset all controllers" event to avoid controllers state break came from end of song
-            for(uint8_t chan = 0; chan < 16; chan++)
+            if(tk == 0)
             {
                 MidiEvent resetEvent;
-                resetEvent.type = MidiEvent::T_CTRLCHANGE;
-                resetEvent.channel = chan;
-                resetEvent.data.push_back(121);
-                resetEvent.data.push_back(0);
+                resetEvent.type = MidiEvent::T_SPECIAL;
+                resetEvent.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
                 evtPos.events.push_back(resetEvent);
             }
 
@@ -1677,7 +1676,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     if(evt.type == MidiEvent::T_SPECIAL)
     {
         // Special event FF
-        uint8_t  evtype = evt.subtype;
+        uint_fast16_t  evtype = evt.subtype;
         uint64_t length = static_cast<uint64_t>(evt.data.size());
         const char *data(length ? reinterpret_cast<const char *>(evt.data.data()) : "");
 
@@ -1768,6 +1767,13 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         {
             if(m_interface->rt_rawOPL)
                 m_interface->rt_rawOPL(m_interface->rtUserData, static_cast<uint8_t>(data[0]), static_cast<uint8_t>(data[1]));
+            return;
+        }
+
+        if(evtype == MidiEvent::ST_SONG_BEGIN_HOOK)
+        {
+            if(m_interface->onSongStart)
+                m_interface->onSongStart(m_interface->onSongStart_userData);
             return;
         }
 

@@ -187,6 +187,7 @@ void MIDIplay::partialReset()
     synth.reset(m_setup.emulator, m_setup.PCM_RATE, this);
     m_chipChannels.clear();
     m_chipChannels.resize((size_t)synth.m_numChannels);
+    resetMIDIDefaults();
 }
 
 void MIDIplay::resetMIDI()
@@ -774,7 +775,7 @@ void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
         break;
 
     case 121: // Reset all controllers
-        m_midiChannels[channel].resetAllControllers();
+        m_midiChannels[channel].resetAllControllers121();
         noteUpdateAll(channel, Upd_Pan + Upd_Volume + Upd_Pitch);
         // Kill all sustained notes
         killSustainingNotes(channel, -1, AdlChannel::LocationData::Sustain_ANY);

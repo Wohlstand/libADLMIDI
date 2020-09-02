@@ -79,6 +79,12 @@ typedef struct BW_MidiRtInterface
     /*! User data which will be passed through On-LoopStart hook */
     void         *onloopEnd_userData;
 
+    typedef void (*SongStartHook)(void *userdata);
+    /*! Song start hook which is calling when starting playing song at begin */
+    SongStartHook onSongStart;
+    /*! User data which will be passed through On-SongStart hook */
+    void         *onSongStart_userData;
+
     /*! MIDI Run Time event calls user data */
     void *rtUserData;
 

@@ -76,7 +76,7 @@ class BW_MidiSequencer
             //! System Exclusive message, type 2
             T_SYSEX2        = 0xF7,//size == len
             //! Special event
-            T_SPECIAL       = 0xFF
+            T_SPECIAL       = 0xFF,
         };
         /**
          * @brief Special MIDI event sub-types
@@ -132,18 +132,21 @@ class BW_MidiSequencer
             //! [Non-Standard] Loop End point with support of multi-loops
             ST_LOOPSTACK_BREAK = 0xE6,//size == 0 <CUSTOM>
             //! [Non-Standard] Callback Trigger
-            ST_CALLBACK_TRIGGER = 0xE7//size == 1 <CUSTOM>
+            ST_CALLBACK_TRIGGER = 0xE7,//size == 1 <CUSTOM>
+
+            // Built-in hooks
+            ST_SONG_BEGIN_HOOK    = 0x101
         };
         //! Main type of event
-        uint8_t type;
+        uint_fast16_t type;
         //! Sub-type of the event
-        uint8_t subtype;
+        uint_fast16_t subtype;
         //! Targeted MIDI channel
-        uint8_t channel;
+        uint_fast16_t channel;
         //! Is valid event
-        uint8_t isValid;
+        uint_fast16_t isValid;
         //! Reserved 5 bytes padding
-        uint8_t __padding[4];
+        uint_fast16_t __padding[4];
         //! Absolute tick position (Used for the tempo calculation only)
         uint64_t absPosition;
         //! Raw data of this event
