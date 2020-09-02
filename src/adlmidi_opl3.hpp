@@ -123,6 +123,8 @@ public:
     {
         //! MIDI mode
         MODE_MIDI,
+        //! AIL XMIDI mode
+        MODE_XMIDI,
         //! Id-Software Music mode
         MODE_IMF,
         //! Creative Music Files mode
