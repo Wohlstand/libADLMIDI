@@ -681,11 +681,12 @@ void OPL3::touchNote(size_t c,
         {
             uint_fast32_t mod = tlCar;
 
+            tlMod = 63 - tlMod;
+            tlMod *= velocity + 0x80;
+
             if(m_volumeScale == Synth::VOLUME_APOGEE_FIXED || mode > 1)
                 mod = tlMod; // Fix the AM voices bug
 
-            tlMod = 63 - tlMod;
-            tlMod *= velocity + 0x80;
             // NOTE: Here is a bug of Apogee Sound System that makes modulator
             // to not work properly on AM instruments. The fix of this bug, you
             // need to replace the tlCar with tmMod in this formula.
