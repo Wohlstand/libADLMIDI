@@ -155,7 +155,9 @@ public:
         //! Audio Interfaces Library volume scaling model
         VOLUME_AIL,
         //! Windows 9x Generic FM driver volume scale table
-        VOLUME_9X_GENERIC_FM
+        VOLUME_9X_GENERIC_FM,
+        //! HMI Sound Operating System volume scale table
+        VOLUME_HMI
     } m_volumeScale;
 
     //! Reserved

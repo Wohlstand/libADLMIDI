@@ -634,6 +634,14 @@ void OPL3::touchNote(size_t c,
         if(m_masterVolume < 127)
             midiVolume = (midiVolume * m_masterVolume) / 127;
     }
+
+    case Synth::VOLUME_HMI:
+    {
+        /* Temporarily copying DMX volume model. TODO: Reverse-engine the actual HMI volume model! */
+        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
+        volume = (s_dmx_volume_model[volume] + 1) << 1;
+        volume = (s_dmx_volume_model[(velocity < 128) ? velocity : 127] * volume) >> 9;
+    }
     break;
     }
 
@@ -985,6 +993,10 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
     case ADLMIDI_VolumeModel_9X_GENERIC_FM:
         m_volumeScale = OPL3::VOLUME_9X_GENERIC_FM;
         break;
+
+    case ADLMIDI_VolumeModel_HMI:
+        m_volumeScale = OPL3::VOLUME_HMI;
+        break;
     }
 }
 
@@ -1011,6 +1023,8 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
         return ADLMIDI_VolumeModel_AIL;
     case OPL3::VOLUME_9X_GENERIC_FM:
         return ADLMIDI_VolumeModel_9X_GENERIC_FM;
+    case OPL3::VOLUME_HMI:
+        return ADLMIDI_VolumeModel_HMI;
     }
 }
 

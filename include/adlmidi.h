@@ -121,7 +121,9 @@ enum ADLMIDI_VolumeModels
     /*! Audio Interfaces Library volume scaling model */
     ADLMIDI_VolumeModel_AIL = 8,
     /*! Aproximated and shorted volume map table (Generic FM driver). Similar to general, but has less granularity. */
-    ADLMIDI_VolumeModel_9X_GENERIC_FM = 9
+    ADLMIDI_VolumeModel_9X_GENERIC_FM = 9,
+    /*! HMI Sound Operating System volume scaling model */
+    ADLMIDI_VolumeModel_HMI = 10
 };
 
 /**

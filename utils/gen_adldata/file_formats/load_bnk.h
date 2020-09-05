@@ -27,7 +27,7 @@ bool BankFormats::LoadBNK(BanksDump &db, const char *fn, unsigned bank,
     }
     std::fclose(fp);
 
-    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Generic);
+    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_HMI);
     BanksDump::MidiBank bnk;
 
     /*printf("%s:\n", fn);*/

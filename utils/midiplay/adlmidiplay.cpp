@@ -213,17 +213,19 @@ const char* volume_model_to_str(int vm)
     case ADLMIDI_VolumeModel_DMX:
         return "DMX";
     case ADLMIDI_VolumeModel_APOGEE:
-        return "Apogee";
+        return "Apogee Sound System";
     case ADLMIDI_VolumeModel_9X:
         return "9X (SB16)";
     case ADLMIDI_VolumeModel_DMX_Fixed:
-        return "DMX (fixed)";
+        return "DMX (fixed AM voices)";
     case ADLMIDI_VolumeModel_APOGEE_Fixed:
-        return "Apogee (fixed)";
+        return "Apogee Sound System (fixed AM voices)";
     case ADLMIDI_VolumeModel_AIL:
-        return "AIL";
+        return "Audio Interfaces Library (AIL)";
     case ADLMIDI_VolumeModel_9X_GENERIC_FM:
         return "9X (Generic FM)";
+    case ADLMIDI_VolumeModel_HMI:
+        return "HMI";
     }
 }
 
