@@ -70,7 +70,7 @@ const BanksDump::BankEntry g_embeddedBanks[] =
 	{0x0300, 1, 1, "SB (Action Soccer)", 114, 115},
 	{0x0300, 1, 0, "SB (3d Cyberpuck :: melodic only)", 116, 117},
 	{0x0300, 1, 0, "SB (Simon the Sorcerer :: melodic only)", 117, 118},
-	{0x0304, 1, 1, "OP3 (The Fat Man 2op set)", 118, 119},
+	{0x0304, 1, 1, "OP3 (The Fat Man 2op set; Win9x)", 118, 119},
 	{0x0307, 1, 1, "OP3 (The Fat Man 4op set)", 120, 121},
 	{0x0304, 1, 1, "OP3 (JungleVision 2op set :: melodic only)", 122, 123},
 	{0x0304, 1, 1, "OP3 (Wallace 2op set, Nitemare 3D :: melodic only)", 124, 125},
