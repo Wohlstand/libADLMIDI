@@ -272,6 +272,15 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
     }
 }
 
+#ifdef HARDWARE_OPL3
+static inline void keyWait()
+{
+    std::printf("\n<press any key to continue...>");
+    getch();
+    std::printf("\r                              \n");
+}
+#endif
+
 static void printBanks()
 {
     // Get count of embedded banks (no initialization needed)
@@ -284,7 +293,13 @@ static void printBanks()
         std::printf("    Available embedded banks by number:\n\n");
 
         for(int a = 0; a < banksCount; ++a)
+        {
             std::printf("%10s%2u = %s\n", a ? "" : "Banks:", a, banknames[a]);
+#ifdef HARDWARE_OPL3
+            if(((a - 15) % 23 == 0 && a != 0))
+                keyWait();
+#endif
+        }
 
         std::printf(
             "\n"
@@ -360,12 +375,20 @@ int main(int argc, char **argv)
             " -vm <num> Chooses one of volume models: \n"
             "    0 auto (default)\n"
             "    1 Generic\n"
-            "    2 Native\n"
+            "    2 Native OPL3\n"
             "    3 DMX\n"
-            "    4 Apogee\n"
-            "    5 9x\n"
+            "    4 Apogee Sound System\n"
+            "    5 9x SB16\n"
             "    6 DMX (Fixed AM voices)\n"
-            "    7 Apogee (Fixed AM voices)\n"
+            "    7 Apogee Sound System (Fixed AM voices)\n"
+            "    8 Audio Interfaces Library (AIL)\n"
+            "    9 9x Generic FM\n"
+            "   10 HMI Sound Operating System\n"
+        );
+#ifdef HARDWARE_OPL3
+        keyWait();
+#endif
+        std::printf(
             " -frb Enables full-ranged CC74 XG Brightness controller\n"
             " -nl Quit without looping\n"
             " -w Write WAV file rather than playing\n"
