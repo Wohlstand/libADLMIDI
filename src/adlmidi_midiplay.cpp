@@ -1368,7 +1368,7 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
             s = 0; // Re-use releasing channel with the same instrument
         else if(synth.m_volumeScale == Synth::VOLUME_HMI)
             s = 0; // HMI doesn't care about the same instrument
-        else
+        else if(chan.recent_ins == ins)
             s =  -koff_ms; // Wait until releasing sound will complete
         return s;
     }
