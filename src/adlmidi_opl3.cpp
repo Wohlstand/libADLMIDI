@@ -353,7 +353,10 @@ void OPL3::setEmbeddedBank(uint32_t bank)
             {
                 midi_bank_idx_t instIndex = bankData.insts[instId];
                 if(instIndex < 0)
+                {
+                    bankTarget.ins[instId].flags = adlinsdata::Flag_NoSound;
                     continue;
+                }
                 BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIndex];
                 adlinsdata2 &instOut = bankTarget.ins[instId];
 

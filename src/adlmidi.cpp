@@ -413,7 +413,10 @@ ADLMIDI_EXPORT int adl_loadEmbeddedBank(struct ADL_MIDIPlayer *device, ADL_Bank 
     {
         midi_bank_idx_t instIdx = bankData.insts[i];
         if(instIdx < 0)
+        {
+            it->second.ins[i].flags = adlinsdata::Flag_NoSound;
             continue;
+        }
         BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIdx];
         adlFromInstrument(instIn, it->second.ins[i]);
     }
