@@ -1586,26 +1586,28 @@ void MIDIplay::noteUpdate(size_t midCh,
                 if(vibrato && (d.is_end() || d->value.vibdelay_us >= chan.vibdelay_us))
                     bend += static_cast<double>(vibrato) * chan.vibdepth * std::sin(chan.vibpos);
 
+                bend += phase;
+
                 // Use different frequency formulas in depend on a volume model
                 switch(synth.m_volumeScale)
                 {
                 case Synth::VOLUME_DMX:
                 case Synth::VOLUME_DMX_FIXED:
-                    finalFreq = s_dmxFreq(currentTone, bend + phase);
+                    finalFreq = s_dmxFreq(currentTone, bend);
                     break;
 
                 case Synth::VOLUME_APOGEE:
                 case Synth::VOLUME_APOGEE_FIXED:
-                    finalFreq = s_apogeeFreq(currentTone, bend + phase);
+                    finalFreq = s_apogeeFreq(currentTone, bend);
                     break;
 
                 case Synth::VOLUME_9X:
                 case Synth::VOLUME_9X_GENERIC_FM:
-                    finalFreq = s_9xFreq(currentTone, bend + phase);
+                    finalFreq = s_9xFreq(currentTone, bend);
                     break;
 
                 default:
-                    finalFreq = s_commonFreq(currentTone, bend + phase);
+                    finalFreq = s_commonFreq(currentTone, bend);
                 }
 
                 synth.noteOn(c, c_slave, finalFreq);
