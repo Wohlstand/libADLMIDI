@@ -37,7 +37,7 @@ static inline double s_commonFreq(double note, double bend)
 }
 
 // DMX volumes table
-static const uint_fast32_t s_dmx_freq_table[] =
+static const int_fast32_t s_dmx_freq_table[] =
 {
     0x0133, 0x0133, 0x0134, 0x0134, 0x0135, 0x0136, 0x0136, 0x0137,
     0x0137, 0x0138, 0x0138, 0x0139, 0x0139, 0x013A, 0x013B, 0x013B,
@@ -171,7 +171,7 @@ static inline double s_dmxFreq(double note, double bend)
         freqIndex = (freqIndex % 384) + 284;
     }
 
-    outHz = (int_fast32_t)(s_dmx_freq_table[freqIndex]);
+    outHz = s_dmx_freq_table[freqIndex];
 
     while(oct > 1)
     {
@@ -183,7 +183,7 @@ static inline double s_dmxFreq(double note, double bend)
 }
 
 
-static const unsigned s_apogee_freq_table[31 + 1][12] =
+static const int_fast32_t s_apogee_freq_table[31 + 1][12] =
 {
     { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x241, 0x263, 0x287 },
     { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x242, 0x264, 0x288 },
@@ -246,6 +246,71 @@ static inline double s_apogeeFreq(double note, double bend)
     }
 
     return (double)outHz;
+}
+
+//static const double s_9x_opl_samplerate = 50000.0;
+//static const double s_9x_opl_tune = 440.0;
+static const uint_fast8_t s_9x_opl_pitchfrac = 8;
+
+static const uint_fast32_t s_9x_opl_freq[12] =
+{
+    0xAB7, 0xB5A, 0xC07, 0xCBE, 0xD80, 0xE4D, 0xF27, 0x100E, 0x1102, 0x1205, 0x1318, 0x143A
+};
+
+static const int32_t s_9x_opl_uppitch = 31;
+static const int32_t s_9x_opl_downpitch = 27;
+
+static uint_fast32_t s_9x_opl_applypitch(uint_fast32_t freq, int_fast32_t pitch)
+{
+    int32_t diff;
+
+    if(pitch > 0)
+    {
+        diff = (pitch * s_9x_opl_uppitch) >> s_9x_opl_pitchfrac;
+        freq += (diff * freq) >> 15;
+    }
+    else if (pitch < 0)
+    {
+        diff = (-pitch * s_9x_opl_downpitch) >> s_9x_opl_pitchfrac;
+        freq -= (diff * freq) >> 15;
+    }
+
+    return freq;
+}
+
+static inline double s_9xFreq(double noteD, double bendD)
+{
+    uint_fast32_t note = (uint_fast32_t)(noteD + 0.5);
+    int_fast32_t bend;
+    double bendDec = bendD - (int)bendD; // 0.0 ± 1.0 - one halftone
+
+    uint_fast32_t freq;
+    uint_fast32_t freqpitched;
+    uint_fast32_t octave;
+
+    uint_fast32_t bendMsb;
+    uint_fast32_t bendLsb;
+
+    note += (int)bendD;
+    bend = (int_fast32_t)(bendDec * 4096) + 8192; // convert to MIDI standard value
+
+    bendMsb = (bend >> 7) & 0x7F;
+    bendLsb = (bend & 0x7F);
+
+    bend = bendMsb << 9 | bendLsb << 2;
+    bend = (int16_t)(uint16_t)(bend + 0x8000);
+
+    octave = note / 12;
+    freq = s_9x_opl_freq[note % 12];
+    if(octave < 5)
+        freq >>= (5 - octave);
+    else if (octave > 5)
+        freq <<= (octave - 5);
+
+    freqpitched = s_9x_opl_applypitch(freq, bend);
+    freqpitched *= 2;
+
+    return (double)freqpitched;
 }
 
 
@@ -1521,6 +1586,7 @@ void MIDIplay::noteUpdate(size_t midCh,
                 if(vibrato && (d.is_end() || d->value.vibdelay_us >= chan.vibdelay_us))
                     bend += static_cast<double>(vibrato) * chan.vibdepth * std::sin(chan.vibpos);
 
+                // Use different frequency formulas in depend on a volume model
                 switch(synth.m_volumeScale)
                 {
                 case Synth::VOLUME_DMX:
@@ -1531,6 +1597,11 @@ void MIDIplay::noteUpdate(size_t midCh,
                 case Synth::VOLUME_APOGEE:
                 case Synth::VOLUME_APOGEE_FIXED:
                     finalFreq = s_apogeeFreq(currentTone, bend + phase);
+                    break;
+
+                case Synth::VOLUME_9X:
+                case Synth::VOLUME_9X_GENERIC_FM:
+                    finalFreq = s_9xFreq(currentTone, bend + phase);
                     break;
 
                 default:
