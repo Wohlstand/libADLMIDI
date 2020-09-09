@@ -27,7 +27,7 @@
 #include "midi_sequencer.hpp"
 
 // Minimum life time of percussion notes
-static const double drum_note_min_time = 0.03;
+static const double s_drum_note_min_time = 0.03;
 
 
 // Standard frequency formula
@@ -37,7 +37,7 @@ static inline double s_commonFreq(double note, double bend)
 }
 
 // DMX volumes table
-static const uint_fast32_t dmx_freq_table[] =
+static const uint_fast32_t s_dmx_freq_table[] =
 {
     0x0133, 0x0133, 0x0134, 0x0134, 0x0135, 0x0136, 0x0136, 0x0137,
     0x0137, 0x0138, 0x0138, 0x0139, 0x0139, 0x013A, 0x013B, 0x013B,
@@ -171,7 +171,7 @@ static inline double s_dmxFreq(double note, double bend)
         freqIndex = (freqIndex % 384) + 284;
     }
 
-    outHz = (int_fast32_t)(dmx_freq_table[freqIndex]);
+    outHz = (int_fast32_t)(s_dmx_freq_table[freqIndex]);
 
     while(oct > 1)
     {
@@ -183,7 +183,7 @@ static inline double s_dmxFreq(double note, double bend)
 }
 
 
-static const unsigned apogee_freq_table[31 + 1][12] =
+static const unsigned s_apogee_freq_table[31 + 1][12] =
 {
     { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x241, 0x263, 0x287 },
     { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x242, 0x264, 0x288 },
@@ -237,7 +237,7 @@ static inline double s_apogeeFreq(double note, double bend)
     scaleNote = noteI % 12;
     octave = noteI / 12;
 
-    outHz = apogee_freq_table[bendI % 32][scaleNote];
+    outHz = s_apogee_freq_table[bendI % 32][scaleNote];
 
     while(octave > 1)
     {
@@ -831,7 +831,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
     // Enable life time extension on percussion note
     if (isPercussion)
     {
-        ni.ttl = drum_note_min_time;
+        ni.ttl = s_drum_note_min_time;
         ++midiChan.extended_note_count;
     }
 
