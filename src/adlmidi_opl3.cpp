@@ -452,7 +452,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double hertz) // Hertz range: 0..131071
         mul_offset++;
     }
 
-    ftone = octave + static_cast<uint32_t>(hertz + 0.5);
+    ftone = octave + static_cast<uint32_t>(hertz /*+ 0.5*/);
     uint32_t chn = g_channelsMap[cc1];
     const adldata &patch1 = m_insCache[c1];
     const adldata &patch2 = m_insCache[c2 < m_insCache.size() ? c2 : 0];

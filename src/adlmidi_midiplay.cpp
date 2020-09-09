@@ -297,7 +297,7 @@ static inline double s_9xFreq(double noteD, double bendD)
     bendMsb = (bend >> 7) & 0x7F;
     bendLsb = (bend & 0x7F);
 
-    bend = bendMsb << 9 | bendLsb << 2;
+    bend = (bendMsb << 9) | (bendLsb << 2);
     bend = (int16_t)(uint16_t)(bend + 0x8000);
 
     octave = note / 12;
@@ -1655,14 +1655,25 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
     // Rate channel with a releasing note
     if(s < 0 && chan.users.empty())
     {
+        bool isSame = (chan.recent_ins == ins);
         s -= 40000;
+
         // If it's same instrument, better chance to get it when no free channels
-        if(chan.recent_ins == ins && synth.m_musicMode == Synth::MODE_CMF)
-            s = 0; // Re-use releasing channel with the same instrument
+        if(synth.m_musicMode == Synth::MODE_CMF)
+        {
+            if(isSame)
+                s = 0; // Re-use releasing channel with the same instrument
+        }
         else if(synth.m_volumeScale == Synth::VOLUME_HMI)
+        {
             s = 0; // HMI doesn't care about the same instrument
-        else if(chan.recent_ins == ins)
-            s =  -koff_ms; // Wait until releasing sound will complete
+        }
+        else
+        {
+            if(isSame)
+                s =  -koff_ms; // Wait until releasing sound will complete
+        }
+
         return s;
     }
 
