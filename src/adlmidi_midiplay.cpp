@@ -328,17 +328,27 @@ static uint_fast32_t s_hmi_freqtable[s_hmi_freqtable_size] =
 };
 
 const size_t s_hmi_bendtable_size = 12;
-static uint32_t s_hmi_bendtable[s_hmi_bendtable_size] =
+static uint_fast32_t s_hmi_bendtable[s_hmi_bendtable_size] =
 {
     0x144, 0x132, 0x121, 0x110, 0x101, 0xf8, 0xe5, 0xd8, 0xcc, 0xc1, 0xb6, 0xac
 };
 
-#define hmi_range_assert(formula, maxVal) assert((formula) >= 0 && (formula) < maxVal)
+#define hmi_range_fix(formula, maxVal) \
+    ( \
+        (formula) < 0 ? \
+        0 : \
+        ( \
+            (formula) >= (int32_t)maxVal ? \
+            (int32_t)maxVal : \
+            (formula) \
+        )\
+    )
 
-static uint32_t s_hmi_bend_calc(uint32_t bend, uint32_t note)
+static uint_fast32_t s_hmi_bend_calc(uint_fast32_t bend, int_fast32_t note)
 {
-    const uint32_t midi_bend_range = 1;
-    uint32_t noteMod12, bendFactor, outFreq, fmOctave, fmFreq, newFreq;
+    const int_fast32_t midi_bend_range = 1;
+    uint_fast32_t bendFactor, outFreq, fmOctave, fmFreq, newFreq, idx;
+    int_fast32_t noteMod12;
 
     note -= 12;
 //    while(doNote >= 12) // ugly way to MOD 12
@@ -354,15 +364,15 @@ static uint32_t s_hmi_bend_calc(uint32_t bend, uint32_t note)
     {
         bendFactor = ((63 - bend) * 1000) >> 6;
 
-        hmi_range_assert(note - midi_bend_range, s_hmi_freqtable_size);
-        hmi_range_assert(midi_bend_range - 1, s_hmi_bendtable_size);
+        idx = hmi_range_fix(note - midi_bend_range, s_hmi_freqtable_size);
+        newFreq = outFreq - s_hmi_freqtable[idx];
 
-        newFreq = outFreq - s_hmi_freqtable[note - midi_bend_range];
         if(newFreq > 719)
         {
             newFreq = fmFreq - s_hmi_bendtable[midi_bend_range - 1];
             newFreq &= 0x3ff;
         }
+
         newFreq = (newFreq * bendFactor) / 1000;
         outFreq -= newFreq;
     }
@@ -370,24 +380,26 @@ static uint32_t s_hmi_bend_calc(uint32_t bend, uint32_t note)
     {
         bendFactor = ((bend - 64) * 1000) >> 6;
 
-        hmi_range_assert(note + midi_bend_range, s_hmi_freqtable_size);
-        hmi_range_assert(11 - noteMod12, s_hmi_bendtable_size);
+        idx = hmi_range_fix(note + midi_bend_range, s_hmi_freqtable_size);
+        newFreq = s_hmi_freqtable[idx] - outFreq;
 
-        newFreq = s_hmi_freqtable[note + midi_bend_range] - outFreq;
         if(newFreq > 719)
         {
-            fmFreq = s_hmi_bendtable[11 - noteMod12];
+            idx = hmi_range_fix(11 - noteMod12, s_hmi_bendtable_size);
+            fmFreq = s_hmi_bendtable[idx];
             outFreq = (fmOctave + 1024) | fmFreq;
-            newFreq = s_hmi_freqtable[note + midi_bend_range] - outFreq;
+
+            idx = hmi_range_fix(note + midi_bend_range, s_hmi_freqtable_size);
+            newFreq = s_hmi_freqtable[idx] - outFreq;
         }
+
         newFreq = (newFreq * bendFactor) / 1000;
         outFreq += newFreq;
     }
 
     return outFreq;
 }
-
-#undef hmi_range_assert
+#undef hmi_range_fix
 
 static inline double s_hmiFreq(double noteD, double bendD)
 {
