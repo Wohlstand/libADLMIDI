@@ -30,11 +30,23 @@
 static const double s_drum_note_min_time = 0.03;
 
 
-// Standard frequency formula
+
+
+/***************************************************************
+ *               Standard frequency formula                    *
+ * *************************************************************/
+
 static inline double s_commonFreq(double note, double bend)
 {
     return BEND_COEFFICIENT * std::exp(0.057762265 * (note + bend));
 }
+
+
+
+
+/***************************************************************
+ *                   DMX frequency model                       *
+ * *************************************************************/
 
 // DMX volumes table
 static const int_fast32_t s_dmx_freq_table[] =
@@ -183,6 +195,12 @@ static inline double s_dmxFreq(double note, double bend)
 }
 
 
+
+
+/***************************************************************
+ *             Apogee Sound System frequency model             *
+ ***************************************************************/
+
 static const int_fast32_t s_apogee_freq_table[31 + 1][12] =
 {
     { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x241, 0x263, 0x287 },
@@ -248,6 +266,13 @@ static inline double s_apogeeFreq(double note, double bend)
     return (double)outHz;
 }
 
+
+
+
+/***************************************************************
+ *            Windows 9x FM drivers frequency model            *
+ ***************************************************************/
+
 //static const double s_9x_opl_samplerate = 50000.0;
 //static const double s_9x_opl_tune = 440.0;
 static const uint_fast8_t s_9x_opl_pitchfrac = 8;
@@ -312,6 +337,13 @@ static inline double s_9xFreq(double noteD, double bendD)
 
     return (double)freqpitched;
 }
+
+
+
+
+/***************************************************************
+ *         HMI Sound Operating System frequency model          *
+ ***************************************************************/
 
 const size_t s_hmi_freqtable_size = 103;
 static uint_fast32_t s_hmi_freqtable[s_hmi_freqtable_size] =
@@ -444,6 +476,9 @@ static inline double s_hmiFreq(double noteD, double bendD)
 
     return freq;
 }
+
+
+
 
 
 
