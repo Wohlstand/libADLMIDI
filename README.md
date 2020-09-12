@@ -191,6 +191,7 @@ To build that example you will need to have installed SDL2 library.
  * Added Generic FM variant of Win9X volume model
  * Fixed an incorrect work of CC-121 (See https://github.com/Wohlstand/libADLMIDI/issues/227 for details)
  * Added HMI volume model (Thanks to [Alexey Khokholov](https://github.com/nukeykt) for a help with a research!)
+ * Added frequency models, assigned to every volume model: AIL, HMI, DMX, Apogee, 9X, and the Generic formula
 
 ## 1.4.0   2018-10-01
  * Implemented a full support for Portamento! (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
