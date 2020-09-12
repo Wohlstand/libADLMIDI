@@ -118,7 +118,7 @@ enum ADLMIDI_VolumeModels
     ADLMIDI_VolumeModel_DMX_Fixed = 6,
     /*! Apogee model with a fixed bug of AM voices*/
     ADLMIDI_VolumeModel_APOGEE_Fixed = 7,
-    /*! Audio Interfaces Library volume scaling model */
+    /*! Audio Interface Library volume scaling model */
     ADLMIDI_VolumeModel_AIL = 8,
     /*! Aproximated and shorted volume map table (Generic FM driver). Similar to general, but has less granularity. */
     ADLMIDI_VolumeModel_9X_GENERIC_FM = 9,
