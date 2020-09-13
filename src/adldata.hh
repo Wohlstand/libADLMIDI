@@ -35,49 +35,64 @@
     inline bool operator!=(const T &a, const T &b)      \
     { return !operator==(a, b); }
 
-struct adldata
+/**
+ * @brief OPL3 Operator data for single tumbre
+ */
+struct OplTimbre
 {
-    uint32_t    modulator_E862, carrier_E862;  // See below
-    uint8_t     modulator_40, carrier_40; // KSL/attenuation settings
-    uint8_t     feedconn; // Feedback/connection bits for the channel
-
-    int8_t      finetune;
+    //! WaveForm, Sustain/Release, AttackDecay, and AM/VIB/EG/KSR/F-Mult settings
+    uint32_t    modulator_E862, carrier_E862;
+    //! KSL/attenuation settings
+    uint8_t     modulator_40, carrier_40;
+    //! Feedback/connection bits for the channel
+    uint8_t     feedconn;
+    //! Semi-tone offset
+    int8_t      noteOffset;
 };
-ADLDATA_BYTE_COMPARABLE(struct adldata)
+ADLDATA_BYTE_COMPARABLE(struct OplTimbre)
 
-struct adlinsdata
-{
-    enum { Flag_Pseudo4op = 0x01, Flag_NoSound = 0x02, Flag_Real4op = 0x04 };
 
-    enum { Flag_RM_BassDrum  = 0x08, Flag_RM_Snare = 0x10, Flag_RM_TomTom = 0x18,
-           Flag_RM_Cymbal = 0x20, Flag_RM_HiHat = 0x28, Mask_RhythmMode = 0x38 };
+enum { OPLNoteOnMaxTime = 40000 };
 
-    uint16_t    adlno1, adlno2;
-    uint8_t     tone;
-    uint8_t     flags;
-    uint16_t    ms_sound_kon;  // Number of milliseconds it produces sound;
-    uint16_t    ms_sound_koff;
-    int8_t      midi_velocity_offset;
-    double      voice2_fine_tune;
-};
-ADLDATA_BYTE_COMPARABLE(struct adlinsdata)
-
-enum { adlNoteOnMaxTime = 40000 };
 
 /**
  * @brief Instrument data with operators included
  */
-struct adlinsdata2
+struct OplInstMeta
 {
-    adldata     adl[2];
-    uint8_t     tone;
-    uint8_t     flags;
-    uint16_t    ms_sound_kon;  // Number of milliseconds it produces sound;
-    uint16_t    ms_sound_koff;
-    int8_t      midi_velocity_offset;
-    double      voice2_fine_tune;
+    enum
+    {
+        Flag_Pseudo4op = 0x01,
+        Flag_NoSound = 0x02,
+        Flag_Real4op = 0x04
+    };
+
+    enum
+    {
+        Flag_RM_BassDrum  = 0x08,
+        Flag_RM_Snare = 0x10,
+        Flag_RM_TomTom = 0x18,
+        Flag_RM_Cymbal = 0x20,
+        Flag_RM_HiHat = 0x28,
+        Mask_RhythmMode = 0x38
+    };
+
+    //! Operator data
+    OplTimbre    op[2];
+    //! Fixed note for drum instruments
+    uint8_t         drumTone;
+    //! Instrument flags
+    uint8_t         flags;
+    //! Number of milliseconds it produces sound while key on
+    uint16_t        soundKeyOnMs;
+    //! Number of milliseconds it produces sound while releasing after key off
+    uint16_t        soundKeyOffMs;
+    //! MIDI velocity offset
+    int8_t          midiVelocityOffset;
+    //! Second voice detune
+    double          voice2_fine_tune;
 };
-ADLDATA_BYTE_COMPARABLE(struct adlinsdata2)
+ADLDATA_BYTE_COMPARABLE(struct OplInstMeta)
 
 #undef ADLDATA_BYTE_COMPARABLE
 #pragma pack(pop)
@@ -96,11 +111,11 @@ struct AdlBankSetup
 /**
  * @brief Convert external instrument to internal instrument
  */
-void cvt_ADLI_to_FMIns(adlinsdata2 &dst, const struct ADL_Instrument &src);
+void cvt_ADLI_to_FMIns(OplInstMeta &dst, const struct ADL_Instrument &src);
 
 /**
  * @brief Convert internal instrument to external instrument
  */
-void cvt_FMIns_to_ADLI(struct ADL_Instrument &dst, const adlinsdata2 &src);
+void cvt_FMIns_to_ADLI(struct ADL_Instrument &dst, const OplInstMeta &src);
 
 #endif //ADLDATA_H

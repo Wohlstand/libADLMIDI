@@ -172,7 +172,7 @@ public:
             //! Time-to-live until release (short percussion note fix)
             double  ttl;
             //! Patch selected
-            const adlinsdata2 *ains;
+            const OplInstMeta *ains;
             enum
             {
                 MaxNumPhysChans = 2,
@@ -196,18 +196,18 @@ public:
                 //! Destination chip channel
                 uint16_t chip_chan;
                 //! ins, inde to adl[]
-                adldata ains;
+                OplTimbre op;
                 //! Is this voice must be detunable?
                 bool    pseudo4op;
 
                 void assign(const Phys &oth)
                 {
-                    ains = oth.ains;
+                    op = oth.op;
                     pseudo4op = oth.pseudo4op;
                 }
                 bool operator==(const Phys &oth) const
                 {
-                    return (ains == oth.ains) && (pseudo4op == oth.pseudo4op);
+                    return (op == oth.op) && (pseudo4op == oth.pseudo4op);
                 }
                 bool operator!=(const Phys &oth) const
                 {

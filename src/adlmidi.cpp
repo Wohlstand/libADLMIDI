@@ -275,7 +275,7 @@ ADLMIDI_EXPORT int adl_getBank(ADL_MIDIPlayer *device, const ADL_BankId *idp, in
         value.first = idnumber;
         memset(&value.second, 0, sizeof(value.second));
         for (unsigned i = 0; i < 128; ++i)
-            value.second.ins[i].flags = adlinsdata::Flag_NoSound;
+            value.second.ins[i].flags = OplInstMeta::Flag_NoSound;
 
         std::pair<Synth::BankMap::iterator, bool> ir;
         if((flags & ADLMIDI_Bank_CreateRt) == ADLMIDI_Bank_CreateRt)
@@ -414,7 +414,7 @@ ADLMIDI_EXPORT int adl_loadEmbeddedBank(struct ADL_MIDIPlayer *device, ADL_Bank 
         midi_bank_idx_t instIdx = bankData.insts[i];
         if(instIdx < 0)
         {
-            it->second.ins[i].flags = adlinsdata::Flag_NoSound;
+            it->second.ins[i].flags = OplInstMeta::Flag_NoSound;
             continue;
         }
         BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIdx];

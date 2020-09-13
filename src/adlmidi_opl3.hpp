@@ -66,7 +66,7 @@ public:
 
 private:
     //! Cached patch data, needed by Touch()
-    std::vector<adldata>    m_insCache;
+    std::vector<OplTimbre>    m_insCache;
     //! Value written to B0, cached, needed by NoteOff.
     /*! Contains Key on/off state, octave block and frequency number values
      */
@@ -81,7 +81,7 @@ public:
     struct Bank
     {
         //! MIDI Bank instruments
-        adlinsdata2 ins[128];
+        OplInstMeta ins[128];
     };
     typedef BasicBankMap<Bank> BankMap;
     //! MIDI bank instruments data
@@ -91,7 +91,7 @@ public:
 
 public:
     //! Blank instrument template
-    static const adlinsdata2 m_emptyInstrument;
+    static const OplInstMeta m_emptyInstrument;
     //! Total number of running concurrent emulated chips
     uint32_t m_numChips;
     //! Currently running embedded bank number. "CustomBankTag" means usign of the custom bank.
@@ -277,7 +277,7 @@ public:
      * @param c Channel of chip (Emulated chip choosing by next formula: [c = ch + (chipId * 23)])
      * @param instrument Instrument data to set into the chip channel
      */
-    void setPatch(size_t c, const adldata &instrument);
+    void setPatch(size_t c, const OplTimbre &instrument);
 
     /**
      * @brief Set panpot position

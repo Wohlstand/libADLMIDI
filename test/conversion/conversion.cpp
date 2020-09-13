@@ -70,7 +70,7 @@ TEST_CASE("[Conversion] Main")
     for (unsigned i = 0; i < 1000000; ++i) {
         ADL_Instrument adl_ins = random_instrument();
 
-        adlinsdata2 internal_ins;
+        OplInstMeta internal_ins;
         cvt_generic_to_FMIns(internal_ins, adl_ins);
 
         ADL_Instrument adl_ins2;

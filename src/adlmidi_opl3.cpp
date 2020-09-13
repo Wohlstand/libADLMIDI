@@ -847,15 +847,15 @@ enum
 
 
 
-static adlinsdata2 makeEmptyInstrument()
+static OplInstMeta makeEmptyInstrument()
 {
-    adlinsdata2 ins;
-    memset(&ins, 0, sizeof(adlinsdata2));
-    ins.flags = adlinsdata::Flag_NoSound;
+    OplInstMeta ins;
+    memset(&ins, 0, sizeof(OplInstMeta));
+    ins.flags = OplInstMeta::Flag_NoSound;
     return ins;
 }
 
-const adlinsdata2 OPL3::m_emptyInstrument = makeEmptyInstrument();
+const OplInstMeta OPL3::m_emptyInstrument = makeEmptyInstrument();
 
 OPL3::OPL3() :
     m_numChips(1),
@@ -931,11 +931,11 @@ void OPL3::setEmbeddedBank(uint32_t bank)
                 midi_bank_idx_t instIndex = bankData.insts[instId];
                 if(instIndex < 0)
                 {
-                    bankTarget.ins[instId].flags = adlinsdata::Flag_NoSound;
+                    bankTarget.ins[instId].flags = OplInstMeta::Flag_NoSound;
                     continue;
                 }
                 BanksDump::InstrumentEntry instIn = g_embeddedBanksInstruments[instIndex];
-                adlinsdata2 &instOut = bankTarget.ins[instId];
+                OplInstMeta &instOut = bankTarget.ins[instId];
 
                 adlFromInstrument(instIn, instOut);
             }
@@ -1063,8 +1063,8 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
 
     ftone = octave + static_cast<uint32_t>(hertz /*+ 0.5*/);
     uint32_t chn = g_channelsMap[cc1];
-    const adldata &patch1 = m_insCache[c1];
-    const adldata &patch2 = m_insCache[c2 < m_insCache.size() ? c2 : 0];
+    const OplTimbre &patch1 = m_insCache[c1];
+    const OplTimbre &patch2 = m_insCache[c2 < m_insCache.size() ? c2 : 0];
 
     if(cc1 < OPL3_CHANNELS_RHYTHM_BASE)
     {
@@ -1136,7 +1136,7 @@ void OPL3::touchNote(size_t c,
                      uint8_t brightness)
 {
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
-    const adldata &adli = m_insCache[c];
+    const OplTimbre &adli = m_insCache[c];
     size_t cmf_offset = ((m_musicMode == MODE_CMF) && cc >= OPL3_CHANNELS_RHYTHM_BASE) ? 10 : 0;
     uint16_t o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
     uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
@@ -1288,7 +1288,7 @@ void OPL3::touchNote(size_t c,
     else if(m_channelCategory[c] == ChanCat_4op_First ||
             m_channelCategory[c] == ChanCat_4op_Second)
     {
-        const adldata *i0, *i1;
+        const OplTimbre *i0, *i1;
 
         if(m_channelCategory[c] == ChanCat_4op_First)
         {
@@ -1445,7 +1445,7 @@ void OPL3::touchNote(size_t c,
     //   63 + chanvol * (instrvol / 63.0 - 1)
 }
 
-void OPL3::setPatch(size_t c, const adldata &instrument)
+void OPL3::setPatch(size_t c, const OplTimbre &instrument)
 {
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
     static const uint8_t data[4] = {0x20, 0x60, 0x80, 0xE0};
@@ -1702,7 +1702,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_chips.resize(m_numChips, AdlMIDI_SPtr<OPLChipBase>());
 #endif
 
-    const struct adldata defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
+    const struct OplTimbre defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
     m_numChannels = m_numChips * NUM_OF_CHANNELS;
     m_insCache.resize(m_numChannels, defaultInsCache);
     m_keyBlockFNumCache.resize(m_numChannels,   0);
