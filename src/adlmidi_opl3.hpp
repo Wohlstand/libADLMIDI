@@ -24,7 +24,7 @@
 #ifndef ADLMIDI_OPL3_HPP
 #define ADLMIDI_OPL3_HPP
 
-#include "adldata.hh"
+#include "oplinst.h"
 #include "adlmidi_ptr.hpp"
 #include "adlmidi_private.hpp"
 #include "adlmidi_bankmap.h"
@@ -87,7 +87,7 @@ public:
     //! MIDI bank instruments data
     BankMap         m_insBanks;
     //! MIDI bank-wide setup
-    AdlBankSetup    m_insBankSetup;
+    OplBankSetup    m_insBankSetup;
 
 public:
     //! Blank instrument template

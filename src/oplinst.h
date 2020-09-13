@@ -21,15 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ADLDATA_H
-#define ADLDATA_H
+#ifndef OPLINST_H
+#define OPLINST_H
 
 #include <string.h>
 #include <stdint.h>
 #include <cstring>
 
 #pragma pack(push, 1)
-#define ADLDATA_BYTE_COMPARABLE(T)                      \
+#define OPLINST_BYTE_COMPARABLE(T)                      \
     inline bool operator==(const T &a, const T &b)      \
     { return !memcmp(&a, &b, sizeof(T)); }              \
     inline bool operator!=(const T &a, const T &b)      \
@@ -49,7 +49,7 @@ struct OplTimbre
     //! Semi-tone offset
     int8_t      noteOffset;
 };
-ADLDATA_BYTE_COMPARABLE(struct OplTimbre)
+OPLINST_BYTE_COMPARABLE(struct OplTimbre)
 
 
 enum { OPLNoteOnMaxTime = 40000 };
@@ -92,15 +92,15 @@ struct OplInstMeta
     //! Second voice detune
     double          voice2_fine_tune;
 };
-ADLDATA_BYTE_COMPARABLE(struct OplInstMeta)
+OPLINST_BYTE_COMPARABLE(struct OplInstMeta)
 
-#undef ADLDATA_BYTE_COMPARABLE
+#undef OPLINST_BYTE_COMPARABLE
 #pragma pack(pop)
 
 /**
  * @brief Bank global setup
  */
-struct AdlBankSetup
+struct OplBankSetup
 {
     int     volumeModel;
     bool    deepTremolo;
@@ -118,4 +118,4 @@ void cvt_ADLI_to_FMIns(OplInstMeta &dst, const struct ADL_Instrument &src);
  */
 void cvt_FMIns_to_ADLI(struct ADL_Instrument &dst, const OplInstMeta &src);
 
-#endif //ADLDATA_H
+#endif // OPLINST_H

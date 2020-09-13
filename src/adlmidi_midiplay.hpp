@@ -24,7 +24,7 @@
 #ifndef ADLMIDI_MIDIPLAY_HPP
 #define ADLMIDI_MIDIPLAY_HPP
 
-#include "adldata.hh"
+#include "oplinst.h"
 #include "adlmidi_private.hpp"
 #include "adlmidi_ptr.hpp"
 #include "structures/pl_list.hpp"
