@@ -124,7 +124,7 @@ option(USE_OPAL_EMULATOR    "Use Opal emulator (inaccurate)" ON)
 option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ON)
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
-option(WITH_GENADLDATA_COMMENTS "Enable comments in generated ADLDATA cache file" OFF)
+option(WITH_GENADLDATA_COMMENTS "Enable comments in a generated embedded instruments cache file" OFF)
 
 option(WITH_MIDIPLAY        "Build also demo MIDI player" OFF)
 option(MIDIPLAY_WAVE_ONLY   "Build Demo MIDI player without support of real time playing. It will output into WAV only." OFF)
@@ -198,7 +198,7 @@ function(handle_options targetLib)
 
     if(WITH_EMBEDDED_BANKS)
         target_sources(${targetLib} PRIVATE
-            ${libADLMIDI_SOURCE_DIR}/src/adldata.cpp
+            ${libADLMIDI_SOURCE_DIR}/src/inst_db.cpp
         )
     else()
         target_compile_definitions(${targetLib} PUBLIC DISABLE_EMBEDDED_BANKS)

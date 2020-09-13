@@ -83,7 +83,7 @@ if(WITH_GENADLDATA_COMMENTS)
 endif()
 
 set(ADLDATA_DATABASE
-    "${libADLMIDI_SOURCE_DIR}/src/adldata.cpp"
+    "${libADLMIDI_SOURCE_DIR}/src/inst_db.cpp"
 )
 add_custom_target(gen-adldata-run #OUTPUT ${ADLDATA_DATABASE}
     COMMAND gen_adldata "${ADLDATA_DATABASE}"
