@@ -157,7 +157,9 @@ public:
         //! Windows 9x Generic FM driver volume scale table
         VOLUME_9X_GENERIC_FM,
         //! HMI Sound Operating System volume scale table
-        VOLUME_HMI
+        VOLUME_HMI,
+        //! HMI Sound Operating System volume scale model, older variant
+        VOLUME_HMI_OLD
     } m_volumeScale;
 
     //! Reserved
@@ -263,14 +265,18 @@ public:
     /**
      * @brief Change setup of instrument in specified chip channel
      * @param c Channel of chip (Emulated chip choosing by next formula: [c = ch + (chipId * 23)])
-     * @param volume Volume level (from 0 to 127)
+     * @param velocity Note velocity (from 0 to 127)
+     * @param channelVolume Channel volume level (from 0 to 127)
+     * @param channelExpression Channel expression level (from 0 to 127)
      * @param brightness CC74 Brightness level (from 0 to 127)
+     * @param isDrum Is this a drum note? This flag is needed for some volume model algorithms
      */
     void touchNote(size_t c,
                    uint_fast32_t velocity,
                    uint_fast32_t channelVolume = 127,
                    uint_fast32_t channelExpression = 127,
-                   uint8_t brightness = 127);
+                   uint_fast32_t brightness = 127,
+                   bool isDrum = false);
 
     /**
      * @brief Set the instrument into specified chip channel

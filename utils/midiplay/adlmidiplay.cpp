@@ -226,6 +226,8 @@ const char* volume_model_to_str(int vm)
         return "9X (Generic FM)";
     case ADLMIDI_VolumeModel_HMI:
         return "HMI Sound Operating System";
+    case ADLMIDI_VolumeModel_HMI_OLD:
+        return "HMI Sound Operating System (Old)";
     }
 }
 

@@ -1247,7 +1247,7 @@ void MIDIplay::noteUpdate(size_t midCh,
         {
             const MIDIchannel &ch = m_midiChannels[midCh];
             bool is_percussion = (midCh == 9) || ch.is_xg_percussion;
-            uint_fast32_t brightness = is_percussion ? 127 : ch.brightness;
+            uint_fast32_t brightness = ch.brightness;
 
             if(!m_setup.fullRangeBrightnessCC74)
             {
@@ -1262,7 +1262,8 @@ void MIDIplay::noteUpdate(size_t midCh,
                             vol,
                             ch.volume,
                             ch.expression,
-                            static_cast<uint8_t>(brightness));
+                            brightness,
+                            is_percussion);
 
             /* DEBUG ONLY!!!
             static uint32_t max = 0;

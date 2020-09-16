@@ -123,7 +123,9 @@ enum ADLMIDI_VolumeModels
     /*! Aproximated and shorted volume map table (Generic FM driver). Similar to general, but has less granularity. */
     ADLMIDI_VolumeModel_9X_GENERIC_FM = 9,
     /*! HMI Sound Operating System volume scaling model */
-    ADLMIDI_VolumeModel_HMI = 10
+    ADLMIDI_VolumeModel_HMI = 10,
+    /*! HMI Sound Operating System volume scaling model, older variant with bugs */
+    ADLMIDI_VolumeModel_HMI_OLD = 11
 };
 
 /**

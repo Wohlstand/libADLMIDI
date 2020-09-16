@@ -1034,6 +1034,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
         break;
 
     case VOLUME_HMI:
+    case VOLUME_HMI_OLD:
         hertz = s_hmiFreq(tone);
         break;
 
@@ -1133,7 +1134,8 @@ void OPL3::touchNote(size_t c,
                      uint_fast32_t velocity,
                      uint_fast32_t channelVolume,
                      uint_fast32_t channelExpression,
-                     uint8_t brightness)
+                     uint_fast32_t brightness,
+                     bool isDrum)
 {
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
     const OplTimbre &adli = m_insCache[c];
@@ -1265,6 +1267,7 @@ void OPL3::touchNote(size_t c,
     break;
 
     case VOLUME_HMI:
+    case VOLUME_HMI_OLD:
     {
         volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
         volume = (((volume * 128) / 127) * velocity) >> 7;
@@ -1412,6 +1415,28 @@ void OPL3::touchNote(size_t c,
             tlCar = (8192 - vol) >> 7;
         }
     }
+    else if(m_volumeScale == Synth::VOLUME_HMI_OLD)
+    {
+        uint_fast32_t vol;
+
+        if(adli.feedconn == 0 && !isDrum)
+        {
+            vol = (channelVolume * channelExpression * 64) / 16129;
+            vol = (((vol * 128) / 127) * velocity) >> 7;
+            vol = s_hmi_volume_table[vol >> 1];
+
+            vol = (64 - vol) << 1;
+            vol *= (64 - tlCar);
+            tlMod = (8192 - vol) >> 7;
+        }
+
+        if(isDrum) // TODO: VERIFY A CORRECTNESS OF THIS!!!
+            vol = s_hmi_volume_table[velocity >> 1];
+
+        vol = (64 - volume) << 1;
+        vol *= (64 - tlCar);
+        tlCar = (8192 - vol) >> 7;
+    }
     else
     {
         if(do_modulator)
@@ -1420,7 +1445,7 @@ void OPL3::touchNote(size_t c,
             tlCar = 63 - volume + (volume * tlCar) / 63;
     }
 
-    if(brightness != 127)
+    if(brightness != 127 && !isDrum)
     {
         brightness = brightnessToOPL(brightness);
         if(!do_modulator)
@@ -1643,6 +1668,10 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
     case ADLMIDI_VolumeModel_HMI:
         m_volumeScale = OPL3::VOLUME_HMI;
         break;
+
+    case ADLMIDI_VolumeModel_HMI_OLD:
+        m_volumeScale = OPL3::VOLUME_HMI_OLD;
+        break;
     }
 }
 
@@ -1671,6 +1700,8 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
         return ADLMIDI_VolumeModel_9X_GENERIC_FM;
     case OPL3::VOLUME_HMI:
         return ADLMIDI_VolumeModel_HMI;
+    case OPL3::VOLUME_HMI_OLD:
+        return ADLMIDI_VolumeModel_HMI_OLD;
     }
 }
 
