@@ -3,6 +3,11 @@ if(NOT WIN32)
     message(FATAL_ERROR "WinDriver: This component is for Windows Platform only")
 endif()
 
+
+#====================================
+#          Driver module
+#====================================
+
 set(ADLMIDI_DRIVER_SRC
     src/winmm_drv.def
     src/winmm_drv.cpp
@@ -28,6 +33,9 @@ endif()
 
 
 
+#====================================
+#        Install utility
+#====================================
 
 set(ADLMIDI_INSTALLER_SRC
     installer/libadlmidi_win32drv_setup.cpp
@@ -42,9 +50,6 @@ endif()
 
 add_executable(drvsetup ${ADLMIDI_INSTALLER_SRC})
 
-add_executable(drvtest test/test.c)
-target_link_libraries(drvtest PRIVATE winmm)
-
 target_compile_definitions(drvsetup PRIVATE
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
@@ -53,6 +58,55 @@ target_compile_definitions(drvsetup PRIVATE
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++")
+endif()
+
+
+#====================================
+#  A unit test to verify the driver
+#====================================
+
+add_executable(drvtest test/test.c)
+target_link_libraries(drvtest PRIVATE winmm)
+
+
+#====================================
+#       Control panel applet
+#====================================
+
+set(ADLMIDI_DRIVER_SRC
+    cpl/adlsetup.def
+    cpl/adlsetup.rc
+    cpl/setup_dialog.c
+)
+
+add_library(adlmidisetup MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlsetup.c)
+set_target_properties(adlmidisetup PROPERTIES PREFIX "" OUTPUT_NAME "libadlsetup" SUFFIX ".cpl")
+
+target_compile_definitions(adlmidisetup PRIVATE
+    -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
+    -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
+    -D_CRT_SECURE_NO_WARNINGS
+    -D_UNICODE
+    -DUNICODE
+)
+
+target_link_libraries(adlmidisetup PRIVATE comctl32 gdi32 user32)
+
+add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlsetup-tool.c)
+set_target_properties(adlmidiconfigtool PROPERTIES WIN32_EXECUTABLE ON)
+target_compile_definitions(adlmidiconfigtool PRIVATE
+    -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
+    -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
+    -D_CRT_SECURE_NO_WARNINGS
+    -D_UNICODE
+    -DUNICODE
+)
+
+target_link_libraries(adlmidiconfigtool PRIVATE comctl32 gdi32 user32)
+
+if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
+    set_property(TARGET adlmidisetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
+    set_property(TARGET adlmidiconfigtool APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
 endif()
 
 

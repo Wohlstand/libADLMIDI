@@ -25,7 +25,7 @@ LONG testDriver()
         dci.lpszDCISectionName = (LPWSTR)0;
         dci.lpszDCIAliasName = (LPWSTR)0;
         printf("Send DRV_CONFIGURE...\n");
-        lRes = SendDriverMessage(hdrvr, DRV_CONFIGURE, 0, (LONG)&dci);
+        lRes = SendDriverMessage(hdrvr, DRV_CONFIGURE, 0, (LPARAM)&dci);
         printf("<-- Got answer: %ld)\n", lRes);
     }
     else
@@ -50,13 +50,15 @@ LONG testDriver()
 int main()
 {
     LONG d = testDriver();
+
     if(d == 0)
     {
         printf("TEST = OK\n");
+        return 0;
     }
     else
     {
         printf("TEST = FAILED\n");
+        return 1;
     }
-    return 0;
 }

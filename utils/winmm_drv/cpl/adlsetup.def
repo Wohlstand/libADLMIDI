@@ -1,0 +1,5 @@
+LIBRARY "libADLMIDISetup"
+
+EXPORTS
+    CPlApplet
+    ToolDlgProc

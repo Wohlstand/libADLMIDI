@@ -1,0 +1,135 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+/////////////////////////////////////////////////////////////////////////////
+// Russian (Russia) resources
+
+#define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+#define RT_MANIFEST                       24
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "adlsetup.manifest"
+
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "opl3icon.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SETUP_BOX DIALOGEX 0, 0, 243, 230
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "libADLMIDI Setup"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,81,212,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,135,212,50,14
+    PUSHBUTTON      "Apply",IDC_APPLYBUTTON,190,212,50,14
+    COMBOBOX        IDC_VOLUMEMODEL,79,95,153,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Volume model:",IDC_VM_LABEL,6,97,66,8
+    COMBOBOX        IDC_BANK_ID,79,15,148,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Instruments bank",IDC_INS_BANK,3,2,230,51
+    CONTROL         "Embedded bank",IDC_BANK_TYPE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,9,16,63,10
+    CONTROL         "External bank",IDC_BANK_CUSTOM,"Button",BS_AUTORADIOBUTTON | WS_GROUP,9,33,67,10
+    EDITTEXT        IDC_BANK_PATH,79,31,98,14,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "Browse...",IDC_BROWSE_BANK,179,31,48,14
+    PUSHBUTTON      "Restore defaults",IDC_RESTORE_DEFAULTS,151,195,88,14
+    CONTROL         "Deep tremolo (Auto/Enable/Disable)",IDC_FLAG_TREMOLO,
+                    "Button",BS_AUTO3STATE | WS_TABSTOP,5,124,227,10
+    CONTROL         "Deep virbrato (Auto/Enable/Disable)",IDC_FLAG_VIBRATO,
+                    "Button",BS_AUTO3STATE | WS_TABSTOP,5,141,227,10
+    CONTROL         "Full-panning stereo",IDC_FLAG_SOFTPAN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,108,227,10
+    COMBOBOX        IDC_EMULATOR,79,56,153,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Chip emulator type:",IDC_CHIPEMU_LABEL,6,58,67,8
+    LTEXT           "Number of chips",IDC_CHIPNUM_LABEL,6,75,69,8
+    COMBOBOX        IDC_NUM_CHIPS,79,74,33,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_NUM_4OPVO,193,74,39,13,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Number of 4OP voices",IDC_4OPSNUM_LABEL,115,76,72,8
+    CONTROL         "Scalable modulation",IDC_FLAG_SCALE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,157,228,10
+    CONTROL         "Full-range brightness (CC74)",IDC_FLAG_FULLBRIGHT,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,173,228,10
+    PUSHBUTTON      "About...",IDC_ABOUT,3,212,50,14
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE
+BEGIN
+    "\0"
+END
+
+3 TEXTINCLUDE
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_SETUP_BOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 3
+        RIGHTMARGIN, 240
+        BOTTOMMARGIN, 226
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    m_nNameID               "libADLMIDI Setup"
+    m_nDescID               "Setup for libADLMIDI synthesizer"
+END
+
+#endif    // Russian (Russia) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
