@@ -136,6 +136,10 @@ option(WITH_MUS2MID         "Build a MUS to MIDI converter" OFF)
 option(WITH_XMI2MID         "Build a XMI to MIDI converter" OFF)
 option(EXAMPLE_SDL2_AUDIO   "Build also a simple SDL2 demo MIDI player" OFF)
 
+if(WIN32)
+    option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
+endif()
+
 function(handle_options targetLib)
     if(WITH_MIDI_SEQUENCER)
         target_sources(${targetLib} PRIVATE ${libADLMIDI_SOURCE_DIR}/src/adlmidi_sequencer.cpp)
@@ -343,6 +347,10 @@ endif()
 
 if(WITH_VLC_PLUGIN AND NOT ADLMIDI_DOS)
     add_subdirectory(utils/vlc_codec)
+endif()
+
+if(WIN32 AND WITH_WINMMDRV)
+    add_subdirectory(utils/winmm_drv)
 endif()
 
 set(libADLMIDI_INSTALLS )
