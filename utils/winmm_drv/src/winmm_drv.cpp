@@ -21,6 +21,46 @@
 #define MAX_CLIENTS 8 // Per driver
 
 #ifdef __MINGW32__
+
+#if !defined(MM_MPU401_MIDIOUT) && !defined(MM_MPU401_MIDIOUT)
+typedef struct tagMIDIOUTCAPS2A {
+    WORD wMid;
+    WORD wPid;
+    MMVERSION vDriverVersion;
+    CHAR szPname[MAXPNAMELEN];
+    WORD wTechnology;
+    WORD wVoices;
+    WORD wNotes;
+    WORD wChannelMask;
+    DWORD dwSupport;
+    GUID ManufacturerGuid;
+    GUID ProductGuid;
+    GUID NameGuid;
+} MIDIOUTCAPS2A,*PMIDIOUTCAPS2A,*NPMIDIOUTCAPS2A,*LPMIDIOUTCAPS2A;
+
+typedef struct tagMIDIOUTCAPS2W {
+    WORD wMid;
+    WORD wPid;
+    MMVERSION vDriverVersion;
+    WCHAR szPname[MAXPNAMELEN];
+    WORD wTechnology;
+    WORD wVoices;
+    WORD wNotes;
+    WORD wChannelMask;
+    DWORD dwSupport;
+    GUID ManufacturerGuid;
+    GUID ProductGuid;
+    GUID NameGuid;
+} MIDIOUTCAPS2W,*PMIDIOUTCAPS2W,*NPMIDIOUTCAPS2W,*LPMIDIOUTCAPS2W;
+#endif
+
+#ifndef MM_UNMAPPED
+#define MM_UNMAPPED 0xffff
+#endif
+#ifndef MM_MPU401_MIDIOUT
+#define MM_MPU401_MIDIOUT 10
+#endif
+
 //BOOL APIENTRY DriverCallback(DWORD_PTR dwCallback,
 //                             DWORD dwFlags,
 //                             HDRVR hDevice,

@@ -20,7 +20,6 @@ target_compile_definitions(adlmididrv PRIVATE
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++ -Wl,--enable-stdcall-fixup")
-    set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lpthread -Wl,-Bdynamic,--no-whole-archive")
 endif()
 
 if(NOT MSVC)
@@ -54,7 +53,6 @@ target_compile_definitions(drvsetup PRIVATE
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++")
-    set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lpthread -Wl,-Bdynamic,--no-whole-archive")
 endif()
 
 
