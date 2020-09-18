@@ -1154,7 +1154,7 @@ static void SendStereoAudio(unsigned long count, short* samples)
 
     //static unsigned counter = 0; if(++counter < 8000)  return;
 
-#if defined(__WIN32__) && 0
+#if defined(_WIN32) && 0
     // Cheat on dosbox recording: easier on the cpu load.
    {count*=2;
     std::vector<short> AudioBuffer(count);
@@ -1185,7 +1185,7 @@ static void SendStereoAudio(unsigned long count, short* samples)
         reverb_data.chan[w].Process(count);
 
     // Convert to signed 16-bit int format and put to playback queue
-#ifdef __WIN32__
+#ifdef _WIN32
     std::vector<short> AudioBuffer(count*2);
     const size_t pos = 0;
 #else
@@ -1299,7 +1299,7 @@ static void SendStereoAudio(unsigned long count, short* samples)
         }
     }
 #endif
-#ifndef __WIN32__
+#ifndef _WIN32
     AudioBuffer_lock.Unlock();
 #else
     if(!WritePCMfile)
@@ -1491,7 +1491,7 @@ bool AdlInstrumentTester::HandleInputChar(char ch)
         DoNoteOff();
         break;
     case 3:
-#if !((!defined(__WIN32__) || defined(__CYGWIN__)) && !defined(__DJGPP__))
+#if !((!defined(_WIN32) || defined(__CYGWIN__)) && !defined(__DJGPP__))
     case 27:
 #endif
         return false;
