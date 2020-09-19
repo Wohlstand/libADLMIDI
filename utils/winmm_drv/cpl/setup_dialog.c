@@ -1,8 +1,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commctrl.h>
+#include <commdlg.h>
 #include <string.h>
 #include <stdio.h>
+#include <wchar.h>
 
 #include "setup_dialog.h"
 #include "resource.h"
@@ -48,7 +50,7 @@ typedef struct DriverSettings_t
 {
     BOOL    useExternalBank;
     int     bankId;
-    char    bankPath[MAX_PATH];
+    char    bankPath[MAX_PATH * 4];
     int     emulatorId;
 
     BOOL    flagDeepTremolo;
@@ -64,12 +66,25 @@ typedef struct DriverSettings_t
 } DriverSettings;
 
 static DriverSettings g_setup;
+static HINSTANCE      s_hModule;
+
+
+static void syncBankType(HWND hwnd, int type);
+static void setupDefault();
+
+static void sync4ops(HWND hwnd);
+static void syncWidget(HWND hwnd);
+static void buildLists(HWND hwnd);
+static void syncBankType(HWND hwnd, int type);
+static void openCustomBank(HWND hwnd);
+static void updateBankName(HWND hwnd, const char *filePath);
+
 
 static void setupDefault()
 {
-    g_setup.useExternalBank = FALSE;
+    g_setup.useExternalBank = 0;
     g_setup.bankId = 68;
-    memset(g_setup.bankPath, 0, sizeof(g_setup.bankPath));
+    ZeroMemory(g_setup.bankPath, sizeof(g_setup.bankPath));
     g_setup.emulatorId = 0;
 
     g_setup.flagDeepTremolo = BST_INDETERMINATE;
@@ -93,7 +108,7 @@ static void sync4ops(HWND hwnd)
     SendDlgItemMessageA(hwnd, IDC_NUM_4OPVO, CB_ADDSTRING, (LPARAM)-1, (LPARAM)"AUTO");
     for(i = 0; i <= g_setup.numChips * 6; i++)
     {
-        memset(buff, 0, 10);
+        ZeroMemory(buff, 10);
         snprintf(buff, 10, "%d", i);
         SendDlgItemMessageA(hwnd, IDC_NUM_4OPVO, CB_ADDSTRING, (LPARAM)0, (LPARAM)buff);
     }
@@ -105,6 +120,16 @@ static void syncWidget(HWND hwnd)
     char buff[10];
     int i;
 
+    SendDlgItemMessage(hwnd, IDC_BANK_EXTERNAL, BM_SETCHECK, 0, 0);
+    SendDlgItemMessage(hwnd, IDC_BANK_INTERNAL, BM_SETCHECK, 0, 0);
+
+    if(g_setup.useExternalBank == 1)
+        SendDlgItemMessage(hwnd, IDC_BANK_EXTERNAL, BM_SETCHECK, 1, 0);
+    else
+        SendDlgItemMessage(hwnd, IDC_BANK_INTERNAL, BM_SETCHECK, 1, 0);
+
+    syncBankType(hwnd, g_setup.useExternalBank);
+
     SendDlgItemMessage(hwnd, IDC_FLAG_TREMOLO, BM_SETCHECK, g_setup.flagDeepTremolo, 0);
     SendDlgItemMessage(hwnd, IDC_FLAG_VIBRATO, BM_SETCHECK, g_setup.flagDeepVibrato, 0);
     SendDlgItemMessage(hwnd, IDC_FLAG_SOFTPAN, BM_SETCHECK, g_setup.flagSoftPanning, 0);
@@ -114,16 +139,15 @@ static void syncWidget(HWND hwnd)
     SendDlgItemMessageW(hwnd, IDC_NUM_CHIPS, CB_RESETCONTENT, 0, 0);
     for(i = 1; i <= 100; i++)
     {
-        memset(buff, 0, 10);
+        ZeroMemory(buff, 10);
         snprintf(buff, 10, "%d", i);
         SendDlgItemMessageA(hwnd, IDC_NUM_CHIPS, CB_ADDSTRING, (LPARAM)0, (LPARAM)buff);
     }
+
     SendDlgItemMessageA(hwnd, IDC_NUM_CHIPS, CB_SETCURSEL, (WPARAM)g_setup.numChips - 1, (LPARAM)0);
-
     SendDlgItemMessageA(hwnd, IDC_BANK_ID, CB_SETCURSEL, (WPARAM)g_setup.bankId, (LPARAM)0);
-
+    updateBankName(hwnd, g_setup.bankPath);
     SendDlgItemMessageA(hwnd, IDC_EMULATOR, CB_SETCURSEL, (WPARAM)g_setup.emulatorId, (LPARAM)0);
-
     SendDlgItemMessageA(hwnd, IDC_VOLUMEMODEL, CB_SETCURSEL, (WPARAM)g_setup.volumeModel, (LPARAM)0);
 
     sync4ops(hwnd);
@@ -173,10 +197,68 @@ static void buildLists(HWND hwnd)
     {
         SendDlgItemMessageA(hwnd, IDC_EMULATOR, CB_ADDSTRING, (LPARAM)0, (LPARAM)emulator_type_descriptions[i]);
     }
-
-
 }
 
+static void syncBankType(HWND hwnd, int type)
+{
+    EnableWindow(GetDlgItem(hwnd, IDC_BANK_ID), !type);
+    EnableWindow(GetDlgItem(hwnd, IDC_BROWSE_BANK), type);
+}
+
+static void updateBankName(HWND hwnd, const char *filePath)
+{
+    int i, len = strlen(filePath);
+    const char *p = NULL;
+    wchar_t label[40];
+
+    for(i = 0; i < len; i++)
+    {
+        if(filePath[i] == '\\' || filePath[i] == '/')
+            p = filePath + i + 1;
+    }
+
+    if(p == NULL)
+        SendDlgItemMessage(hwnd, IDC_BANK_PATH, WM_SETTEXT, (WPARAM)NULL, (LPARAM)L"<none>");
+    else
+    {
+        ZeroMemory(label, 40);
+        MultiByteToWideChar(CP_UTF8, 0, p, strlen(p), label, 40);
+        SendDlgItemMessage(hwnd, IDC_BANK_PATH, WM_SETTEXT, (WPARAM)NULL, (LPARAM)label);
+    }
+}
+
+static void openCustomBank(HWND hwnd)
+{
+    OPENFILENAMEW ofn;
+    wchar_t szFile[MAX_PATH];
+    int ret;
+
+    ZeroMemory(&ofn, sizeof(ofn));
+    ZeroMemory(szFile, sizeof(szFile));
+
+    MultiByteToWideChar(CP_UTF8, 0, g_setup.bankPath, strlen(g_setup.bankPath), szFile, sizeof(szFile));
+
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hInstance = s_hModule;
+    ofn.hwndOwner = hwnd;
+    ofn.lpstrFilter = L"WOPL bank file (*.wopl)\0*.WOPL\0All files (*.*)\0*.*\0";
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrTitle = L"Open external bank file";
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_READONLY | OFN_HIDEREADONLY | OFN_EXPLORER;
+
+    if(GetOpenFileNameW(&ofn) == TRUE)
+    {
+        ret = WideCharToMultiByte(CP_UTF8, 0,
+                                  ofn.lpstrFile, wcslen(ofn.lpstrFile),
+                                  g_setup.bankPath, MAX_PATH * 4, 0, 0);
+        if(ret >= 0)
+        {
+            g_setup.bankPath[ret] = '\0';
+            updateBankName(hwnd, g_setup.bankPath);
+        }
+    }
+}
 
 BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -210,6 +292,34 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
             {
                 g_setup.num4ops = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0) - 1;
             }
+            break;
+
+        case IDC_EMULATOR:
+            if(HIWORD(wParam) == CBN_SELCHANGE)
+            {
+                g_setup.emulatorId = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+            }
+            break;
+
+        case IDC_BANK_INTERNAL:
+            g_setup.useExternalBank = 0;
+            syncBankType(hwnd, FALSE);
+            break;
+
+        case IDC_BANK_EXTERNAL:
+            g_setup.useExternalBank = 1;
+            syncBankType(hwnd, TRUE);
+            break;
+
+        case IDC_BANK_ID:
+            if(HIWORD(wParam) == CBN_SELCHANGE)
+            {
+                g_setup.bankId = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+            }
+            break;
+
+        case IDC_BROWSE_BANK:
+            openCustomBank(hwnd);
             break;
 
         case IDC_FLAG_TREMOLO:
@@ -247,6 +357,7 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
             }
             break;
 
+
         case IDC_RESTORE_DEFAULTS:
             setupDefault();
             syncWidget(hwnd);
@@ -276,6 +387,8 @@ BOOL runAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 {
     int ret;
 
+    s_hModule = hModule;
+
     setupDefault();
 
     ret = DialogBoxW(hModule, MAKEINTRESOURCEW(IDD_SETUP_BOX), hwnd, ToolDlgProc);
@@ -292,6 +405,8 @@ BOOL runAdlSetupBox(HINSTANCE hModule, HWND hwnd)
     {
         MessageBoxA(hwnd, "Dialog failed!", "Error", MB_OK | MB_ICONINFORMATION);
     }
+
+    s_hModule = NULL;
 
     return TRUE;
 }

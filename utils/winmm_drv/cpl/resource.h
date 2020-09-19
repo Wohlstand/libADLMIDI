@@ -21,14 +21,13 @@
 #define IDC_VM_LABEL                    1002
 #define IDC_BANK_ID                     1003
 #define IDC_INS_BANK                    1004
-#define IDC_BANK_TYPE                   1005
-#define IDC_BANK_CUSTOM                 1006
+#define IDC_BANK_INTERNAL               1005
+#define IDC_BANK_EXTERNAL               1006
 #define IDC_BANK_PATH                   1007
 #define IDC_BROWSE_BANK                 1008
 #define IDC_EMULATOR                    1014
 #define IDC_NUM_CHIPS                   1018
 #define IDC_NUM_4OPVO                   1019
-#define IDC_BUTTON1                     1022
 
 #define IDC_CHIPEMU_LABEL               1023
 #define IDC_CHIPNUM_LABEL               1024
