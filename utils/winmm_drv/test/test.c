@@ -2,11 +2,21 @@
 #include <stdio.h>
 #include <mmsystem.h>
 
+typedef DWORD (WINAPI * MessagePtr)(UINT, UINT, DWORD, DWORD, DWORD);
+
+#ifndef MODM_GETDEVCAPS
+#define MODM_GETDEVCAPS     2
+#endif
+
 LONG testDriver()
 {
     HDRVR hdrvr;
     DRVCONFIGINFO dci;
     LONG lRes;
+    HMODULE lib;
+    DWORD modRet;
+    MIDIOUTCAPSA myCapsA;
+    MessagePtr modMessagePtr;
 
     printf("Open...\n");
     // Open the driver (no additional parameters needed this time).
@@ -32,6 +42,37 @@ LONG testDriver()
     {
         printf("<-- No configure\n");
         lRes = DRVCNF_OK;
+    }
+
+
+    printf("Getting library pointer\n");
+    if((lib = GetDriverModuleHandle(hdrvr)))
+    {
+        printf("Getting modMessage call\n");
+        modMessagePtr = (MessagePtr)GetProcAddress(lib, "modMessage");
+        if(!modMessagePtr)
+        {
+            CloseDriver(hdrvr, 0, 0);
+            printf("!!! modMessage not found!\n");
+            return -1;
+        }
+
+        printf("Getting capabilities...\n");
+        modRet = modMessagePtr(0, MODM_GETDEVCAPS, (DWORD_PTR)NULL, (DWORD_PTR)&myCapsA, sizeof(myCapsA));
+        if(modRet != MMSYSERR_NOERROR)
+        {
+            CloseDriver(hdrvr, 0, 0);
+            printf("!!! modMessage returned an error!\n");
+            return -1;
+        }
+
+        printf("<-- %s\n", myCapsA.szPname);
+    }
+    else
+    {
+        CloseDriver(hdrvr, 0, 0);
+        printf("!!! Error when getting module handler!\n");
+        return -1;
     }
 
     printf("Close...\n");
