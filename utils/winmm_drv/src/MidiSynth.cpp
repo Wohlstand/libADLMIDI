@@ -528,7 +528,7 @@ void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len)
     synthEvent.Release();
 }
 
-int MidiSynth::LoadSynthSetup()
+void MidiSynth::LoadSynthSetup()
 {
     // TODO: load setup from registry and control panel
     adl_switchEmulator(synth, ADLMIDI_EMU_NUKED);

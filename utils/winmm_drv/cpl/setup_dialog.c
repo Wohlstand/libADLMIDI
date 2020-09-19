@@ -14,6 +14,36 @@
 #define CB_SETMINVISIBLE (CBM_FIRST+1)
 #endif
 
+typedef int (*BankNamesCount)(void);
+typedef const char *const *(*BankNamesList)(void);
+
+static const char *const volume_models_descriptions[] =
+{
+    "Auto (defined by bank)",
+    "Generic",
+    "OPL3 Native",
+    "DMX",
+    "Apogee Sound System",
+    "Win9x SB16 driver",
+    "DMX (Fixed AM)",
+    "Apogee Sound System (Fixed AM)",
+    "Audio Interfaces Library (AIL)",
+    "Win9x Generic FM driver",
+    "HMI Sound Operating System",
+    "HMI Sound Operating System (Old)",
+    NULL
+};
+
+static const char * const emulator_type_descriptions[] =
+{
+    "Nuked OPL3 1.8",
+    "Nuked OPL3 1.7.4 (Optimized)",
+    "DOSBox",
+    "Opal",
+    "Java OPL3",
+    NULL
+};
+
 typedef struct DriverSettings_t
 {
     BOOL    useExternalBank;
@@ -38,7 +68,7 @@ static DriverSettings g_setup;
 static void setupDefault()
 {
     g_setup.useExternalBank = FALSE;
-    g_setup.bankId = 64;
+    g_setup.bankId = 68;
     memset(g_setup.bankPath, 0, sizeof(g_setup.bankPath));
     g_setup.emulatorId = 0;
 
@@ -68,7 +98,6 @@ static void sync4ops(HWND hwnd)
         SendDlgItemMessageA(hwnd, IDC_NUM_4OPVO, CB_ADDSTRING, (LPARAM)0, (LPARAM)buff);
     }
     SendDlgItemMessageA(hwnd, IDC_NUM_4OPVO, CB_SETCURSEL, (WPARAM)g_setup.num4ops + 1, (LPARAM)0);
-    SendDlgItemMessageA(hwnd, IDC_NUM_4OPVO, CB_SETMINVISIBLE, (WPARAM)12, (LPARAM)0);
 }
 
 static void syncWidget(HWND hwnd)
@@ -90,16 +119,71 @@ static void syncWidget(HWND hwnd)
         SendDlgItemMessageA(hwnd, IDC_NUM_CHIPS, CB_ADDSTRING, (LPARAM)0, (LPARAM)buff);
     }
     SendDlgItemMessageA(hwnd, IDC_NUM_CHIPS, CB_SETCURSEL, (WPARAM)g_setup.numChips - 1, (LPARAM)0);
-    SendDlgItemMessageA(hwnd, IDC_NUM_CHIPS, CB_SETMINVISIBLE, (WPARAM)12, (LPARAM)0);
+
+    SendDlgItemMessageA(hwnd, IDC_BANK_ID, CB_SETCURSEL, (WPARAM)g_setup.bankId, (LPARAM)0);
+
+    SendDlgItemMessageA(hwnd, IDC_EMULATOR, CB_SETCURSEL, (WPARAM)g_setup.emulatorId, (LPARAM)0);
+
+    SendDlgItemMessageA(hwnd, IDC_VOLUMEMODEL, CB_SETCURSEL, (WPARAM)g_setup.volumeModel, (LPARAM)0);
 
     sync4ops(hwnd);
 }
+
+static void buildLists(HWND hwnd)
+{
+    int i, bMax;
+    HMODULE lib;
+    const char *const* list;
+    BankNamesCount adl_getBanksCount;
+    BankNamesList adl_getBankNames;
+
+    lib = LoadLibraryW(L"adlmididrv.dll");
+    if(lib)
+    {
+        adl_getBanksCount = (BankNamesCount)GetProcAddress(lib, "adl_getBanksCount");
+        adl_getBankNames = (BankNamesList)GetProcAddress(lib, "adl_getBankNames");
+        if(adl_getBanksCount && adl_getBankNames)
+        {
+            bMax = adl_getBanksCount();
+            list = adl_getBankNames();
+            for(i = 0; i < bMax; i++)
+            {
+                SendDlgItemMessageA(hwnd, IDC_BANK_ID, CB_ADDSTRING, (LPARAM)0, (LPARAM)list[i]);
+            }
+        }
+        else
+        {
+            SendDlgItemMessageA(hwnd, IDC_BANK_ID, CB_ADDSTRING, (LPARAM)0, (LPARAM)"<Can't get calls>");
+        }
+        FreeLibrary(lib);
+    }
+    else
+    {
+        SendDlgItemMessageA(hwnd, IDC_BANK_ID, CB_ADDSTRING, (LPARAM)0, (LPARAM)"<Can't load library>");
+    }
+
+    // Volume models
+    for(i = 0; volume_models_descriptions[i] != NULL; ++i)
+    {
+        SendDlgItemMessageA(hwnd, IDC_VOLUMEMODEL, CB_ADDSTRING, (LPARAM)0, (LPARAM)volume_models_descriptions[i]);
+    }
+
+    // Emulators list
+    for(i = 0; emulator_type_descriptions[i] != NULL; ++i)
+    {
+        SendDlgItemMessageA(hwnd, IDC_EMULATOR, CB_ADDSTRING, (LPARAM)0, (LPARAM)emulator_type_descriptions[i]);
+    }
+
+
+}
+
 
 BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
     switch(Message)
     {
     case WM_INITDIALOG:
+        buildLists(hwnd);
         syncWidget(hwnd);
         return TRUE;
 

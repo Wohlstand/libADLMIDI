@@ -2,3 +2,5 @@ LIBRARY      adlmidisynth
 EXPORTS
     DriverProc
     modMessage
+    adl_getBankNames
+    adl_getBanksCount

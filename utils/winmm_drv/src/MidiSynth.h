@@ -71,7 +71,7 @@ public:
     void PushMIDI(DWORD msg);
     void PlaySysex(Bit8u *bufpos, DWORD len);
 
-    int LoadSynthSetup();
+    void LoadSynthSetup();
 };
 
 }

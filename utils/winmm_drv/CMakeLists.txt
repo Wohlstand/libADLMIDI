@@ -28,6 +28,7 @@ if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 if(NOT MSVC)
+    target_compile_options(adlmididrv PRIVATE "-Wno-cast-function-type")
     target_link_libraries(adlmididrv PRIVATE pthread)
 endif()
 
@@ -105,6 +106,8 @@ target_compile_definitions(adlmidiconfigtool PRIVATE
 target_link_libraries(adlmidiconfigtool PRIVATE comctl32 gdi32 user32)
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
+    target_compile_options(adlmidisetup PRIVATE "-Wno-cast-function-type")
+    target_compile_options(adlmidiconfigtool PRIVATE "-Wno-cast-function-type")
     set_property(TARGET adlmidisetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
     set_property(TARGET adlmidiconfigtool APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
 endif()
