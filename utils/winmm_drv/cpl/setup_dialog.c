@@ -4,10 +4,12 @@
 #include <commdlg.h>
 #include <string.h>
 #include <stdio.h>
-#include <wchar.h>
+#include <stdlib.h>
 
 #include "setup_dialog.h"
 #include "resource.h"
+
+#include "regsetup.h"
 
 #ifndef CBM_FIRST
 #define CBM_FIRST 0x1700
@@ -46,58 +48,16 @@ static const char * const emulator_type_descriptions[] =
     NULL
 };
 
-typedef struct DriverSettings_t
-{
-    BOOL    useExternalBank;
-    int     bankId;
-    char    bankPath[MAX_PATH * 4];
-    int     emulatorId;
-
-    BOOL    flagDeepTremolo;
-    BOOL    flagDeepVibrato;
-
-    BOOL    flagSoftPanning;
-    BOOL    flagScaleModulators;
-    BOOL    flagFullBrightness;
-
-    int     volumeModel;
-    int     numChips;
-    int     num4ops;
-} DriverSettings;
-
 static DriverSettings g_setup;
 static HINSTANCE      s_hModule;
 
-
 static void syncBankType(HWND hwnd, int type);
-static void setupDefault();
-
 static void sync4ops(HWND hwnd);
 static void syncWidget(HWND hwnd);
 static void buildLists(HWND hwnd);
 static void syncBankType(HWND hwnd, int type);
 static void openCustomBank(HWND hwnd);
-static void updateBankName(HWND hwnd, const char *filePath);
-
-
-static void setupDefault()
-{
-    g_setup.useExternalBank = 0;
-    g_setup.bankId = 68;
-    ZeroMemory(g_setup.bankPath, sizeof(g_setup.bankPath));
-    g_setup.emulatorId = 0;
-
-    g_setup.flagDeepTremolo = BST_INDETERMINATE;
-    g_setup.flagDeepVibrato = BST_INDETERMINATE;
-
-    g_setup.flagSoftPanning = BST_CHECKED;
-    g_setup.flagScaleModulators = BST_UNCHECKED;
-    g_setup.flagFullBrightness = BST_UNCHECKED;
-
-    g_setup.volumeModel = 0;
-    g_setup.numChips = 4;
-    g_setup.num4ops = -1;
-}
+static void updateBankName(HWND hwnd, const WCHAR *filePath);
 
 static void sync4ops(HWND hwnd)
 {
@@ -205,38 +165,32 @@ static void syncBankType(HWND hwnd, int type)
     EnableWindow(GetDlgItem(hwnd, IDC_BROWSE_BANK), type);
 }
 
-static void updateBankName(HWND hwnd, const char *filePath)
+static void updateBankName(HWND hwnd, const WCHAR *filePath)
 {
-    int i, len = strlen(filePath);
-    const char *p = NULL;
-    wchar_t label[40];
+    int i, len = wcslen(filePath);
+    const WCHAR *p = NULL;
 
     for(i = 0; i < len; i++)
     {
-        if(filePath[i] == '\\' || filePath[i] == '/')
+        if(filePath[i] == L'\\' || filePath[i] == L'/')
             p = filePath + i + 1;
     }
 
     if(p == NULL)
         SendDlgItemMessage(hwnd, IDC_BANK_PATH, WM_SETTEXT, (WPARAM)NULL, (LPARAM)L"<none>");
     else
-    {
-        ZeroMemory(label, 40);
-        MultiByteToWideChar(CP_UTF8, 0, p, strlen(p), label, 40);
-        SendDlgItemMessage(hwnd, IDC_BANK_PATH, WM_SETTEXT, (WPARAM)NULL, (LPARAM)label);
-    }
+        SendDlgItemMessage(hwnd, IDC_BANK_PATH, WM_SETTEXT, (WPARAM)NULL, (LPARAM)p);
 }
 
 static void openCustomBank(HWND hwnd)
 {
     OPENFILENAMEW ofn;
-    wchar_t szFile[MAX_PATH];
-    int ret;
+    WCHAR szFile[MAX_PATH];
 
     ZeroMemory(&ofn, sizeof(ofn));
     ZeroMemory(szFile, sizeof(szFile));
 
-    MultiByteToWideChar(CP_UTF8, 0, g_setup.bankPath, strlen(g_setup.bankPath), szFile, sizeof(szFile));
+    wcsncpy(szFile, g_setup.bankPath, MAX_PATH);
 
     ofn.lStructSize = sizeof(ofn);
     ofn.hInstance = s_hModule;
@@ -249,14 +203,9 @@ static void openCustomBank(HWND hwnd)
 
     if(GetOpenFileNameW(&ofn) == TRUE)
     {
-        ret = WideCharToMultiByte(CP_UTF8, 0,
-                                  ofn.lpstrFile, wcslen(ofn.lpstrFile),
-                                  g_setup.bankPath, MAX_PATH * 4, 0, 0);
-        if(ret >= 0)
-        {
-            g_setup.bankPath[ret] = '\0';
-            updateBankName(hwnd, g_setup.bankPath);
-        }
+        ZeroMemory(g_setup.bankPath, sizeof(g_setup.bankPath));
+        wcsncpy(g_setup.bankPath, szFile, MAX_PATH);
+        updateBankName(hwnd, g_setup.bankPath);
     }
 }
 
@@ -359,11 +308,18 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 
 
         case IDC_RESTORE_DEFAULTS:
-            setupDefault();
+            setupDefault(&g_setup);
             syncWidget(hwnd);
             break;
 
+        case IDC_APPLYBUTTON:
+            saveSetup(&g_setup);
+            sendSignal();
+            break;
+
         case IDOK:
+            saveSetup(&g_setup);
+            sendSignal();
             EndDialog(hwnd, IDOK);
             break;
 
@@ -385,26 +341,11 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 
 BOOL runAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 {
-    int ret;
-
     s_hModule = hModule;
 
-    setupDefault();
+    loadSetup(&g_setup);
 
-    ret = DialogBoxW(hModule, MAKEINTRESOURCEW(IDD_SETUP_BOX), hwnd, ToolDlgProc);
-
-    if(ret == IDOK)
-    {
-        MessageBoxA(hwnd, "Dialog exited with IDOK.", "Notice", MB_OK | MB_ICONINFORMATION);
-    }
-    else if(ret == IDCANCEL)
-    {
-        MessageBoxA(hwnd, "Dialog exited with IDCANCEL.", "Notice", MB_OK | MB_ICONINFORMATION);
-    }
-    else if(ret == -1)
-    {
-        MessageBoxA(hwnd, "Dialog failed!", "Error", MB_OK | MB_ICONINFORMATION);
-    }
+    DialogBoxW(hModule, MAKEINTRESOURCEW(IDD_SETUP_BOX), hwnd, ToolDlgProc);
 
     s_hModule = NULL;
 
@@ -414,7 +355,7 @@ BOOL runAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 WINBOOL initAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 {
     InitCommonControls();
-    setupDefault();
+    setupDefault(&g_setup);
     UNREFERENCED_PARAMETER(hModule);
     UNREFERENCED_PARAMETER(hwnd);
     return TRUE;

@@ -14,7 +14,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include "stdafx.h"
+#include "regsetup.h"
 
 #ifndef OPL3EMU_MIDISYNTH_H
 #define OPL3EMU_MIDISYNTH_H
@@ -55,6 +58,10 @@ private:
 
     ADL_MIDIPlayer *synth;
 
+    bool m_setupInit;
+    DriverSettings m_setup;
+    DriverSettings m_setupCurrent;
+
     unsigned int MillisToFrames(unsigned int millis);
     void LoadSettings();
 
@@ -70,6 +77,8 @@ public:
     void Render(Bit16s *bufpos, DWORD totalFrames);
     void PushMIDI(DWORD msg);
     void PlaySysex(Bit8u *bufpos, DWORD len);
+
+    void loadSetup();
 
     void LoadSynthSetup();
 };

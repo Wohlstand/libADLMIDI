@@ -319,13 +319,18 @@ void WaveOutWin32::RenderingThread(void *)
 
 MidiSynth::MidiSynth() :
     synth(NULL)
-{}
+{
+    m_setupInit = false;
+    loadSetup();
+    ::openSignalListener();
+}
 
 MidiSynth::~MidiSynth()
 {
     if(synth)
         adl_close(synth);
     synth = NULL;
+    ::closeSignalListener();
 }
 
 MidiSynth &MidiSynth::getInstance()
@@ -355,6 +360,13 @@ void MidiSynth::RenderAvailableSpace()
         }
     }
     midiSynth.Render(buffer + 2 * framesRendered, framesToRender);
+
+    if(::hasSignal()) // Reload settings on the fly
+    {
+        this->loadSetup();
+        LoadSynthSetup();
+        ::resetSignal();
+    }
 }
 
 // Renders totalFrames frames starting from bufpos
@@ -474,6 +486,7 @@ int MidiSynth::Init()
         return 1;
     }
 
+    m_setupInit = false;
     LoadSynthSetup();
 
     UINT wResult = s_waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate);
@@ -508,6 +521,7 @@ int MidiSynth::Reset()
         return 1;
     }
 
+    m_setupInit = false;
     LoadSynthSetup();
 
     synthEvent.Release();
@@ -528,13 +542,119 @@ void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len)
     synthEvent.Release();
 }
 
+void MidiSynth::loadSetup()
+{
+    ::loadSetup(&m_setup);
+}
+
 void MidiSynth::LoadSynthSetup()
 {
-    // TODO: load setup from registry and control panel
-    adl_switchEmulator(synth, ADLMIDI_EMU_NUKED);
-    adl_setNumChips(synth, 4);
-    adl_setSoftPanEnabled(synth, 1);
-    adl_setBank(synth, 68);
+    if(m_setupCurrent.emulatorId != m_setup.emulatorId || !m_setupInit)
+    {
+        adl_switchEmulator(synth, m_setup.emulatorId);
+        m_setupCurrent.emulatorId = m_setup.emulatorId;
+    }
+
+    if(m_setupCurrent.numChips != m_setup.numChips || !m_setupInit)
+    {
+        adl_setNumChips(synth, m_setup.numChips);
+        m_setupCurrent.numChips = m_setup.numChips;
+    }
+
+    if(m_setupCurrent.flagDeepTremolo != m_setup.flagDeepTremolo || !m_setupInit)
+    {
+        switch(m_setup.flagDeepTremolo)
+        {
+        case BST_INDETERMINATE:
+            adl_setHTremolo(synth, -1);
+            break;
+        case BST_CHECKED:
+            adl_setHTremolo(synth, 1);
+            break;
+        case BST_UNCHECKED:
+            adl_setHTremolo(synth, 0);
+            break;
+        }
+        m_setupCurrent.flagDeepTremolo = m_setup.flagDeepTremolo;
+    }
+
+    if(m_setupCurrent.flagDeepVibrato != m_setup.flagDeepVibrato || !m_setupInit)
+    {
+        switch(m_setup.flagDeepVibrato)
+        {
+        case BST_INDETERMINATE:
+            adl_setHVibrato(synth, -1);
+            break;
+        case BST_CHECKED:
+            adl_setHVibrato(synth, 1);
+            break;
+        case BST_UNCHECKED:
+            adl_setHVibrato(synth, 0);
+            break;
+        }
+        m_setupCurrent.flagDeepVibrato = m_setup.flagDeepVibrato;
+    }
+
+    if(m_setupCurrent.flagSoftPanning != m_setup.flagSoftPanning || !m_setupInit)
+    {
+        adl_setSoftPanEnabled(synth, m_setup.flagSoftPanning);
+        m_setupCurrent.flagSoftPanning = m_setup.flagSoftPanning;
+    }
+
+
+    if(m_setupCurrent.flagScaleModulators != m_setup.flagScaleModulators || !m_setupInit)
+    {
+        adl_setScaleModulators(synth, m_setup.flagScaleModulators);
+        m_setupCurrent.flagScaleModulators = m_setup.flagScaleModulators;
+    }
+
+    if(m_setupCurrent.flagFullBrightness != m_setup.flagFullBrightness || !m_setupInit)
+    {
+        adl_setFullRangeBrightness(synth, m_setup.flagFullBrightness);
+        m_setupCurrent.flagFullBrightness = m_setup.flagFullBrightness;
+    }
+
+    if(m_setupCurrent.volumeModel != m_setup.volumeModel || !m_setupInit)
+    {
+        adl_setVolumeRangeModel(synth, m_setup.volumeModel);
+        m_setupCurrent.volumeModel = m_setup.volumeModel;
+    }
+
+    if(m_setupCurrent.numChips != m_setup.numChips || !m_setupInit)
+    {
+        adl_setNumChips(synth, m_setup.numChips);
+        m_setupCurrent.numChips = m_setup.numChips;
+    }
+
+    if(m_setupCurrent.num4ops != m_setup.num4ops || !m_setupInit)
+    {
+        adl_setNumFourOpsChn(synth, m_setup.num4ops);
+        m_setupCurrent.num4ops = m_setup.num4ops;
+    }
+
+    if(m_setupCurrent.useExternalBank != m_setup.useExternalBank ||
+       m_setupCurrent.bankId != m_setup.bankId ||
+       wcscmp(m_setupCurrent.bankPath, m_setup.bankPath) != 0 ||
+       !m_setupInit
+    )
+    {
+        if(m_setup.useExternalBank)
+        {
+            char pathUtf8[MAX_PATH * 4];
+            ZeroMemory(pathUtf8, MAX_PATH * 4);
+            int len = WideCharToMultiByte(CP_UTF8, 0, m_setup.bankPath, wcslen(m_setup.bankPath), pathUtf8, MAX_PATH * 4, 0, 0);
+            pathUtf8[len] = '\0';
+            adl_openBankFile(synth, pathUtf8);
+        }
+        else
+            adl_setBank(synth, m_setup.bankId);
+
+        m_setupCurrent.useExternalBank = m_setup.useExternalBank;
+        m_setupCurrent.bankId = m_setup.bankId;
+        wcscpy(m_setupCurrent.bankPath, m_setup.bankPath);
+    }
+
+    m_setupInit = true;
 }
 
 void MidiSynth::Close()

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef SETUP_DIALOG_HHHH
 #define SETUP_DIALOG_HHHH
 
