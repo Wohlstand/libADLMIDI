@@ -123,7 +123,7 @@ void setupDefault(DriverSettings *setup)
 {
     setup->useExternalBank = 0;
     setup->bankId = 68;
-    ZeroMemory(setup->bankPath, sizeof(setup->bankPath));
+    ZeroMemory(setup->bankPath, MAX_PATH * sizeof(WCHAR));
     setup->emulatorId = 0;
 
     setup->flagDeepTremolo = BST_INDETERMINATE;
@@ -192,8 +192,8 @@ void saveSetup(DriverSettings *setup)
     createRegistryKey(HKEY_CURRENT_USER, s_regPath);
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"useExternalBank", setup->useExternalBank);
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"bankId", setup->bankId);
-    writeStringToRegistry(HKEY_CURRENT_USER, s_regPath, L"bankPath", setup->bankPath);
-
+    if(setup->bankPath[0] != L'\0')
+        writeStringToRegistry(HKEY_CURRENT_USER, s_regPath, L"bankPath", setup->bankPath);
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"emulatorId", setup->emulatorId);
 
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"flagDeepTremolo", setup->flagDeepTremolo);
