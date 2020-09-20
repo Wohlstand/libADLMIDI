@@ -330,6 +330,7 @@ MidiSynth::MidiSynth() :
     synth(NULL)
 {
     m_setupInit = false;
+    setupDefault(&m_setup);
     loadSetup();
     ::openSignalListener();
 }
