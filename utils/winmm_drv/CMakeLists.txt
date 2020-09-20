@@ -3,6 +3,13 @@ if(NOT WIN32)
     message(FATAL_ERROR "WinDriver: This component is for Windows Platform only")
 endif()
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(PGE_ARCHITECTURE_BITS "32")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(PGE_ARCHITECTURE_BITS "64")
+else()
+    set(PGE_ARCHITECTURE_BITS "unk")
+endif()
 
 #====================================
 #          Driver module
@@ -28,6 +35,9 @@ target_compile_definitions(adlmididrv PRIVATE
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++ -Wl,--enable-stdcall-fixup")
+    if(PGE_ARCHITECTURE_BITS EQUAL 64)
+        set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lpthread -Wl,-Bdynamic,--no-whole-archive")
+    endif()
 endif()
 
 if(NOT MSVC)
@@ -42,8 +52,7 @@ endif()
 #====================================
 
 set(ADLMIDI_INSTALLER_SRC
-    installer/libadlmidi_win32drv_setup.cpp
-    installer/stdafx.cpp
+    installer/drvinst.c
 )
 
 if(NOT MSVC)
@@ -61,7 +70,7 @@ target_compile_definitions(drvsetup PRIVATE
 )
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
-    set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++")
+    set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc")
 endif()
 
 
@@ -71,6 +80,7 @@ endif()
 
 add_executable(drvtest test/test.c)
 target_link_libraries(drvtest PRIVATE winmm)
+target_compile_options(drvtest PRIVATE "-Wno-cast-function-type")
 
 
 #====================================
@@ -93,6 +103,7 @@ target_compile_definitions(adlmidisetup PRIVATE
     -D_CRT_SECURE_NO_WARNINGS
     -D_UNICODE
     -DUNICODE
+    -DADL_IS_CPL_APPLET
 )
 
 target_link_libraries(adlmidisetup PRIVATE comctl32 gdi32 user32)

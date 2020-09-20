@@ -13,7 +13,11 @@ LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 // RT_MANIFEST
 //
 
-MANIFSEST_RES RT_MANIFEST             "adlsetup.manifest"
+#ifdef ADL_IS_CPL_APPLET
+MANIFSEST_RES_CPL RT_MANIFEST         "adlsetup.cpl.manifest"
+#else
+MANIFSEST_RES RT_MANIFEST             "adlsetup-tool.exe.manifest"
+#endif
 
 
 /////////////////////////////////////////////////////////////////////////////

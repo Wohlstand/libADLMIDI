@@ -223,8 +223,8 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
         {
         case IDC_ABOUT:
             MessageBoxW(hwnd,
-                        L"libADLMIDI - a software MIDI synthesizer with OPL3 FM synth, "
-                        L"made by Vitaly Novichkov \"Wohlstand\".\n\n"
+                        L"libADLMIDI - a software MIDI synthesizer with OPL3 FM synth,\n"
+                        L"Made by Vitaly Novichkov \"Wohlstand\".\n\n"
                         L"Source code is here: https://github.com/Wohlstand/libADLMIDI",
                         L"About this driver",
                         MB_OK);
@@ -370,6 +370,13 @@ WINBOOL initAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 {
     InitCommonControls();
     setupDefault(&g_setup);
+    UNREFERENCED_PARAMETER(hModule);
+    UNREFERENCED_PARAMETER(hwnd);
+    return TRUE;
+}
+
+WINBOOL cleanUpAdlSetupBox(HINSTANCE hModule, HWND hwnd)
+{
     UNREFERENCED_PARAMETER(hModule);
     UNREFERENCED_PARAMETER(hwnd);
     return TRUE;

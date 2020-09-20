@@ -85,13 +85,14 @@ LONG APIENTRY CPlApplet(
         break;
 
     case CPL_STOP:
-       break;
+        break;
 
     case CPL_EXIT:
-       break;
+        cleanUpAdlSetupBox(hModule, hwndCPL);
+        break;
 
     default:
-       break;
+        break;
     }
 
     return retCode;

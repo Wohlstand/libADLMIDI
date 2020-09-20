@@ -14,9 +14,17 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "stdafx.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windef.h>
+#include <winuser.h>
+#include <winreg.h>
+#include <winbase.h>
+#include <winerror.h>
 
 const char OPL3EMU_DRIVER_NAME[] = "adlmididrv.dll";
+const char OPL3EMU_CPLAPPLET_NAME[] = "libadlsetup.cpl";
+const char OPL3EMU_SETUPTOOL_NAME[] = "adlmidiconfigtool.exe";
+
 const char WDM_DRIVER_NAME[] = "wdmaud.drv";
 const char SYSTEM_DIR_NAME[] = "SYSTEM32";
 const char SYSTEM_ROOT_ENV_NAME[] = "SYSTEMROOT";
@@ -43,20 +51,23 @@ const char ERROR_TITLE[] = "Error";
 const char REGISTRY_ERROR_TITLE[] = "Registry error";
 const char FILE_ERROR_TITLE[] = "File error";
 
-bool registerDriver(bool &installMode)
+BOOL registerDriver(BOOL *installMode)
 {
-    HKEY hReg;
-    if(RegOpenKeyA(HKEY_LOCAL_MACHINE, DRIVERS_REGISTRY_KEY, &hReg))
-    {
-        MessageBoxA(NULL, CANNOT_OPEN_REGISTRY_ERR, REGISTRY_ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
-        return false;
-    }
     char str[255];
     char drvName[] = "midi0";
     DWORD len, res;
-    bool wdmEntryFound = false;
+    BOOL wdmEntryFound = FALSE;
     int freeEntry = -1;
-    for(int i = 0; i < 10; i++)
+    HKEY hReg;
+    int i;
+
+    if(RegOpenKeyA(HKEY_LOCAL_MACHINE, DRIVERS_REGISTRY_KEY, &hReg))
+    {
+        MessageBoxA(NULL, CANNOT_OPEN_REGISTRY_ERR, REGISTRY_ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
+        return FALSE;
+    }
+
+    for(i = 0; i < 10; i++)
     {
         len = 255;
         if(i)
@@ -73,8 +84,8 @@ bool registerDriver(bool &installMode)
         if(!_stricmp(str, OPL3EMU_DRIVER_NAME))
         {
             RegCloseKey(hReg);
-            installMode = false;
-            return true;
+            *installMode = FALSE;
+            return TRUE;
         }
         if(freeEntry != -1) continue;
         if(strlen(str) == 0)
@@ -85,42 +96,50 @@ bool registerDriver(bool &installMode)
             if(wdmEntryFound)
                 freeEntry = i;
             else
-                wdmEntryFound = true;
+                wdmEntryFound = TRUE;
         }
     }
+
     if(freeEntry == -1)
     {
         MessageBoxA(NULL, CANNOT_INSTALL_NO_PORTS_ERR, ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
         RegCloseKey(hReg);
-        return false;
+        return FALSE;
     }
+
     if(freeEntry)
         drvName[4] = '0' + freeEntry;
     else
         drvName[4] = 0;
-    res = RegSetValueExA(hReg, drvName, (DWORD)NULL, REG_SZ, (LPBYTE)OPL3EMU_DRIVER_NAME, sizeof(OPL3EMU_DRIVER_NAME));
+
+    res = RegSetValueExA(hReg, drvName, 0, REG_SZ, (LPBYTE)OPL3EMU_DRIVER_NAME, sizeof(OPL3EMU_DRIVER_NAME));
     if(res != ERROR_SUCCESS)
     {
         MessageBoxA(NULL, CANNOT_REGISTER_ERR, REGISTRY_ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
         RegCloseKey(hReg);
-        return false;
+        return FALSE;
     }
+
     RegCloseKey(hReg);
-    return true;
+
+    return TRUE;
 }
 
 void unregisterDriver()
 {
+    char str[255];
+    char drvName[] = "midi0";
+    DWORD len, res;
     HKEY hReg;
+    int i;
+
     if(RegOpenKeyA(HKEY_LOCAL_MACHINE, DRIVERS_REGISTRY_KEY, &hReg))
     {
         MessageBoxA(NULL, CANNOT_OPEN_REGISTRY_ERR, REGISTRY_ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
         return;
     }
-    char str[255];
-    char drvName[] = "midi0";
-    DWORD len, res;
-    for(int i = 0; i < 10; i++)
+
+    for(i = 0; i < 10; i++)
     {
         len = 255;
         if(i)
@@ -144,6 +163,7 @@ void unregisterDriver()
             return;
         }
     }
+
     MessageBoxA(NULL, CANNOT_UNINSTALL_NOT_FOUND_ERR, ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
     RegCloseKey(hReg);
 }
@@ -158,35 +178,69 @@ void constructSystemDirName(char *pathName)
     strncat(pathName, PATH_SEPARATOR, MAX_PATH - strlen(pathName));
 }
 
-void constructDriverPathName(char *pathName)
+void constructDriverPathName(char *pathName, const char*fileName)
 {
     constructSystemDirName(pathName);
-    strncat(pathName, OPL3EMU_DRIVER_NAME, MAX_PATH - strlen(pathName));
+    strncat(pathName, fileName, MAX_PATH - strlen(pathName));
 }
 
-void deleteFileReliably(char *pathName)
+void deleteFileReliably(char *pathName, const char *fileName)
 {
+    const size_t nameSize = strlen(fileName) + 1;
+    char tmpFilePrefix[nameSize + 1];
+    char tmpDirName[MAX_PATH + 1];
+    char tmpPathName[MAX_PATH + 1];
+
     if(DeleteFileA(pathName))
         return;
     // File doesn't exist, nothing to do
     if(ERROR_FILE_NOT_FOUND == GetLastError())
         return;
+
     // File can't be deleted, rename it and register pending deletion
-    const size_t nameSize = sizeof(OPL3EMU_DRIVER_NAME);
-    char tmpFilePrefix[nameSize + 1];
-    strncpy(tmpFilePrefix, OPL3EMU_DRIVER_NAME, nameSize);
+    strncpy(tmpFilePrefix, fileName, nameSize);
     strncat(tmpFilePrefix, ".", nameSize);
-    char tmpDirName[MAX_PATH + 1];
     constructSystemDirName(tmpDirName);
-    char tmpPathName[MAX_PATH + 1];
     GetTempFileNameA(tmpDirName, tmpFilePrefix, 0, tmpPathName);
     DeleteFileA(tmpPathName);
     MoveFileA(pathName, tmpPathName);
     MoveFileExA(tmpPathName, NULL, MOVEFILE_DELAY_UNTIL_REBOOT);
 }
 
+BOOL copyFileIntoSystem(const char *fileName, char **argv)
+{
+    char driverPathName[MAX_PATH + 1];
+    char setupPathName[MAX_PATH + 1];
+    int setupPathLen;
+
+    setupPathLen = strrchr(argv[0], '\\') - argv[0];
+    if(setupPathLen > (int)(MAX_PATH - strlen(fileName) + 1 - 2))
+    {
+        MessageBoxA(NULL, CANNOT_INSTALL_PATH_TOO_LONG_ERR, ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
+        return 2;
+    }
+
+    constructDriverPathName(driverPathName, fileName);
+    deleteFileReliably(driverPathName, fileName);
+
+    strncpy(setupPathName, argv[0], setupPathLen);
+    setupPathName[setupPathLen] = 0;
+    strncat(setupPathName, PATH_SEPARATOR, MAX_PATH - strlen(setupPathName));
+    strncat(setupPathName, fileName, MAX_PATH - strlen(setupPathName));
+
+    if(!CopyFileA(setupPathName, driverPathName, FALSE))
+    {
+        MessageBoxA(NULL, CANNOT_INSTALL_FILE_COPY_ERR, FILE_ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 int main(int argc, char *argv[])
 {
+    char pathName[MAX_PATH + 1];
+    BOOL installMode;
+
     if(argc != 2 || (_stricmp(INSTALL_COMMAND, argv[1]) != 0 && _stricmp(UNINSTALL_COMMAND, argv[1]) != 0))
     {
         MessageBoxA(NULL, USAGE_MSG, INFORMATION_TITLE, MB_OK | MB_ICONINFORMATION);
@@ -195,36 +249,28 @@ int main(int argc, char *argv[])
 
     if(_stricmp(UNINSTALL_COMMAND, argv[1]) == 0)
     {
-        char pathName[MAX_PATH + 1];
-        constructDriverPathName(pathName);
-        deleteFileReliably(pathName);
+        constructDriverPathName(pathName, OPL3EMU_DRIVER_NAME);
+        deleteFileReliably(pathName, OPL3EMU_DRIVER_NAME);
+        constructDriverPathName(pathName, OPL3EMU_CPLAPPLET_NAME);
+        deleteFileReliably(pathName, OPL3EMU_CPLAPPLET_NAME);
+        constructDriverPathName(pathName, OPL3EMU_SETUPTOOL_NAME);
+        deleteFileReliably(pathName, OPL3EMU_SETUPTOOL_NAME);
+
         unregisterDriver();
         return 0;
     }
 
-    int setupPathLen = strrchr(argv[0], '\\') - argv[0];
-    if(setupPathLen > (int)(MAX_PATH - sizeof(OPL3EMU_DRIVER_NAME) - 2))
-    {
-        MessageBoxA(NULL, CANNOT_INSTALL_PATH_TOO_LONG_ERR, ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
-        return 2;
-    }
-
-    bool installMode = true;
-    if(!registerDriver(installMode))
+    installMode = TRUE;
+    if(!registerDriver(&installMode))
         return 3;
-    char driverPathName[MAX_PATH + 1];
-    constructDriverPathName(driverPathName);
-    deleteFileReliably(driverPathName);
-    char setupPathName[MAX_PATH + 1];
-    strncpy(setupPathName, argv[0], setupPathLen);
-    setupPathName[setupPathLen] = 0;
-    strncat(setupPathName, PATH_SEPARATOR, MAX_PATH - strlen(setupPathName));
-    strncat(setupPathName, OPL3EMU_DRIVER_NAME, MAX_PATH - strlen(setupPathName));
-    if(!CopyFileA(setupPathName, driverPathName, FALSE))
-    {
-        MessageBoxA(NULL, CANNOT_INSTALL_FILE_COPY_ERR, FILE_ERROR_TITLE, MB_OK | MB_ICONEXCLAMATION);
+
+    if(!copyFileIntoSystem(OPL3EMU_DRIVER_NAME, argv))
         return 4;
-    }
+    if(!copyFileIntoSystem(OPL3EMU_CPLAPPLET_NAME, argv))
+        return 4;
+    if(!copyFileIntoSystem(OPL3EMU_SETUPTOOL_NAME, argv))
+        return 4;
+
     MessageBoxA(NULL, installMode ? SUCCESSFULLY_INSTALLED_MSG : SUCCESSFULLY_UPDATED_MSG, INFORMATION_TITLE, MB_OK | MB_ICONINFORMATION);
     return 0;
 }
