@@ -3,13 +3,7 @@ if(NOT WIN32)
     message(FATAL_ERROR "WinDriver: This component is for Windows Platform only")
 endif()
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(PGE_ARCHITECTURE_BITS "32")
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(PGE_ARCHITECTURE_BITS "64")
-else()
-    set(PGE_ARCHITECTURE_BITS "unk")
-endif()
+option(WITH_WINMMDRV_PTHREADS    "Link libwinpthreads statically (when using pthread-based builds)" ON)
 
 #====================================
 #          Driver module
@@ -35,14 +29,13 @@ target_compile_definitions(adlmididrv PRIVATE
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++ -Wl,--enable-stdcall-fixup")
-    if(PGE_ARCHITECTURE_BITS EQUAL 64)
+    if(WITH_WINMMDRV_PTHREADS)
         set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lpthread -Wl,-Bdynamic,--no-whole-archive")
     endif()
 endif()
 
 if(NOT MSVC)
     target_compile_options(adlmididrv PRIVATE "-Wno-cast-function-type")
-    target_link_libraries(adlmididrv PRIVATE pthread)
 endif()
 
 
