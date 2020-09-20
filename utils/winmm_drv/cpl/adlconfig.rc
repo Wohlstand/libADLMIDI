@@ -1,0 +1,142 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+/////////////////////////////////////////////////////////////////////////////
+// Russian (Russia) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RT_MANIFEST
+//
+
+#ifdef ADL_IS_CPL_APPLET
+MANIFSEST_RES_CPL RT_MANIFEST         "adlconfig.cpl.manifest"
+#else
+MANIFSEST_RES RT_MANIFEST             "adlconfig-tool.exe.manifest"
+#endif
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "opl3icon.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONFIG_BOX DIALOGEX 0, 0, 243, 242
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "libADLMIDI settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,81,210,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,135,210,50,14
+    PUSHBUTTON      "Apply",IDC_APPLYBUTTON,191,210,50,14
+    COMBOBOX        IDC_VOLUMEMODEL,79,95,155,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Volume model:",IDC_VM_LABEL,5,97,66,8
+    COMBOBOX        IDC_BANK_ID,79,15,155,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Instruments bank",IDC_INS_BANK,4,2,234,51
+    CONTROL         "Internal bank",IDC_BANK_INTERNAL,"Button",BS_AUTORADIOBUTTON | WS_GROUP,9,16,63,10
+    CONTROL         "External bank",IDC_BANK_EXTERNAL,"Button",BS_AUTORADIOBUTTON,9,33,67,10
+    EDITTEXT        IDC_BANK_PATH,79,31,107,14,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "Browse...",IDC_BROWSE_BANK,187,31,48,14
+    PUSHBUTTON      "Restore defaults",IDC_RESTORE_DEFAULTS,153,193,88,14
+    CONTROL         "Deep tremolo (Auto/Enable/Disable)",IDC_FLAG_TREMOLO,
+                    "Button",BS_AUTO3STATE | WS_TABSTOP,5,124,227,10
+    CONTROL         "Deep virbrato (Auto/Enable/Disable)",IDC_FLAG_VIBRATO,
+                    "Button",BS_AUTO3STATE | WS_TABSTOP,5,141,227,10
+    CONTROL         "Full-panning stereo",IDC_FLAG_SOFTPAN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,108,227,10
+    COMBOBOX        IDC_EMULATOR,79,56,155,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Chip emulator type:",IDC_CHIPEMU_LABEL,5,58,67,8
+    LTEXT           "Number of chips",IDC_CHIPNUM_LABEL,5,75,69,8
+    COMBOBOX        IDC_NUM_CHIPS,79,74,33,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_NUM_4OPVO,193,74,41,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Number of 4OP voices",IDC_4OPSNUM_LABEL,115,76,72,8
+    CONTROL         "Scalable modulation",IDC_FLAG_SCALE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,157,228,10
+    CONTROL         "Full-range brightness (CC74)",IDC_FLAG_FULLBRIGHT,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,173,228,10
+    PUSHBUTTON      "About...",IDC_ABOUT,5,210,50,14
+    PUSHBUTTON      "Reset synth now",IDC_RESET_SYNTH,69,193,80,14
+    RTEXT           "Settings will be applied immediately",IDC_BOTTOMNOTE_LABEL,0,227,241,8
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE
+BEGIN
+    "\0"
+END
+
+3 TEXTINCLUDE
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_SETUP_BOX, DIALOG
+    BEGIN
+        RIGHTMARGIN, 241
+        BOTTOMMARGIN, 241
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDC_DRIVERNAME               "libADLMIDI settings"
+    IDC_DRIVERDESC               "Settings for libADLMIDI synthesizer"
+END
+
+#endif    // Russian (Russia) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
