@@ -389,7 +389,7 @@ void MidiSynth::Render(Bit16s *bufpos, DWORD totalFrames)
                 switch (channel)
                 {
                 case 0xF:
-                    adl_rt_resetState(synth);
+                    ResetSynth();
                     break;
                 }
             }
@@ -548,6 +548,12 @@ int MidiSynth::Reset()
 
     wResult = s_waveOut.Resume();
     return wResult;
+}
+
+void MidiSynth::ResetSynth()
+{
+    if(synth)
+        adl_reset(synth);
 }
 
 void MidiSynth::PushMIDI(DWORD msg)

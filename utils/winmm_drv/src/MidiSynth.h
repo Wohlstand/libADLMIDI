@@ -73,6 +73,7 @@ public:
     int Init();
     void Close();
     int Reset();
+    void ResetSynth();
     void RenderAvailableSpace();
     void Render(Bit16s *bufpos, DWORD totalFrames);
     void CheckForSignals();

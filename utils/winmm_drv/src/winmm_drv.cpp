@@ -347,6 +347,10 @@ EXTERN_C DWORD __declspec(dllexport) __stdcall modMessage(DWORD uDeviceID, DWORD
     case MODM_UNPREPARE:
         return MMSYSERR_NOTSUPPORTED;
 
+    case MODM_RESET:
+        midiSynth.ResetSynth();
+        return MMSYSERR_NOERROR;
+
     case MODM_GETDEVCAPS:
         return modGetCaps((PVOID)dwParam1, (DWORD)dwParam2);
 
