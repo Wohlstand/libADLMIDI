@@ -16,9 +16,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windef.h>
+#include <winbase.h>
 #include <winuser.h>
 #include <winreg.h>
-#include <winbase.h>
 #include <winerror.h>
 
 const char OPL3EMU_DRIVER_NAME[] = "adlmididrv.dll";
