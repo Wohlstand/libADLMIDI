@@ -250,6 +250,13 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
             }
             break;
 
+        case IDC_VOLUMEMODEL:
+            if(HIWORD(wParam) == CBN_SELCHANGE)
+            {
+                g_setup.volumeModel = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+            }
+            break;
+
         case IDC_BANK_INTERNAL:
             g_setup.useExternalBank = 0;
             syncBankType(hwnd, FALSE);
