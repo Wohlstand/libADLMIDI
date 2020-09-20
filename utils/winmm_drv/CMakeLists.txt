@@ -87,7 +87,7 @@ set(ADLMIDI_DRIVER_SRC
     config/regconfig.c
 )
 
-add_library(adlmidiconfig MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlconfig.c)
+add_library(adlmidiconfig MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlconfig.c cpl/res-cpl.rc)
 set_target_properties(adlmidiconfig PROPERTIES PREFIX "" OUTPUT_NAME "libadlconfig" SUFFIX ".cpl")
 target_include_directories(adlmidiconfig PRIVATE config)
 target_compile_definitions(adlmidiconfig PRIVATE
@@ -101,7 +101,7 @@ target_compile_definitions(adlmidiconfig PRIVATE
 
 target_link_libraries(adlmidiconfig PRIVATE comctl32 gdi32 user32)
 
-add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlconfig-tool.c)
+add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlconfig-tool.c cpl/res-tool.rc)
 set_target_properties(adlmidiconfigtool PROPERTIES WIN32_EXECUTABLE ON)
 target_include_directories(adlmidiconfigtool PRIVATE config)
 target_compile_definitions(adlmidiconfigtool PRIVATE
