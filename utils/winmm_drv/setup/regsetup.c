@@ -139,10 +139,8 @@ void setupDefault(DriverSettings *setup)
 }
 
 
-#define BUF_SIZE 4
-const WCHAR g_adlSignalMemory[] = L"Global\\libADLMIDIDriverListener";
 
-static const PWCHAR s_regPath = L"SOFTWARE\\Wohlstand\\libADLMIDI";
+static const PWCHAR s_regPath       = L"SOFTWARE\\Wohlstand\\libADLMIDI";
 
 void loadSetup(DriverSettings *setup)
 {
@@ -209,71 +207,91 @@ void saveSetup(DriverSettings *setup)
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"num4ops", setup->num4ops);
 }
 
+
+static const PWCHAR s_regPathNotify = L"SOFTWARE\\Wohlstand\\libADLMIDI\\notify";
+
 void sendSignal()
 {
-    HANDLE hMapFile;
-    LPSTR pBuf;
-
-    hMapFile = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, g_adlSignalMemory);
-    if(hMapFile == NULL)
-        return; // Nothing to do, driver is not runnig
-
-    pBuf = (LPSTR)MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUF_SIZE);
-
-    if(pBuf == NULL)
-    {
-        CloseHandle(hMapFile);
-        return;
-    }
-
-    pBuf[0] = 1; // Send '1' to tell driver reload the settings immediately
-
-    UnmapViewOfFile(pBuf);
-    CloseHandle(hMapFile);
+    writeIntToRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", 1);
 }
 
 
 #ifdef ENABLE_REG_SERVER
 
-static HANDLE s_hMapFile = NULL;
-static LPSTR  s_pBuf = NULL;
+static HKEY   hKey = 0;
+static HANDLE hEvent = 0;
 
 void openSignalListener()
 {
-    s_hMapFile = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUF_SIZE, g_adlSignalMemory);
-    if(s_hMapFile == NULL)
-        return; // Nothing to do
+    LONG  errorcode;
+    DWORD  dwFilter = REG_NOTIFY_CHANGE_NAME |
+                      REG_NOTIFY_CHANGE_ATTRIBUTES |
+                      REG_NOTIFY_CHANGE_LAST_SET |
+                      REG_NOTIFY_CHANGE_SECURITY;
 
-    s_pBuf = (LPSTR)MapViewOfFile(s_hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUF_SIZE);
-    if(s_pBuf == NULL)
+    createRegistryKey(HKEY_CURRENT_USER, s_regPathNotify);
+    writeIntToRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", 0);
+
+    errorcode = RegOpenKeyExW(HKEY_CURRENT_USER, s_regPath, 0, KEY_NOTIFY, &hKey);
+    if(errorcode != ERROR_SUCCESS)
+        return;
+
+    hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if(hEvent == NULL)
     {
-        CloseHandle(s_hMapFile);
+        RegCloseKey(hKey);
+        hKey = 0;
         return;
     }
-    ZeroMemory(s_pBuf, BUF_SIZE);
+
+    errorcode = RegNotifyChangeKeyValue(hKey,
+                                        FALSE,
+                                        dwFilter,
+                                        hEvent,
+                                        TRUE);
+    if(errorcode != ERROR_SUCCESS)
+    {
+        CloseHandle(hEvent);
+        hEvent = 0;
+        RegCloseKey(hKey);
+        hKey = 0;
+        return;
+    }
 }
 
-BOOL hasSignal()
+BOOL hasReloadSetupSignal()
 {
-    if(!s_pBuf)
+    DWORD ret;
+    int cmd;
+
+    if(hEvent == 0)
         return FALSE;
-    return s_pBuf[0] == 1;
+
+    ret = WaitForSingleObject(hEvent, 0);
+
+    if(ret == WAIT_OBJECT_0)
+    {
+        readIntFromRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", &cmd);
+        return (cmd == 1);
+    }
+
+    return FALSE;
 }
 
 void resetSignal()
 {
-    if(s_pBuf)
-        ZeroMemory(s_pBuf, BUF_SIZE);
+    writeIntToRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", 0);
 }
 
 void closeSignalListener()
 {
-    if(s_pBuf)
-        UnmapViewOfFile(s_pBuf);
-    if(s_hMapFile)
-        CloseHandle(s_hMapFile);
-    s_pBuf = NULL;
-    s_hMapFile = NULL;
+    if(hKey)
+        RegCloseKey(hKey);
+    hKey = 0;
+
+    if(hEvent)
+        CloseHandle(hEvent);
+    hEvent = 0;
 }
 
 #endif

@@ -45,7 +45,7 @@ extern void sendSignal();
 #ifdef ENABLE_REG_SERVER
 // Server
 extern void openSignalListener();
-extern BOOL hasSignal();
+extern BOOL hasReloadSetupSignal();
 extern void resetSignal();
 extern void closeSignalListener();
 #endif

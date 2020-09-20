@@ -360,13 +360,6 @@ void MidiSynth::RenderAvailableSpace()
         }
     }
     midiSynth.Render(buffer + 2 * framesRendered, framesToRender);
-
-    if(::hasSignal()) // Reload settings on the fly
-    {
-        this->loadSetup();
-        LoadSynthSetup();
-        ::resetSignal();
-    }
 }
 
 // Renders totalFrames frames starting from bufpos
@@ -447,6 +440,13 @@ void MidiSynth::Render(Bit16s *bufpos, DWORD totalFrames)
     // Wrap framesRendered counter
     if(framesRendered >= bufferSize)
         framesRendered -= bufferSize;
+
+    if(::hasReloadSetupSignal()) // Reload settings on the fly
+    {
+        this->loadSetup();
+        LoadSynthSetup();
+        ::resetSignal();
+    }
 }
 
 unsigned int MidiSynth::MillisToFrames(unsigned int millis)
