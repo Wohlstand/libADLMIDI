@@ -172,7 +172,7 @@ void constructSystemDirName(char *pathName)
 {
     char sysRoot[MAX_PATH + 1];
     GetEnvironmentVariableA(SYSTEM_ROOT_ENV_NAME, sysRoot, MAX_PATH);
-    strncpy(pathName, sysRoot, MAX_PATH);
+    strncpy(pathName, sysRoot, MAX_PATH + 1);
     strncat(pathName, PATH_SEPARATOR, MAX_PATH - strlen(pathName));
     strncat(pathName, SYSTEM_DIR_NAME, MAX_PATH - strlen(pathName));
     strncat(pathName, PATH_SEPARATOR, MAX_PATH - strlen(pathName));
