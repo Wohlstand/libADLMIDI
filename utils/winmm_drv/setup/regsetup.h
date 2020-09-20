@@ -36,16 +36,19 @@ extern void loadSetup(DriverSettings *setup);
 extern void saveSetup(DriverSettings *setup);
 
 
+#define DRV_SIGNAL_RELOAD_SETUP 1
+#define DRV_SIGNAL_RESET_SYNTH  2
+
 // Client
 /**
  * @brief Ping the running driver to immediately reload the settings
  */
-extern void sendSignal();
+extern void sendSignal(int sig);
 
 #ifdef ENABLE_REG_SERVER
 // Server
 extern void openSignalListener();
-extern BOOL hasReloadSetupSignal();
+extern int  hasReloadSetupSignal();
 extern void resetSignal();
 extern void closeSignalListener();
 #endif

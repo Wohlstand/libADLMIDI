@@ -75,6 +75,7 @@ public:
     int Reset();
     void RenderAvailableSpace();
     void Render(Bit16s *bufpos, DWORD totalFrames);
+    void CheckForSignals();
     void PushMIDI(DWORD msg);
     void PlaySysex(Bit8u *bufpos, DWORD len);
 

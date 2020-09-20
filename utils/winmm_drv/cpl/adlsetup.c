@@ -56,8 +56,8 @@ LONG APIENTRY CPlApplet(
     case CPL_INQUIRE:
         lpCPlInfo = (LPCPLINFO)lParam2;
         lpCPlInfo->idIcon = IDI_ICON1;
-        lpCPlInfo->idName = m_nNameID;
-        lpCPlInfo->idInfo = m_nDescID;
+        lpCPlInfo->idName = IDC_DRIVERNAME;
+        lpCPlInfo->idInfo = IDC_DRIVERDESC;
         lpCPlInfo->lData = 0L;
         break;
 
@@ -71,8 +71,8 @@ LONG APIENTRY CPlApplet(
         lpNewCPlInfo->hIcon = LoadIconW(hModule, (LPCTSTR)MAKEINTRESOURCEW(IDI_ICON1));
         lpNewCPlInfo->szHelpFile[0] = '\0';
 
-        LoadStringW(hModule, m_nNameID, lpNewCPlInfo->szName, 32);
-        LoadStringW(hModule, m_nDescID, lpNewCPlInfo->szInfo, 64);
+        LoadStringW(hModule, IDC_DRIVERNAME, lpNewCPlInfo->szName, 32);
+        LoadStringW(hModule, IDC_DRIVERDESC, lpNewCPlInfo->szInfo, 64);
         break;
 
     // application icon selected

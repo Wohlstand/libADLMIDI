@@ -210,9 +210,9 @@ void saveSetup(DriverSettings *setup)
 
 static const PWCHAR s_regPathNotify = L"SOFTWARE\\Wohlstand\\libADLMIDI\\notify";
 
-void sendSignal()
+void sendSignal(int sig)
 {
-    writeIntToRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", 1);
+    writeIntToRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", sig);
 }
 
 
@@ -232,7 +232,7 @@ void openSignalListener()
     createRegistryKey(HKEY_CURRENT_USER, s_regPathNotify);
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", 0);
 
-    errorcode = RegOpenKeyExW(HKEY_CURRENT_USER, s_regPath, 0, KEY_NOTIFY, &hKey);
+    errorcode = RegOpenKeyExW(HKEY_CURRENT_USER, s_regPathNotify, 0, KEY_NOTIFY, &hKey);
     if(errorcode != ERROR_SUCCESS)
         return;
 
@@ -259,23 +259,23 @@ void openSignalListener()
     }
 }
 
-BOOL hasReloadSetupSignal()
+int hasReloadSetupSignal()
 {
     DWORD ret;
     int cmd;
 
     if(hEvent == 0)
-        return FALSE;
+        return 0;
 
     ret = WaitForSingleObject(hEvent, 0);
 
     if(ret == WAIT_OBJECT_0)
     {
         readIntFromRegistry(HKEY_CURRENT_USER, s_regPathNotify, L"command", &cmd);
-        return (cmd == 1);
+        return cmd;
     }
 
-    return FALSE;
+    return 0;
 }
 
 void resetSignal()

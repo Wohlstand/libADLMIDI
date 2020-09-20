@@ -223,8 +223,11 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
         {
         case IDC_ABOUT:
             MessageBoxW(hwnd,
-                        L"libADLMIDI - a library, made by Vitaly Novichkov \"Wohlstand\".", L"About this driver",
-                        MB_OK | MB_ICONINFORMATION);
+                        L"libADLMIDI - a software MIDI synthesizer with OPL3 FM synth, "
+                        L"made by Vitaly Novichkov \"Wohlstand\".\n\n"
+                        L"Source code is here: https://github.com/Wohlstand/libADLMIDI",
+                        L"About this driver",
+                        MB_OK);
         break;
 
         case IDC_NUM_CHIPS:
@@ -319,14 +322,18 @@ BOOL CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
             syncWidget(hwnd);
             break;
 
+        case IDC_RESET_SYNTH:
+            sendSignal(DRV_SIGNAL_RESET_SYNTH);
+            break;
+
         case IDC_APPLYBUTTON:
             saveSetup(&g_setup);
-            sendSignal();
+            sendSignal(DRV_SIGNAL_RELOAD_SETUP);
             break;
 
         case IDOK:
             saveSetup(&g_setup);
-            sendSignal();
+            sendSignal(DRV_SIGNAL_RELOAD_SETUP);
             EndDialog(hwnd, IDOK);
             break;
 
