@@ -6,7 +6,7 @@
 
 #define MANIFSEST_RES                   1
 #define MANIFSEST_RES_CPL               123
-#define IDD_SETUP_BOX                   101
+#define IDD_CONFIG_BOX                  101
 #define IDI_ICON1                       102
 #define IDC_DRIVERNAME                  103
 #define IDC_DRIVERDESC                  104

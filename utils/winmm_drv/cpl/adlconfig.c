@@ -6,7 +6,7 @@
 
 #include "resource.h"
 
-#include "setup_dialog.h"
+#include "config_dialog.h"
 
 static HANDLE  hModule = NULL;
 

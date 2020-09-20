@@ -17,7 +17,7 @@
 #pragma once
 
 #include "stdafx.h"
-#include "regsetup.h"
+#include "regconfig.h"
 
 #ifndef OPL3EMU_MIDISYNTH_H
 #define OPL3EMU_MIDISYNTH_H

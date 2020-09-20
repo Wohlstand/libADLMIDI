@@ -22,7 +22,7 @@
 #include <winerror.h>
 
 const char OPL3EMU_DRIVER_NAME[] = "adlmididrv.dll";
-const char OPL3EMU_CPLAPPLET_NAME[] = "libadlsetup.cpl";
+const char OPL3EMU_CPLAPPLET_NAME[] = "libadlconfig.cpl";
 const char OPL3EMU_SETUPTOOL_NAME[] = "adlmidiconfigtool.exe";
 
 const char WDM_DRIVER_NAME[] = "wdmaud.drv";

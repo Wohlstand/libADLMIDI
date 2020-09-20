@@ -5,7 +5,7 @@
 #include <winbase.h>
 #include <winuser.h>
 
-#include "regsetup.h"
+#include "regconfig.h"
 
 
 #define TOTAL_BYTES_READ    1024

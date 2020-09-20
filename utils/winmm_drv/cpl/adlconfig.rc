@@ -14,9 +14,9 @@ LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 //
 
 #ifdef ADL_IS_CPL_APPLET
-MANIFSEST_RES_CPL RT_MANIFEST         "adlsetup.cpl.manifest"
+MANIFSEST_RES_CPL RT_MANIFEST         "adlconfig.cpl.manifest"
 #else
-MANIFSEST_RES RT_MANIFEST             "adlsetup-tool.exe.manifest"
+MANIFSEST_RES RT_MANIFEST             "adlconfig-tool.exe.manifest"
 #endif
 
 
@@ -35,9 +35,9 @@ IDI_ICON1               ICON                    "opl3icon.ico"
 // Dialog
 //
 
-IDD_SETUP_BOX DIALOGEX 0, 0, 243, 242
+IDD_CONFIG_BOX DIALOGEX 0, 0, 243, 242
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "libADLMIDI Setup"
+CAPTION "libADLMIDI settings"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,81,210,50,14
@@ -121,8 +121,8 @@ END
 
 STRINGTABLE
 BEGIN
-    IDC_DRIVERNAME               "libADLMIDI Setup"
-    IDC_DRIVERDESC               "Setup for libADLMIDI synthesizer"
+    IDC_DRIVERNAME               "libADLMIDI settings"
+    IDC_DRIVERDESC               "Settings for libADLMIDI synthesizer"
 END
 
 #endif    // Russian (Russia) resources

@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "setup_dialog.h"
+#include "config_dialog.h"
 #include "resource.h"
 
-#include "regsetup.h"
+#include "regconfig.h"
 
 #ifndef CBM_FIRST
 #define CBM_FIRST 0x1700
@@ -359,7 +359,7 @@ BOOL runAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 
     loadSetup(&g_setup);
 
-    DialogBoxW(hModule, MAKEINTRESOURCEW(IDD_SETUP_BOX), hwnd, ToolDlgProc);
+    DialogBoxW(hModule, MAKEINTRESOURCEW(IDD_CONFIG_BOX), hwnd, ToolDlgProc);
 
     s_hModule = NULL;
 

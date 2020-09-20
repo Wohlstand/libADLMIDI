@@ -19,13 +19,13 @@ set(ADLMIDI_DRIVER_SRC
     src/winmm_drv.def
     src/winmm_drv.cpp
     src/MidiSynth.cpp
-    setup/regsetup.c
+    config/regconfig.c
 )
 
 add_library(adlmididrv MODULE ${ADLMIDI_DRIVER_SRC})
 set_target_properties(adlmididrv PROPERTIES PREFIX "")
 target_link_libraries(adlmididrv PRIVATE winmm ADLMIDI_static)
-target_include_directories(adlmididrv PRIVATE setup)
+target_include_directories(adlmididrv PRIVATE config)
 target_compile_definitions(adlmididrv PRIVATE
     -D_USRDLL
     -D_WINDLL
@@ -88,16 +88,16 @@ target_compile_options(drvtest PRIVATE "-Wno-cast-function-type")
 #====================================
 
 set(ADLMIDI_DRIVER_SRC
-    cpl/adlsetup.def
-    cpl/adlsetup.rc
-    cpl/setup_dialog.c
-    setup/regsetup.c
+    cpl/adlconfig.def
+    cpl/adlconfig.rc
+    cpl/config_dialog.c
+    config/regconfig.c
 )
 
-add_library(adlmidisetup MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlsetup.c)
-set_target_properties(adlmidisetup PROPERTIES PREFIX "" OUTPUT_NAME "libadlsetup" SUFFIX ".cpl")
-target_include_directories(adlmidisetup PRIVATE setup)
-target_compile_definitions(adlmidisetup PRIVATE
+add_library(adlmidiconfig MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlconfig.c)
+set_target_properties(adlmidiconfig PROPERTIES PREFIX "" OUTPUT_NAME "libadlconfig" SUFFIX ".cpl")
+target_include_directories(adlmidiconfig PRIVATE config)
+target_compile_definitions(adlmidiconfig PRIVATE
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
     -D_CRT_SECURE_NO_WARNINGS
@@ -106,11 +106,11 @@ target_compile_definitions(adlmidisetup PRIVATE
     -DADL_IS_CPL_APPLET
 )
 
-target_link_libraries(adlmidisetup PRIVATE comctl32 gdi32 user32)
+target_link_libraries(adlmidiconfig PRIVATE comctl32 gdi32 user32)
 
-add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlsetup-tool.c)
+add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlconfig-tool.c)
 set_target_properties(adlmidiconfigtool PROPERTIES WIN32_EXECUTABLE ON)
-target_include_directories(adlmidiconfigtool PRIVATE setup)
+target_include_directories(adlmidiconfigtool PRIVATE config)
 target_compile_definitions(adlmidiconfigtool PRIVATE
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
@@ -122,9 +122,9 @@ target_compile_definitions(adlmidiconfigtool PRIVATE
 target_link_libraries(adlmidiconfigtool PRIVATE comctl32 gdi32 user32)
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
-    target_compile_options(adlmidisetup PRIVATE "-Wno-cast-function-type")
+    target_compile_options(adlmidiconfig PRIVATE "-Wno-cast-function-type")
     target_compile_options(adlmidiconfigtool PRIVATE "-Wno-cast-function-type")
-    set_property(TARGET adlmidisetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
+    set_property(TARGET adlmidiconfig APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
     set_property(TARGET adlmidiconfigtool APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
 endif()
 

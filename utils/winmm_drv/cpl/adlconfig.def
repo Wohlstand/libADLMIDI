@@ -1,4 +1,4 @@
-LIBRARY "libADLMIDISetup"
+LIBRARY "libADLMIDIConfig"
 
 EXPORTS
     CPlApplet

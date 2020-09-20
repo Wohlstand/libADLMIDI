@@ -6,7 +6,7 @@
 
 #include "resource.h"
 
-#include "setup_dialog.h"
+#include "config_dialog.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
 {
