@@ -54,7 +54,7 @@ BEGIN
     PUSHBUTTON      "Restore defaults",IDC_RESTORE_DEFAULTS,153,193,88,14
     CONTROL         "Deep tremolo (Auto/Enable/Disable)",IDC_FLAG_TREMOLO,
                     "Button",BS_AUTO3STATE | WS_TABSTOP,5,124,227,10
-    CONTROL         "Deep virbrato (Auto/Enable/Disable)",IDC_FLAG_VIBRATO,
+    CONTROL         "Deep vibrato (Auto/Enable/Disable)",IDC_FLAG_VIBRATO,
                     "Button",BS_AUTO3STATE | WS_TABSTOP,5,141,227,10
     CONTROL         "Full-panning stereo",IDC_FLAG_SOFTPAN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,108,227,10
     COMBOBOX        IDC_EMULATOR,79,56,155,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
