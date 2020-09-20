@@ -338,7 +338,11 @@ EXTERN_C DWORD __declspec(dllexport) __stdcall modMessage(DWORD uDeviceID, DWORD
     case MODM_CLOSE:
         if(driver->clients[dwUser].allocated == false)
             return MMSYSERR_ERROR;
-        if(synthOpened) midiSynth.Reset();
+        if(synthOpened)
+        {
+            midiSynth.Reset();
+            midiSynth.ResetSynth();
+        }
         return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 
     case MODM_PREPARE:
@@ -348,7 +352,7 @@ EXTERN_C DWORD __declspec(dllexport) __stdcall modMessage(DWORD uDeviceID, DWORD
         return MMSYSERR_NOTSUPPORTED;
 
     case MODM_RESET:
-        midiSynth.ResetSynth();
+        midiSynth.PanicSynth();
         return MMSYSERR_NOERROR;
 
     case MODM_GETDEVCAPS:

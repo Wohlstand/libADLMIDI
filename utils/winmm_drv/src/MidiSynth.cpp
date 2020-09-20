@@ -78,6 +78,14 @@ public:
         unsigned int peekPos = (startpos + pos) % maxPos;
         return stream[peekPos][1];
     }
+
+    void Clean()
+    {
+        startpos = 0;
+        endpos = 0;
+        memset(stream, 0, sizeof(stream));
+    }
+
 } midiStream;
 
 static class SynthEventWin32
@@ -389,7 +397,7 @@ void MidiSynth::Render(Bit16s *bufpos, DWORD totalFrames)
                 switch (channel)
                 {
                 case 0xF:
-                    ResetSynth();
+                    adl_reset(synth);
                     break;
                 }
             }
@@ -552,8 +560,17 @@ int MidiSynth::Reset()
 
 void MidiSynth::ResetSynth()
 {
-    if(synth)
-        adl_reset(synth);
+    synthEvent.Wait();
+    adl_reset(synth);
+    midiStream.Clean();
+    synthEvent.Release();
+}
+
+void MidiSynth::PanicSynth()
+{
+    synthEvent.Wait();
+    adl_panic(synth);
+    synthEvent.Release();
 }
 
 void MidiSynth::PushMIDI(DWORD msg)
