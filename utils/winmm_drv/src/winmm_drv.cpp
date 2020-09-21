@@ -352,7 +352,8 @@ EXTERN_C DWORD __declspec(dllexport) __stdcall modMessage(DWORD uDeviceID, DWORD
         return MMSYSERR_NOTSUPPORTED;
 
     case MODM_RESET:
-        midiSynth.PanicSynth();
+        if(synthOpened)
+            midiSynth.PanicSynth();
         return MMSYSERR_NOERROR;
 
     case MODM_GETDEVCAPS:
