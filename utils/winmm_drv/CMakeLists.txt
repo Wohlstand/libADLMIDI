@@ -3,7 +3,10 @@ if(NOT WIN32)
     message(FATAL_ERROR "WinDriver: This component is for Windows Platform only")
 endif()
 
-option(WITH_WINMMDRV_PTHREADS    "Link libwinpthreads statically (when using pthread-based builds)" ON)
+if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
+    option(WITH_WINMMDRV_PTHREADS    "Link libwinpthreads statically (when using pthread-based builds)" ON)
+    option(WITH_WINMMDRV_MINGWEX     "Link libmingwex statically (when using vanilla MinGW builds)" OFF)
+endif()
 
 #====================================
 #          Driver module
@@ -31,6 +34,9 @@ if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++ -Wl,--enable-stdcall-fixup")
     if(WITH_WINMMDRV_PTHREADS)
         set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lpthread -Wl,-Bdynamic,--no-whole-archive")
+    endif()
+    if(WITH_WINMMDRV_MINGWEX)
+        set_property(TARGET adlmididrv APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lmingwex -Wl,-Bdynamic,--no-whole-archive")
     endif()
 endif()
 
@@ -64,7 +70,13 @@ target_compile_definitions(drvsetup PRIVATE
 
 if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc")
+    if(WITH_WINMMDRV_MINGWEX)
+        set_property(TARGET drvsetup APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lmingwex -Wl,-Bdynamic,--no-whole-archive")
+    endif()
 endif()
+
+configure_file(installer/install.bat ${CMAKE_BINARY_DIR}/install.bat COPYONLY)
+configure_file(installer/uninstall.bat ${CMAKE_BINARY_DIR}/uninstall.bat COPYONLY)
 
 
 #====================================
@@ -74,6 +86,9 @@ endif()
 add_executable(drvtest test/test.c)
 target_link_libraries(drvtest PRIVATE winmm)
 target_compile_options(drvtest PRIVATE "-Wno-cast-function-type")
+if(WITH_WINMMDRV_MINGWEX)
+    set_property(TARGET drvtest APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lmingwex -Wl,-Bdynamic,--no-whole-archive")
+endif()
 
 
 #====================================
@@ -101,6 +116,7 @@ target_compile_definitions(adlmidiconfig PRIVATE
 
 target_link_libraries(adlmidiconfig PRIVATE comctl32 gdi32 user32)
 
+
 add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlconfig-tool.c cpl/res-tool.rc)
 set_target_properties(adlmidiconfigtool PROPERTIES WIN32_EXECUTABLE ON)
 target_include_directories(adlmidiconfigtool PRIVATE config)
@@ -119,6 +135,10 @@ if(WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
     target_compile_options(adlmidiconfigtool PRIVATE "-Wno-cast-function-type")
     set_property(TARGET adlmidiconfig APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
     set_property(TARGET adlmidiconfigtool APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -Wl,--enable-stdcall-fixup")
+    if(WITH_WINMMDRV_MINGWEX)
+        set_property(TARGET adlmidiconfig APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lmingwex -Wl,-Bdynamic,--no-whole-archive")
+        set_property(TARGET adlmidiconfigtool APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lmingwex -Wl,-Bdynamic,--no-whole-archive")
+    endif()
 endif()
 
 
