@@ -366,7 +366,7 @@ BOOL runAdlSetupBox(HINSTANCE hModule, HWND hwnd)
     return TRUE;
 }
 
-WINBOOL initAdlSetupBox(HINSTANCE hModule, HWND hwnd)
+BOOL initAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 {
     InitCommonControls();
     setupDefault(&g_setup);
@@ -375,7 +375,7 @@ WINBOOL initAdlSetupBox(HINSTANCE hModule, HWND hwnd)
     return TRUE;
 }
 
-WINBOOL cleanUpAdlSetupBox(HINSTANCE hModule, HWND hwnd)
+BOOL cleanUpAdlSetupBox(HINSTANCE hModule, HWND hwnd)
 {
     UNREFERENCED_PARAMETER(hModule);
     UNREFERENCED_PARAMETER(hwnd);

@@ -15,11 +15,8 @@
  */
 
 #define WIN32_LEAN_AND_MEAN
-#include <windef.h>
-#include <winbase.h>
-#include <winuser.h>
-#include <winreg.h>
-#include <winerror.h>
+#include <windows.h>
+
 
 const char OPL3EMU_DRIVER_NAME[] = "adlmididrv.dll";
 const char OPL3EMU_CPLAPPLET_NAME[] = "libadlconfig.cpl";
@@ -187,7 +184,7 @@ void constructDriverPathName(char *pathName, const char*fileName)
 void deleteFileReliably(char *pathName, const char *fileName)
 {
     const size_t nameSize = strlen(fileName) + 1;
-    char tmpFilePrefix[nameSize + 1];
+    char tmpFilePrefix[MAX_PATH + 1];
     char tmpDirName[MAX_PATH + 1];
     char tmpPathName[MAX_PATH + 1];
 
