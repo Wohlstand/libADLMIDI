@@ -8,6 +8,7 @@ set NINJA_URL=http://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip
 md C:\mingw-temp
 md C:\mingw-temp\bin
 
+echo Downloading %NINJA_URL%...
 "%WGET_BIN%" --quiet %NINJA_URL% -O C:\mingw-temp\ninja.zip
 if %errorlevel% neq 0 exit /b %errorlevel%
 "%SEVENZIP%" x C:\mingw-temp\ninja.zip -oC:\mingw-temp\bin
@@ -16,17 +17,19 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 md C:\mingw-temp\MinGW32
 md C:\mingw-temp\MinGW-w64
 
+echo Downloading %MINGW_VANILLA_URL%...
 "%WGET_BIN%" --quiet %MINGW_VANILLA_URL% -O C:\mingw-temp\mingw-vanilla.zip
 if %errorlevel% neq 0 exit /b %errorlevel%
 "%SEVENZIP%" x C:\mingw-temp\mingw-vanilla.zip -oC:\mingw-temp\MinGW32
 if %errorlevel% neq 0 exit /b %errorlevel%
 
-
+echo Downloading %MINGW_W64_32_URL%...
 "%WGET_BIN%" --quiet %MINGW_W64_32_URL% -O C:\mingw-temp\mingw-w64-32.7z
 if %errorlevel% neq 0 exit /b %errorlevel%
 "%SEVENZIP%" x C:\mingw-temp\mingw-w64-32.7z -oC:\mingw-temp\MinGW-w64
 if %errorlevel% neq 0 exit /b %errorlevel%
 
+echo Downloading %MINGW_W64_64_URL%...
 "%WGET_BIN%" --quiet %MINGW_W64_64_URL% -O C:\mingw-temp\mingw-w64-64.7z
 if %errorlevel% neq 0 exit /b %errorlevel%
 "%SEVENZIP%" x C:\mingw-temp\mingw-w64-64.7z -oC:\mingw-temp\MinGW-w64
@@ -34,10 +37,7 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 set PUREPATH=C:\mingw-temp\bin;%PATH:C:\Program Files\Git\usr\bin;=%
 
-set FILES_LIST=^
-"adlmidiconfigtool.exe" "adlmididrv.dll" "libadlconfig.cpl" ^
-"drvsetup.exe" "drvtest.exe" ^
-"install.bat" "uninstall.bat"
+set FILES_LIST=adlmidiconfigtool.exe adlmididrv.dll libadlconfig.cpl drvsetup.exe drvtest.exe install.bat uninstall.bat
 
 rem ============= BUILD pre-WinXP 32-bit driver =============
 
