@@ -92,7 +92,7 @@ static BOOL readStringFromRegistry(HKEY hKeyParent, const PWCHAR subkey, const P
 
 static BOOL readIntFromRegistry(HKEY hKeyParent, const PWCHAR subkey, const PWCHAR valueName, int *readData)
 {
-    WCHAR *buf;
+    WCHAR *buf = NULL;
     BOOL ret;
     ret = readStringFromRegistry(hKeyParent, subkey, valueName, &buf);
     if(ret && readData)
