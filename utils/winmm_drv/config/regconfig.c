@@ -1,9 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <windef.h>
-#include <winbase.h>
-#include <winuser.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include "regconfig.h"
 
