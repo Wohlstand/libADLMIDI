@@ -24,7 +24,9 @@
 #include "adlmidi_midiplay.hpp"
 #include "adlmidi_opl3.hpp"
 #include "adlmidi_private.hpp"
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
 #include "midi_sequencer.hpp"
+#endif
 
 // Minimum life time of percussion notes
 static const double s_drum_note_min_time = 0.03;

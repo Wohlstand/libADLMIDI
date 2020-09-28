@@ -26,7 +26,9 @@
 #include "adlmidi_private.hpp"
 #include "adlmidi_cvt.hpp"
 #include "file_reader.hpp"
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
 #include "midi_sequencer.hpp"
+#endif
 #include "wopl/wopl_file.h"
 
 bool MIDIplay::LoadBank(const std::string &filename)
