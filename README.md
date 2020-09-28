@@ -186,14 +186,14 @@ To build that example you will need to have installed SDL2 library.
  * Added Public Domain Opal OPL3 emulator made by Reality (a team who originally made the Reality Adlib Tracker) (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Added LGPL licensed JavaOPL3 emulator made by Robson Cozendey in Java and later rewritten into C++ for GZDoom (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Fully rewritten an embedded bank database format, embedded banks now supports a wider set (more than 127:127 instruments in one bank)
- * Improved an accuracy of the DMX volume model, include the buggy AM intepretation
- * Improved an accuracy of Apogee volume model, include the bug of AM instruments
- * Improved an accuracy of Win9X volume model
- * Removed C++ extras. C++-binded instruments tester is useless since a real-time MIDI API can completely replace it
+ * Improved accuracy of the DMX volume model, include the buggy AM interpretation
+ * Improved accuracy of Apogee volume model, include the bug of AM instruments
+ * Improved accuracy of the Win9X volume model
+ * Removed C++ extras. C++-bounded instruments tester is useless since a real-time MIDI API can completely replace it
  * Added AIL volume model
  * Added Generic FM variant of Win9X volume model
  * Fixed an incorrect work of CC-121 (See https://github.com/Wohlstand/libADLMIDI/issues/227 for details)
- * Added HMI volume model (Thanks to [Alexey Khokholov](https://github.com/nukeykt) for a help with a research!)
+ * Added HMI volume model (Thanks to [Alexey Khokholov](https://github.com/nukeykt) for help with research!)
  * Added frequency models, assigned to every volume model: AIL, HMI, DMX, Apogee, 9X, and the Generic formula
 
 ## 1.4.0   2018-10-01
