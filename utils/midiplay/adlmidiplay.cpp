@@ -249,13 +249,18 @@ static int stop = 0;
 #ifndef HARDWARE_OPL3
 static void sighandler(int dum)
 {
-    if((dum == SIGINT)
-        || (dum == SIGTERM)
-    #if !defined(_WIN32) && !defined(__WATCOMC__)
-        || (dum == SIGHUP)
-    #endif
-    )
+    switch(dum)
+    {
+    case SIGINT:
+    case SIGTERM:
+#ifndef _WIN32
+    case SIGHUP:
+#endif
         stop = 1;
+        break;
+    default:
+        break;
+    }
 }
 #endif
 
