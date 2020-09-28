@@ -394,7 +394,7 @@ static inline double s_dmxFreq(double tone)
 {
     uint_fast32_t noteI = (uint_fast32_t)(tone);
     int_fast32_t bendI = 0;
-    int_fast32_t outHz = 0.0;
+    int_fast32_t outHz = 0;
     double bendDec = tone - (int)tone;
 
     bendI = (int_fast32_t)((bendDec * 128.0) / 2.0) + 128;
@@ -470,7 +470,7 @@ static inline double s_apogeeFreq(double tone)
 {
     uint_fast32_t noteI = (uint_fast32_t)(tone);
     int_fast32_t bendI = 0;
-    int_fast32_t outHz = 0.0;
+    int_fast32_t outHz = 0;
     double bendDec = tone - (int)tone;
     int_fast32_t octave;
     int_fast32_t scaleNote;

@@ -1714,7 +1714,7 @@ size_t MIDIplay::chooseDevice(const std::string &name)
     size_t n = m_midiDevices.size() * 16;
     m_midiDevices.insert(std::make_pair(name, n));
     m_midiChannels.resize(n + 16);
-    resetMIDIDefaults(n);
+    resetMIDIDefaults(static_cast<int>(n));
     return n;
 }
 
