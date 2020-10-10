@@ -178,6 +178,10 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
+## 1.5.0.1 2020-10-11
+ * Fixed an incorrect timer processing when using a real-time interface
+
+# Changelog
 ## 1.5.0   2020-09-28
  * Drum note length expanding is now supported in real-time mode (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)
  * Channels manager has been improved (Thanks to [Jean Pierre Cimalando](https://github.com/jpcima) for a work!)

@@ -1414,7 +1414,7 @@ ADLMIDI_EXPORT int adl_generateFormat(struct ADL_MIDIPlayer *device, int sampleC
     ssize_t n_periodCountStereo = 512;
 
     int     left = sampleCount;
-    double  delay = double(sampleCount) / double(setup.PCM_RATE);
+    double  delay = double(sampleCount / 2) / double(setup.PCM_RATE);
 
     while(left > 0)
     {
