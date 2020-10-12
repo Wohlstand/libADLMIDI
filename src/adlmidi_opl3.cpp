@@ -403,14 +403,16 @@ static inline double s_dmxFreq(double tone)
     int_fast32_t oct = 0;
     int_fast32_t freqIndex = (noteI << 5) + bendI;
 
+#define MAX_FREQ_IDX 283 // 284 - with the DMX side bug
     if(freqIndex < 0)
         freqIndex = 0;
-    else if(freqIndex >= 284)
+    else if(freqIndex >= MAX_FREQ_IDX)
     {
-        freqIndex -= 284;
+        freqIndex -= MAX_FREQ_IDX;
         oct = freqIndex / 384;
-        freqIndex = (freqIndex % 384) + 284;
+        freqIndex = (freqIndex % 384) + MAX_FREQ_IDX;
     }
+#undef MAX_FREQ_IDX
 
     outHz = s_dmx_freq_table[freqIndex];
 
