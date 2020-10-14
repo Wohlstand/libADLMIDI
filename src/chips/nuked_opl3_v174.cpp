@@ -73,3 +73,8 @@ const char *NukedOPL3v174::emulatorName()
 {
     return "Nuked OPL3 (v 1.7.4)";
 }
+
+OPLChipBase::ChipType NukedOPL3v174::chipType()
+{
+    return CHIPTYPE_OPL3;
+}

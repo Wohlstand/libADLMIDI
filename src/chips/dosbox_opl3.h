@@ -41,6 +41,7 @@ public:
     void nativePostGenerate() override {}
     void nativeGenerateN(int16_t *output, size_t frames) override;
     const char *emulatorName() override;
+    ChipType chipType() override;
 };
 
 #endif // DOSBOX_OPL3_H

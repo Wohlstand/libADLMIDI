@@ -39,6 +39,10 @@ class OPLChipBase
 {
 public:
     enum { nativeRate = 49716 };
+    enum ChipType
+    {
+        CHIPTYPE_OPL3 = 0, CHIPTYPE_OPL2 = 1
+    };
 protected:
     uint32_t m_id;
     uint32_t m_rate;
@@ -74,6 +78,7 @@ public:
     virtual void generateAndMix32(int32_t *output, size_t frames) = 0;
 
     virtual const char* emulatorName() = 0;
+    virtual ChipType chipType() = 0;
 private:
     OPLChipBase(const OPLChipBase &c);
     OPLChipBase &operator=(const OPLChipBase &c);
