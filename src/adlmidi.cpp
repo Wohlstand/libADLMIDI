@@ -1310,72 +1310,69 @@ ADLMIDI_EXPORT int adl_playFormat(ADL_MIDIPlayer *device, int sampleCount,
 
     while(left > 0)
     {
-        {//...
-            const double eat_delay = setup.delay < setup.maxdelay ? setup.delay : setup.maxdelay;
-            if(hasSkipped)
+        const double eat_delay = setup.delay < setup.maxdelay ? setup.delay : setup.maxdelay;
+        if(hasSkipped)
+        {
+            size_t samples = setup.tick_skip_samples_delay > sampleCount ? sampleCount : setup.tick_skip_samples_delay;
+            n_periodCountStereo = samples / 2;
+        }
+        else
+        {
+            setup.delay -= eat_delay;
+            setup.carry += double(setup.PCM_RATE) * eat_delay;
+            n_periodCountStereo = static_cast<ssize_t>(setup.carry);
+            setup.carry -= double(n_periodCountStereo);
+        }
+
+        //if(setup.SkipForward > 0)
+        //    setup.SkipForward -= 1;
+        //else
+        {
+            if((player->m_sequencer->positionAtEnd()) && (setup.delay <= 0.0))
+                break;//Stop to fetch samples at reaching the song end with disabled loop
+
+            ssize_t leftSamples = left / 2;
+            if(n_periodCountStereo > leftSamples)
             {
-                size_t samples = setup.tick_skip_samples_delay > sampleCount ? sampleCount : setup.tick_skip_samples_delay;
-                n_periodCountStereo = samples / 2;
+                setup.tick_skip_samples_delay = (n_periodCountStereo - leftSamples) * 2;
+                n_periodCountStereo = leftSamples;
             }
-            else
+            //! Count of stereo samples
+            ssize_t in_generatedStereo = (n_periodCountStereo > 512) ? 512 : n_periodCountStereo;
+            //! Total count of samples
+            ssize_t in_generatedPhys = in_generatedStereo * 2;
+            //! Unsigned total sample count
+            //fill buffer with zeros
+            int32_t *out_buf = player->m_outBuf;
+            std::memset(out_buf, 0, static_cast<size_t>(in_generatedPhys) * sizeof(out_buf[0]));
+            Synth &synth = *player->m_synth;
+            unsigned int chips = synth.m_numChips;
+            if(chips == 1)
             {
-                setup.delay -= eat_delay;
-                setup.carry += double(setup.PCM_RATE) * eat_delay;
-                n_periodCountStereo = static_cast<ssize_t>(setup.carry);
-                setup.carry -= double(n_periodCountStereo);
+                synth.m_chips[0]->generate32(out_buf, (size_t)in_generatedStereo);
             }
-
-            //if(setup.SkipForward > 0)
-            //    setup.SkipForward -= 1;
-            //else
+            else if(n_periodCountStereo > 0)
             {
-                if((player->m_sequencer->positionAtEnd()) && (setup.delay <= 0.0))
-                    break;//Stop to fetch samples at reaching the song end with disabled loop
-
-                ssize_t leftSamples = left / 2;
-                if(n_periodCountStereo > leftSamples)
-                {
-                    setup.tick_skip_samples_delay = (n_periodCountStereo - leftSamples) * 2;
-                    n_periodCountStereo = leftSamples;
-                }
-                //! Count of stereo samples
-                ssize_t in_generatedStereo = (n_periodCountStereo > 512) ? 512 : n_periodCountStereo;
-                //! Total count of samples
-                ssize_t in_generatedPhys = in_generatedStereo * 2;
-                //! Unsigned total sample count
-                //fill buffer with zeros
-                int32_t *out_buf = player->m_outBuf;
-                std::memset(out_buf, 0, static_cast<size_t>(in_generatedPhys) * sizeof(out_buf[0]));
-                Synth &synth = *player->m_synth;
-                unsigned int chips = synth.m_numChips;
-                if(chips == 1)
-                {
-                    synth.m_chips[0]->generate32(out_buf, (size_t)in_generatedStereo);
-                }
-                else if(n_periodCountStereo > 0)
-                {
-                    /* Generate data from every chip and mix result */
-                    for(size_t card = 0; card < chips; ++card)
-                        synth.m_chips[card]->generateAndMix32(out_buf, (size_t)in_generatedStereo);
-                }
-
-                /* Process it */
-                if(SendStereoAudio(sampleCount, in_generatedStereo, out_buf, gotten_len, out_left, out_right, format) == -1)
-                    return 0;
-
-                left -= (int)in_generatedPhys;
-                gotten_len += (in_generatedPhys) /* - setup.stored_samples*/;
+                /* Generate data from every chip and mix result */
+                for(size_t card = 0; card < chips; ++card)
+                    synth.m_chips[card]->generateAndMix32(out_buf, (size_t)in_generatedStereo);
             }
 
-            if(hasSkipped)
-            {
-                setup.tick_skip_samples_delay -= n_periodCountStereo * 2;
-                hasSkipped = setup.tick_skip_samples_delay > 0;
-            }
-            else
-                setup.delay = player->Tick(eat_delay, setup.mindelay);
+            /* Process it */
+            if(SendStereoAudio(sampleCount, in_generatedStereo, out_buf, gotten_len, out_left, out_right, format) == -1)
+                return 0;
 
-        }//...
+            left -= (int)in_generatedPhys;
+            gotten_len += (in_generatedPhys) /* - setup.stored_samples*/;
+        }
+
+        if(hasSkipped)
+        {
+            setup.tick_skip_samples_delay -= n_periodCountStereo * 2;
+            hasSkipped = setup.tick_skip_samples_delay > 0;
+        }
+        else
+            setup.delay = player->Tick(eat_delay, setup.mindelay);
     }
 
     return static_cast<int>(gotten_len);
@@ -1418,47 +1415,45 @@ ADLMIDI_EXPORT int adl_generateFormat(struct ADL_MIDIPlayer *device, int sampleC
 
     while(left > 0)
     {
-        {//...
-            if(delay <= 0.0)
-                delay = double(left / 2) / double(setup.PCM_RATE);
-            const double eat_delay = delay < setup.maxdelay ? delay : setup.maxdelay;
-            delay -= eat_delay;
-            setup.carry += double(setup.PCM_RATE) * eat_delay;
-            n_periodCountStereo = static_cast<ssize_t>(setup.carry);
-            setup.carry -= double(n_periodCountStereo);
+        if(delay <= 0.0)
+            delay = double(left / 2) / double(setup.PCM_RATE);
+        const double eat_delay = delay < setup.maxdelay ? delay : setup.maxdelay;
+        delay -= eat_delay;
+        setup.carry += double(setup.PCM_RATE) * eat_delay;
+        n_periodCountStereo = static_cast<ssize_t>(setup.carry);
+        setup.carry -= double(n_periodCountStereo);
 
+        {
+            ssize_t leftSamples = left / 2;
+            if(n_periodCountStereo > leftSamples)
+                n_periodCountStereo = leftSamples;
+            //! Count of stereo samples
+            ssize_t in_generatedStereo = (n_periodCountStereo > 512) ? 512 : n_periodCountStereo;
+            //! Total count of samples
+            ssize_t in_generatedPhys = in_generatedStereo * 2;
+            //! Unsigned total sample count
+            //fill buffer with zeros
+            int32_t *out_buf = player->m_outBuf;
+            std::memset(out_buf, 0, static_cast<size_t>(in_generatedPhys) * sizeof(out_buf[0]));
+            Synth &synth = *player->m_synth;
+            unsigned int chips = synth.m_numChips;
+            if(chips == 1)
+                synth.m_chips[0]->generate32(out_buf, (size_t)in_generatedStereo);
+            else if(n_periodCountStereo > 0)
             {
-                ssize_t leftSamples = left / 2;
-                if(n_periodCountStereo > leftSamples)
-                    n_periodCountStereo = leftSamples;
-                //! Count of stereo samples
-                ssize_t in_generatedStereo = (n_periodCountStereo > 512) ? 512 : n_periodCountStereo;
-                //! Total count of samples
-                ssize_t in_generatedPhys = in_generatedStereo * 2;
-                //! Unsigned total sample count
-                //fill buffer with zeros
-                int32_t *out_buf = player->m_outBuf;
-                std::memset(out_buf, 0, static_cast<size_t>(in_generatedPhys) * sizeof(out_buf[0]));
-                Synth &synth = *player->m_synth;
-                unsigned int chips = synth.m_numChips;
-                if(chips == 1)
-                    synth.m_chips[0]->generate32(out_buf, (size_t)in_generatedStereo);
-                else if(n_periodCountStereo > 0)
-                {
-                    /* Generate data from every chip and mix result */
-                    for(unsigned card = 0; card < chips; ++card)
-                        synth.m_chips[card]->generateAndMix32(out_buf, (size_t)in_generatedStereo);
-                }
-                /* Process it */
-                if(SendStereoAudio(sampleCount, in_generatedStereo, out_buf, gotten_len, out_left, out_right, format) == -1)
-                    return 0;
-
-                left -= (int)in_generatedPhys;
-                gotten_len += (in_generatedPhys) /* - setup.stored_samples*/;
+                /* Generate data from every chip and mix result */
+                for(unsigned card = 0; card < chips; ++card)
+                    synth.m_chips[card]->generateAndMix32(out_buf, (size_t)in_generatedStereo);
             }
+            /* Process it */
+            if(SendStereoAudio(sampleCount, in_generatedStereo, out_buf, gotten_len, out_left, out_right, format) == -1)
+                return 0;
 
-            player->TickIterators(eat_delay);
-        }//...
+            left -= (int)in_generatedPhys;
+            gotten_len += (in_generatedPhys) /* - setup.stored_samples*/;
+        }
+
+        player->TickIterators(eat_delay);
     }
 
     return static_cast<int>(gotten_len);
