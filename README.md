@@ -76,8 +76,8 @@ The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT
 ## Available CMake options
 
 ### Library options
-* **CMAKE_PREFIX_PATH** - destination folder where libADLMIDI will be installed. On Linux it is /usr/local/ by default.
-* **CMAKE_BUILD_TYPE** - Build types: **Debug** or **Release**
+* **CMAKE_INSTALL_PREFIX** - destination directory where libADLMIDI will be installed. On Linux it is /usr/local/ by default.
+* **CMAKE_BUILD_TYPE** - Build types: **Debug** or **Release**. Also **MinSizeRel** or **RelWithDebInfo**.
 
 * **libADLMIDI_STATIC** - (ON/OFF, default ON) Build static library
 * **libADLMIDI_SHARED** - (ON/OFF, default OFF) Build shared library
