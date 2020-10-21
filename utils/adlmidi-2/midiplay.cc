@@ -889,9 +889,9 @@ static void ParseReverb(std::string specs)
             //    std::from_chars(&value[0], &value[value.size()], floatvalue); // Not implemented in GCC
 
             // Create a hash of the key
-            //Good: start=0x266191FB6907,mul=0x1,add=0x3238000,perm=0xF3B47F00, mod=21,shift=12   distance = 21  min=0 max=20
-            std::uint_fast64_t a=0xF5A9AADABAC7, b=0xC08F0800, c=0xA06C000, d=0x336A683E37B6, result=a + d*key.size();
-            unsigned mod=19, shift=3;
+            //Good: start=0xF4939CE1DDA3,mul=0xE519FDFD45F8,add=0x9770000,perm=0x67EE6A00, mod=17,shift=32   distance = 7854  min=0 max=16
+            std::uint_fast64_t a=0xF4939CE1DDA3, b=0x67EE6A00, c=0x9770000, d=0xE519FDFD45F8, result=a + d*key.size();
+            unsigned mod=17, shift=32;
             for(unsigned char ch: key)
             {
                 result += ch;
@@ -900,25 +900,26 @@ static void ParseReverb(std::string specs)
             }
             unsigned index = result % mod;
             // switch(index) {
-            // case 0: index = 2; break; // room, room_scale, scale, room-scale, roomscale
-            // case 1: index = 1; break; // g
-            // case 2: index = 6; break; // stereo, depth, stereo_depth, stereo-depth, stereodepth, width, s
-            // case 3: index = 3; break; // reverberance, factor, f
-            // case 4: index = 0; break; // none, off
-            // case 5: index = 0; break; // false
-            // case 6: index = 4; break; // hf, hf_damping, hf-damping, damping, dampening
-            // case 7: index = 0; break; // no
-            // case 8: index = 6; break; // wide
-            // case 9: index = 5; break; // delay, pre_delay, pre-delay, predelay, seconds, wait
-            // case 10: index = 4; break; // damp, d
-            // case 11: index = 1; break; // gain, wet_gain, wetgain, wet
-            // case 13: index = 2; break; // r
-            // case 15: index = 3; break; // amount
-            // case 16: index = 3; break; // reverb
-            // case 18: index = 5; break; // w
+            // case 0: index = 0; break; // 0
+            // case 1: index = 3; break; // reverberance, reverb, amount, f
+            // case 2: index = 1; break; // g
+            // case 3: index = 2; break; // room_scale, scale, room-scale, roomscale
+            // case 4: index = 5; break; // delay, pre_delay, pre-delay, predelay, wait
+            // case 5: index = 4; break; // hf, hf_damping, hf-damping, damping, dampening, d
+            // case 6: index = 2; break; // r
+            // case 7: index = 0; break; // no, n
+            // case 8: index = 5; break; // seconds, w
+            // case 9: index = 6; break; // stereo
+            // case 10: index = 0; break; // none, false
+            // case 11: index = 4; break; // damp
+            // case 12: index = 2; break; // room
+            // case 13: index = 6; break; // depth, stereo_depth, stereo-depth, stereodepth, width, wide, s
+            // case 14: index = 0; break; // off
+            // case 15: index = 1; break; // gain, wet_gain, wetgain, wet, wet-gain
+            // case 16: index = 3; break; // factor
             // }
-            index = (05733727145604003612 >> (index * 3)) & 7;
-            if(index < 7) ReverbSpecs.array[index] = floatvalue;
+            index = (031062406502452130 >> (index * 3)) & 7;
+            /*if(index < 7)*/ ReverbSpecs.array[index] = floatvalue;
         }
         specs.erase(specs.begin(), specs.begin() + colon);
     }
