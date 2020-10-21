@@ -8,6 +8,8 @@ endif()
 
 if(NOT WIN32 AND NOT ADLMIDI_DOS)
     option(ADLMIDI2_HAS_PUZZLE_GAME     "Enable the built-in puzzle game" ON)
+endif()
+if(NOT ADLMIDI_DOS)
     option(ADLMIDI2_VIDEO_OUT_SUPPORT   "Allow video recording with using of FFMPEG" ON)
 endif()
 

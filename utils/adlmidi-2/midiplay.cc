@@ -43,6 +43,9 @@
 # endif
 # include <windows.h>
 # include <mmsystem.h>
+# ifdef SUPPORT_VIDEO_OUTPUT
+#  define popen _popen
+# endif
 #endif
 
 #if defined(_WIN32) || defined(__DJGPP__)
@@ -397,7 +400,12 @@ public:
         if(NDirty)
         {
             #pragma omp parallel for schedule(static)
+# ifdef _WIN32
+            // MSVC refuses to compile unless scan is a signed variable
+            for(long scan = 0; scan < TxWidth * TxHeight; ++scan)
+# else
             for(unsigned scan = 0; scan < TxWidth * TxHeight; ++scan)
+# endif
                 if(DirtyCells[scan])
                 {
                     --NDirty;
@@ -1274,8 +1282,13 @@ static void SendStereoAudio(unsigned long count, short* samples)
                 " -c:v h264"
                 " -aspect " + std::to_string(UI.VidWidth) + "/" + std::to_string(UI.VidHeight) +
                 " -pix_fmt yuv420p"
+# ifdef _WIN32
+                " -preset superfast -partitions all -refs 2 -tune animation -y \"" + VidFilepath + "\"";
+            cmdline += " > nul 2> nul";
+# else
                 " -preset superfast -partitions all -refs 2 -tune animation -y '" + VidFilepath + "'"; // FIXME: escape filename
             cmdline += " >/dev/null 2>/dev/null";
+# endif
             fp = popen(cmdline.c_str(), "w");
         }
         if(fp)
