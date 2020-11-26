@@ -308,7 +308,9 @@ struct BanksDump
     size_t initBank(size_t bankId, const std::string &title, uint_fast16_t bankSetup);
     void addMidiBank(size_t bankId, bool percussion, MidiBank b);
     void addInstrument(MidiBank &bank, size_t patchId, InstrumentEntry e, Operator *ops, const std::string &meta = std::string());
-    void exportBanks(const std::string &outPath, const std::string &headerName = "adlmidi_db.h");
+    void exportBanks(const std::string &outPath,
+                     bool donntOverride,
+                     const std::string &headerName = "adlmidi_db.h");
 };
 
 
