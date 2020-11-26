@@ -2254,6 +2254,11 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
         }
     }
 
+    // Add final row
+    evtPos.absPos = abs_position;
+    abs_position += evtPos.delay;
+    m_trackData[0].push_back(evtPos);
+
     if(!m_trackData[0].empty())
         m_currentPosition.track[0].pos = m_trackData[0].begin();
 
