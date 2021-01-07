@@ -3,7 +3,7 @@ project(gen_adldata CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
-find_package(OpenMP)
+find_package(OpenMP QUIET)
 if(OPENMP_FOUND)
     if(MSVC AND NOT (MSVC_VERSION LESS 1900))
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
