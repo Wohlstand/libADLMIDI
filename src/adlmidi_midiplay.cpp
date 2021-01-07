@@ -36,7 +36,8 @@ enum { MasterVolumeDefault = 127 };
 
 inline bool isXgPercChannel(uint8_t msb, uint8_t lsb)
 {
-    return (msb == 0x7E || msb == 0x7F) && (lsb == 0);
+    ADL_UNUSED(lsb);
+    return (msb == 0x7E || msb == 0x7F);
 }
 
 void MIDIplay::AdlChannel::addAge(int64_t us)
@@ -329,7 +330,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
             // Let XG Percussion bank will use (0...127 LSB range in WOPN file)
 
             // Choose: SFX or Drum Kits
-            bank = midiins + ((bank == 0x7E00) ? 128 : 0);
+            bank = midiins + ((midiChan.bank_msb == 0x7E) ? 128 : 0);
         }
         else
         {
@@ -357,8 +358,8 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
             caughtMissingBank = true;
     }
 
-    //Or fall back to bank ignoring LSB (GS)
-    if((ains->flags & OplInstMeta::Flag_NoSound) && ((m_synthMode & Mode_GS) != 0))
+    //Or fall back to bank ignoring LSB (GS/XG)
+    if(ains->flags & OplInstMeta::Flag_NoSound)
     {
         size_t fallback = bank & ~(size_t)0x7F;
         if(fallback != bank)
