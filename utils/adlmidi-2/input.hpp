@@ -29,14 +29,23 @@ static const unsigned NewTimerFreq = 209;
 # include <csignal>
 #endif
 
+#if defined(HAS_TERMIO)
+typedef struct termio InputTermio_t;
+#elif defined(HAS_TERMIOS)
+typedef struct termios InputTermio_t;
+#else
+#   error Undefined type for termio;
+#endif
+
 class xInput
 {
-    #ifdef _WIN32
+#ifdef _WIN32
     void *inhandle;
-    #endif
-    #if (!defined(_WIN32) || defined(__CYGWIN__)) && !defined(__DJGPP__) && !defined(__APPLE__)
-    struct termio back;
-    #endif
+#endif
+#if (!defined(_WIN32) || defined(__CYGWIN__)) && !defined(__DJGPP__) && !defined(__APPLE__)
+    InputTermio_t back;
+#endif
+
 public:
     xInput();
     ~xInput();

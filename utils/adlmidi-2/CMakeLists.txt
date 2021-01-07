@@ -13,6 +13,9 @@ if(NOT ADLMIDI_DOS)
     option(ADLMIDI2_VIDEO_OUT_SUPPORT   "Allow video recording with using of FFMPEG" ON)
 endif()
 
+try_compile(HAS_TERMIO ${CMAKE_BINARY_DIR}/compile_tests "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-termio.c")
+try_compile(HAS_TERMIOS ${CMAKE_BINARY_DIR}/compile_tests "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-termios.c")
+
 set(adlmidi2_src)
 list(APPEND adlmidi2_src
     midiplay.cc
@@ -32,6 +35,18 @@ if(NOT WIN32 AND NOT ADLMIDI_DOS)
 endif()
 
 set_nopie(adlmidi2)
+
+if(HAS_TERMIO)
+    target_compile_definitions(adlmidi2 PRIVATE -DHAS_TERMIO)
+endif()
+
+if(HAS_TERMIOS)
+    target_compile_definitions(adlmidi2 PRIVATE -DHAS_TERMIOS)
+endif()
+
+if(NOT HAS_TERMIO AND NOT HAS_TERMIOS)
+    message(FATAL_ERROR "Failed to recognize the termio or termios terminal I/O type")
+endif()
 
 if(ADLMIDI2_HAS_PUZZLE_GAME)
     target_compile_definitions(adlmidi2 PUBLIC SUPPORT_PUZZLE_GAME)
