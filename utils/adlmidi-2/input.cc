@@ -5,7 +5,8 @@ xInput::xInput()
 #ifdef _WIN32
     inhandle = GetStdHandle(STD_INPUT_HANDLE);
 #endif
-#if (!defined(_WIN32) || defined(__CYGWIN__)) && !defined(__DJGPP__) && !defined(__APPLE__)
+
+#ifdef USE_TERMIO
     ioctl(0, TCGETA, &back);
     InputTermio_t term = back;
     term.c_lflag &= ~(ICANON | ECHO);
@@ -17,7 +18,7 @@ xInput::xInput()
 
 xInput::~xInput()
 {
-#if (!defined(_WIN32) || defined(__CYGWIN__)) && !defined(__DJGPP__) && !defined(__APPLE__)
+#ifdef USE_TERMIO
     if(ioctl(0, TCSETA, &back) < 0)
         fcntl(0, F_SETFL, fcntl(0, F_GETFL) & ~ O_NONBLOCK);
 #endif

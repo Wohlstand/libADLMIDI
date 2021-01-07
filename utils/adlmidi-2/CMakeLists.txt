@@ -44,10 +44,6 @@ if(HAS_TERMIOS)
     target_compile_definitions(adlmidi2 PRIVATE -DHAS_TERMIOS)
 endif()
 
-if(NOT HAS_TERMIO AND NOT HAS_TERMIOS)
-    message(FATAL_ERROR "Failed to recognize the termio or termios terminal I/O type")
-endif()
-
 if(ADLMIDI2_HAS_PUZZLE_GAME)
     target_compile_definitions(adlmidi2 PUBLIC SUPPORT_PUZZLE_GAME)
 endif()
