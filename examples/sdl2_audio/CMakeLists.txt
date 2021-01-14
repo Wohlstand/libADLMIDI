@@ -3,22 +3,22 @@ if(POLICY CMP0111)
 endif()
 
 find_package(SDL2 REQUIRED)
-add_library(ADLMIDI_SDL2 INTERFACE)
+add_library(ADLMIDIEXAMPLE_SDL2 INTERFACE)
 if(TARGET SDL2::SDL2)
     if(MINGW)
-        target_link_libraries(ADLMIDI_SDL2 INTERFACE mingw32 SDL2::SDL2main SDL2::SDL2)
+        target_link_libraries(ADLMIDIEXAMPLE_SDL2 INTERFACE mingw32 SDL2::SDL2main SDL2::SDL2)
     else()
-        target_link_libraries(ADLMIDI_SDL2 INTERFACE SDL2::SDL2)
+        target_link_libraries(ADLMIDIEXAMPLE_SDL2 INTERFACE SDL2::SDL2)
     endif()
-    target_include_directories(ADLMIDI_SDL2 INTERFACE ${SDL2_INCLUDE_DIRS})
+    target_include_directories(ADLMIDIEXAMPLE_SDL2 INTERFACE ${SDL2_INCLUDE_DIRS})
 else()
     string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
-    target_include_directories(ADLMIDI_SDL2 INTERFACE ${SDL2_INCLUDE_DIRS})
-    target_link_libraries(ADLMIDI_SDL2 INTERFACE ${SDL2_LIBRARIES})
+    target_include_directories(ADLMIDIEXAMPLE_SDL2 INTERFACE ${SDL2_INCLUDE_DIRS})
+    target_link_libraries(ADLMIDIEXAMPLE_SDL2 INTERFACE ${SDL2_LIBRARIES})
 endif()
 
 add_executable(adlmidi_sdl2_demo sdl2_sample.c)
-target_link_libraries(adlmidi_sdl2_demo PRIVATE ADLMIDI ADLMIDI_SDL2)
+target_link_libraries(adlmidi_sdl2_demo PRIVATE ADLMIDI ADLMIDIEXAMPLE_SDL2)
 
 set_nopie(adlmidi_sdl2_demo)
 
@@ -35,4 +35,3 @@ endif()
 
 install(TARGETS adlmidi_sdl2_demo
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-
