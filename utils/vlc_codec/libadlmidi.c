@@ -1,7 +1,7 @@
 /*****************************************************************************
  * libadlmidi.c: Software MIDI synthesizer using OPL3 Synth emulation
  *****************************************************************************
- * Copyright © 2015-2020 Vitaly Novichkov
+ * Copyright © 2015-2021 Vitaly Novichkov
  * $Id$
  *
  * This program is free software: you can redistribute it and/or modify
