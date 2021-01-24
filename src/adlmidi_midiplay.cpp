@@ -91,6 +91,7 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
     //m_setup.SkipForward = 0;
     m_setup.scaleModulators     = -1;
     m_setup.fullRangeBrightnessCC74 = false;
+    m_setup.enableAutoArpeggio = true;
     m_setup.delay = 0.0;
     m_setup.carry = 0.0;
     m_setup.tick_skip_samples_delay = 0;
@@ -1503,6 +1504,9 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
     {
         uint16_t cs = static_cast<uint16_t>(c);
 
+        if(!m_setup.enableAutoArpeggio)
+            break; // Arpeggio disabled completely
+
         if(c >= maxChannels)
             break;
         if(c == from_channel)
@@ -1725,6 +1729,13 @@ void MIDIplay::updateArpeggio(double) // amount = amount of time passed
     // simulated on the same channel, arpeggio them.
 
     Synth &synth = *m_synth;
+
+    if(!m_setup.enableAutoArpeggio) // Arpeggio was disabled
+    {
+        if(m_arpeggioCounter != 0)
+            m_arpeggioCounter = 0;
+        return;
+    }
 
 #if 0
     const unsigned desired_arpeggio_rate = 40; // Hz (upper limit)

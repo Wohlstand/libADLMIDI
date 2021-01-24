@@ -403,6 +403,7 @@ int main(int argc, char **argv)
             "      will be combined into one\n"
             " --solo <track>             Selects a solo track to play\n"
             " --only <track1,...,trackN> Selects a subset of tracks to play\n"
+            " -na Disable the auto-arpeggio\n"
 #ifndef HARDWARE_OPL3
             " -fp Enables full-panning stereo support\n"
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
@@ -483,6 +484,7 @@ int main(int argc, char **argv)
     bool recordWave = false;
     int loopEnabled = 1;
 #endif
+    int autoArpeggioEnabled = 1;
 
 #ifndef HARDWARE_OPL3
     int emulator = ADLMIDI_EMU_NUKED;
@@ -540,6 +542,8 @@ int main(int argc, char **argv)
         else if(!std::strcmp("-nl", argv[2]))
             loopEnabled = 0; //Enable loop
 #endif
+        else if(!std::strcmp("-na", argv[2]))
+            autoArpeggioEnabled = 0; //Enable auto-arpeggio
 
 #ifndef HARDWARE_OPL3
         else if(!std::strcmp("--emu-nuked", argv[2]))
@@ -638,6 +642,8 @@ int main(int argc, char **argv)
     //Turn loop on/off (for WAV recording loop must be disabled!)
     adl_setLoopEnabled(myDevice, recordWave ? 0 : loopEnabled);
 #endif
+
+    adl_setAutoArpeggio(myDevice, autoArpeggioEnabled);
 
 #ifdef DEBUG_TRACE_ALL_EVENTS
     //Hook all MIDI events are ticking while generating an output buffer
@@ -841,6 +847,8 @@ int main(int argc, char **argv)
         }
         std::fprintf(stdout, "\n");
     }
+
+    std::fprintf(stdout, " - Automatic arpeggion is turned %s\n", autoArpeggioEnabled ? "ON" : "OFF");
 
     std::fprintf(stdout, " - File [%s] opened!\n", musPath.c_str());
     flushout(stdout);

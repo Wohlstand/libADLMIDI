@@ -551,6 +551,15 @@ ADLMIDI_EXPORT void adl_setFullRangeBrightness(struct ADL_MIDIPlayer *device, in
     play->m_setup.fullRangeBrightnessCC74 = (fr_brightness != 0);
 }
 
+ADLMIDI_EXPORT void adl_setAutoArpeggio(ADL_MIDIPlayer *device, int aaEn)
+{
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_setup.enableAutoArpeggio = (aaEn != 0);
+}
+
 ADLMIDI_EXPORT void adl_setLoopEnabled(ADL_MIDIPlayer *device, int loopEn)
 {
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER

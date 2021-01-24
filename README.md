@@ -178,6 +178,9 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
+## 1.5.1   dev
+ * Added an ability to disable the automatical arpeggio
+
 ## 1.5.0.1 2020-10-11
  * Fixed an incorrect timer processing when using a real-time interface
 
@@ -305,4 +308,3 @@ To build that example you will need to have installed SDL2 library.
 
 ## 1.0.0	2015-10-10
  * First release of library
-
