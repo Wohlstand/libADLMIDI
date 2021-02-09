@@ -34,10 +34,13 @@ extern "C" {
 
 #if !defined(__STDC_VERSION__) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ < 199901L)) \
   || defined(__STRICT_ANSI__) || !defined(__cplusplus)
+/* Solaris defines the integer types regardless of what C/C++ standard is actually available, so avoid defining them at all by ourselves. */
+#ifndef __sun
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef signed short int int16_t;
 typedef unsigned short int uint16_t;
+#endif
 #endif
 
 /* Global OPL flags */
