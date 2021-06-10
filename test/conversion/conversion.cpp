@@ -13,6 +13,7 @@ static ADL_Instrument random_instrument()
     ins.note_offset2 = std::uniform_int_distribution<int>(-128, 127)(rng);
     ins.midi_velocity_offset = std::uniform_int_distribution<int>(-128, 127)(rng);
     ins.second_voice_detune = std::uniform_int_distribution<int>(-128, 127)(rng);
+    ins.second_voice_detune -= ins.second_voice_detune % 2; // Make sure number is even
     ins.percussion_key_number = std::uniform_int_distribution<unsigned>(0, 127)(rng);
     ins.inst_flags =
         std::uniform_int_distribution<unsigned>(0, 255)(rng) &
