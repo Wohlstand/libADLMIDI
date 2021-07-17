@@ -32,6 +32,10 @@
 #include <set>
 #include <assert.h>
 
+#if defined(VITA)
+#include <psp2kern/kernel/sysclib.h> // snprintf
+#endif
+
 #if defined(_WIN32) && !defined(__WATCOMC__)
 #   ifdef _MSC_VER
 #       ifdef _WIN64

@@ -63,8 +63,8 @@ if(NOT MSVC AND NOT MSDOS)
     endif()
 # Supress the std::vector::insert() GCC change warning
     if(VITA)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcompare-debug-second")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcompare-debug-second")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVITA -DVITA=1 -fcompare-debug-second")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVITA -DVITA=1 -fcompare-debug-second")
     endif()
 endif()
 
