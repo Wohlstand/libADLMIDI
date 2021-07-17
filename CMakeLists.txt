@@ -61,6 +61,11 @@ if(NOT MSVC AND NOT MSDOS)
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" )
         set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--no-undefined" )
     endif()
+# Supress the std::vector::insert() GCC change warning
+    if(VITA)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcompare-debug-second")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcompare-debug-second")
+    endif()
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -110,6 +115,12 @@ function(set_visibility_hidden destTarget)
 endfunction()
 #===========================================================================================
 
+if(VITA OR 3DS)
+    set(DEFAULT_HEAVY_EMULATORS OFF)
+else()
+    set(DEFAULT_HEAVY_EMULATORS ON)
+endif()
+
 option(libADLMIDI_STATIC   "Build static library of libADLMIDI" ON)
 option(libADLMIDI_SHARED   "Build shared library of libADLMIDI" OFF)
 
@@ -119,9 +130,9 @@ option(WITH_HQ_RESAMPLER    "Build with support for high quality resampling" OFF
 option(WITH_MUS_SUPPORT     "Build with support for DMX MUS files" ON)
 option(WITH_XMI_SUPPORT     "Build with support for AIL XMI files" ON)
 option(USE_DOSBOX_EMULATOR  "Use DosBox 0.74 OPL3 emulator (semi-accurate, suggested for slow or mobile platforms)" ON)
-option(USE_NUKED_EMULATOR   "Use Nuked OPL3 emulator (most accurate, powerful)" ON)
-option(USE_OPAL_EMULATOR    "Use Opal emulator (inaccurate)" ON)
-option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ON)
+option(USE_NUKED_EMULATOR   "Use Nuked OPL3 emulator (most accurate, powerful)" ${DEFAULT_HEAVY_EMULATORS})
+option(USE_OPAL_EMULATOR    "Use Opal emulator (inaccurate)" ${DEFAULT_HEAVY_EMULATORS})
+option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ${DEFAULT_HEAVY_EMULATORS})
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
 option(WITH_GENADLDATA_COMMENTS "Enable comments in a generated embedded instruments cache file" OFF)
@@ -138,6 +149,15 @@ option(EXAMPLE_SDL2_AUDIO   "Build also a simple SDL2 demo MIDI player" OFF)
 
 if(WIN32)
     option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
+endif()
+
+if(NOT WIN32
+   AND NOT VITA
+   AND NOT EMSCRIPTEN
+   AND NOT ADLMIDI_DOS)
+    option(ENABLE_FPIC "Build static libraries as position independent code" ON)
+else()
+    set(ENABLE_FPIC OFF)
 endif()
 
 function(handle_options targetLib)
@@ -249,7 +269,7 @@ if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     handle_options(ADLMIDI_static)
 
     # -fPIC thing
-    if(NOT WIN32 AND NOT ADLMIDI_DOS)
+    if(ENABLE_FPIC)
         set_target_properties(ADLMIDI_static PROPERTIES COMPILE_FLAGS "-fPIC")
     endif()
 
@@ -279,11 +299,6 @@ if(libADLMIDI_SHARED)
     endif()
     if(OPENBSD_LOCALBASE)
         set_property(TARGET ADLMIDI_shared APPEND_STRING PROPERTY LINK_FLAGS " -lc")
-    endif()
-
-    # -fPIC thing
-    if(NOT WIN32 AND NOT ADLMIDI_DOS)
-        set_target_properties(ADLMIDI_shared PROPERTIES COMPILE_FLAGS "-fPIC")
     endif()
 
     set_target_properties(ADLMIDI_shared PROPERTIES SOVERSION "1")
