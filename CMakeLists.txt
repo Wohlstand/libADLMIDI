@@ -121,8 +121,16 @@ else()
     set(DEFAULT_HEAVY_EMULATORS ON)
 endif()
 
-option(libADLMIDI_STATIC   "Build static library of libADLMIDI" ON)
-option(libADLMIDI_SHARED   "Build shared library of libADLMIDI" OFF)
+if(NOT EMSCRIPTEN
+   AND NOT VITA
+   AND NOT 3DS
+   AND NOT ADLMIDI_DOS)
+    option(libADLMIDI_STATIC   "Build static library of libADLMIDI" ON)
+    option(libADLMIDI_SHARED   "Build shared library of libADLMIDI" OFF)
+else()
+    set(libADLMIDI_STATIC ON)
+    set(libADLMIDI_SHARED OFF)
+endif()
 
 option(WITH_MIDI_SEQUENCER  "Build with embedded MIDI sequencer. Disable this if you want use library in real-time MIDI drivers or plugins." ON)
 option(WITH_EMBEDDED_BANKS  "Use embedded banks" ON)
