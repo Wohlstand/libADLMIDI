@@ -83,6 +83,11 @@ if(WITH_GENADLDATA_PROGRESS OR WITH_GENADLDATA_DEEPDEBUG)
     target_compile_options(gen_adldata PUBLIC "-DADL_GENDATA_PRINT_PROGRESS")
 endif()
 
+option(WITH_GENADLDATA_MINIFY "Minify the printing result at gen_adldata" ON)
+if(WITH_GENADLDATA_MINIFY)
+    target_compile_options(gen_adldata PUBLIC "-DADL_GENDATA_MINIFY")
+endif()
+
 if(WITH_GENADLDATA_COMMENTS)
     target_compile_options(gen_adldata PUBLIC "-DADLDATA_WITH_COMMENTS")
 endif()
