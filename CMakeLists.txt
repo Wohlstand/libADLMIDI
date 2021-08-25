@@ -161,6 +161,7 @@ endif()
 
 if(NOT WIN32
    AND NOT VITA
+   AND NOT 3DS
    AND NOT EMSCRIPTEN
    AND NOT ADLMIDI_DOS)
     option(ENABLE_FPIC "Build static libraries as position independent code" ON)
