@@ -181,6 +181,7 @@ To build that example you will need to have installed SDL2 library.
 ## 1.5.1   dev
  * Added an ability to disable the automatical arpeggio
  * Added an ability to set the count of loops (how many times to play the song)
+ * Added an ability to disable/enable playing of selected MIDI channels
 
 ## 1.5.0.1 2020-10-11
  * Fixed an incorrect timer processing when using a real-time interface

@@ -1569,6 +1569,27 @@ ADLMIDI_EXPORT int adl_setTrackOptions(struct ADL_MIDIPlayer *device, size_t tra
 #endif
 }
 
+ADLMIDI_EXPORT int adl_setChannelEnabled(struct ADL_MIDIPlayer *device, size_t channelNumber, int enabled)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return -1;
+
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    MidiSequencer &seq = *play->m_sequencer;
+
+    if(!seq.setChannelEnabled(channelNumber, (bool)enabled))
+        return -1;
+    return 0;
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(channelNumber);
+    ADL_UNUSED(enabled);
+    return -1;
+#endif
+}
+
 ADLMIDI_EXPORT int adl_setTriggerHandler(struct ADL_MIDIPlayer *device, ADL_TriggerHandler handler, void *userData)
 {
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
