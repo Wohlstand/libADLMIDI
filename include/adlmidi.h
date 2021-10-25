@@ -564,6 +564,16 @@ extern ADLMIDI_DECLSPEC void adl_setAutoArpeggio(struct ADL_MIDIPlayer *device, 
 extern ADLMIDI_DECLSPEC void adl_setLoopEnabled(struct ADL_MIDIPlayer *device, int loopEn);
 
 /**
+ * @brief Set how many times loop will be played
+ *
+ * Note: The song will be played once if loop has been disabled with no matter which value of loop count was set
+ *
+ * @param device Instance of the library
+ * @param loopCount Number of loops or -1 to loop infinitely
+ */
+extern ADLMIDI_DECLSPEC void adl_setLoopCount(struct ADL_MIDIPlayer *device, int loopCount);
+
+/**
  * @brief Enable or disable soft panning with chip emulators
  * @param device Instance of the library
  * @param softPanEn 0 - disabled, 1 - enabled

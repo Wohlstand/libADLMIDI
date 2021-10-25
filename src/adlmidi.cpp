@@ -574,6 +574,21 @@ ADLMIDI_EXPORT void adl_setLoopEnabled(ADL_MIDIPlayer *device, int loopEn)
 #endif
 }
 
+ADLMIDI_EXPORT void adl_setLoopCount(ADL_MIDIPlayer *device, int loopCount)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_sequencer->setLoopsCount(loopCount);
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(loopCount);
+#endif
+}
+
+
 ADLMIDI_EXPORT void adl_setSoftPanEnabled(ADL_MIDIPlayer *device, int softPanEn)
 {
     if(!device)
