@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 
 #ifdef __DJGPP__
 typedef signed char     int8_t;
@@ -1240,4 +1241,3 @@ static int xmi2mid_ExtractTracks(struct xmi2mid_xmi_ctx *ctx) {
 
     return (0);
 }
-
