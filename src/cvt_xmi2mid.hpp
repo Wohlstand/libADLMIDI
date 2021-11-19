@@ -90,7 +90,7 @@ typedef struct {
 } midi_descriptor;
 
 struct xmi2mid_xmi_ctx {
-    uint8_t *src, *src_ptr;
+    uint8_t *src, *src_ptr, *src_end;
     uint32_t srcsize;
     uint32_t datastart;
     uint8_t *dst, *dst_ptr;
@@ -129,6 +129,7 @@ static uint32_t xmi2mid_ExtractTracksFromXmi(struct xmi2mid_xmi_ctx *ctx);
 static uint32_t xmi2mid_read1(struct xmi2mid_xmi_ctx *ctx)
 {
     uint8_t b0;
+    assert(ctx->src_ptr + 1 < ctx->src_end);
     b0 = *ctx->src_ptr++;
     return (b0);
 }
@@ -136,6 +137,7 @@ static uint32_t xmi2mid_read1(struct xmi2mid_xmi_ctx *ctx)
 static uint32_t xmi2mid_read2(struct xmi2mid_xmi_ctx *ctx)
 {
     uint8_t b0, b1;
+    assert(ctx->src_ptr + 2 < ctx->src_end);
     b0 = *ctx->src_ptr++;
     b1 = *ctx->src_ptr++;
     return (b0 + ((uint32_t)b1 << 8));
@@ -144,6 +146,7 @@ static uint32_t xmi2mid_read2(struct xmi2mid_xmi_ctx *ctx)
 static uint32_t xmi2mid_read4(struct xmi2mid_xmi_ctx *ctx)
 {
     uint8_t b0, b1, b2, b3;
+    assert(ctx->src_ptr + 4 < ctx->src_end);
     b3 = *ctx->src_ptr++;
     b2 = *ctx->src_ptr++;
     b1 = *ctx->src_ptr++;
@@ -154,6 +157,7 @@ static uint32_t xmi2mid_read4(struct xmi2mid_xmi_ctx *ctx)
 static uint32_t xmi2mid_read4le(struct xmi2mid_xmi_ctx *ctx)
 {
     uint8_t b0, b1, b2, b3;
+    assert(ctx->src_ptr + 4 < ctx->src_end);
     b3 = *ctx->src_ptr++;
     b2 = *ctx->src_ptr++;
     b1 = *ctx->src_ptr++;
@@ -163,6 +167,7 @@ static uint32_t xmi2mid_read4le(struct xmi2mid_xmi_ctx *ctx)
 
 static void xmi2mid_copy(struct xmi2mid_xmi_ctx *ctx, char *b, uint32_t len)
 {
+    assert(ctx->src_ptr + len < ctx->src_end);
     memcpy(b, ctx->src_ptr, len);
     ctx->src_ptr += len;
 }
@@ -525,6 +530,7 @@ static int Convert_xmi2midi(uint8_t *in, uint32_t insize,
     memset(&ctx, 0, sizeof(struct xmi2mid_xmi_ctx));
     ctx.src = ctx.src_ptr = in;
     ctx.srcsize = insize;
+    ctx.src_end = ctx.src + insize;
     ctx.convert_type = convert_type;
 
     if (xmi2mid_ParseXMI(&ctx) < 0) {
@@ -632,6 +638,8 @@ static int xmi2mid_GetVLQ(struct xmi2mid_xmi_ctx *ctx, uint32_t *quant) {
 
     *quant = 0;
     for (i = 0; i < 4; i++) {
+        if(ctx->src_ptr + 1 >= ctx->src + ctx->srcsize)
+            break;
         data = xmi2mid_read1(ctx);
         *quant <<= 7;
         *quant |= data & 0x7F;

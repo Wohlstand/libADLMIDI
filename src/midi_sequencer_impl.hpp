@@ -1825,7 +1825,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         // Special event FF
         uint_fast16_t  evtype = evt.subtype;
         uint64_t length = static_cast<uint64_t>(evt.data.size());
-        const char *data(length ? reinterpret_cast<const char *>(evt.data.data()) : "");
+        const char *data(length ? reinterpret_cast<const char *>(evt.data.data()) : "\0\0\0\0\0\0\0\0");
 
         if(m_interface->rt_metaEvent) // Meta event hook
             m_interface->rt_metaEvent(m_interface->rtUserData, evtype, reinterpret_cast<const uint8_t*>(data), size_t(length));
@@ -1879,9 +1879,22 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     m_loop.skipStackStart = false;
                     return;
                 }
-                LoopStackEntry &s = m_loop.stack[static_cast<size_t>(m_loop.stackLevel + 1)];
-                s.loops = static_cast<int>(data[0]);
-                s.infinity = (data[0] == 0);
+
+                char x = data[0];
+                size_t s_addr = static_cast<size_t>(m_loop.stackLevel + 1);
+                while(s_addr >= m_loop.stack.size())
+                {
+                    LoopStackEntry e;
+                    e.loops = x;
+                    e.infinity = (x == 0);
+                    e.start = 0;
+                    e.end = 0;
+                    m_loop.stack.push_back(e);
+                }
+
+                LoopStackEntry &s = m_loop.stack[s_addr];
+                s.loops = static_cast<int>(x);
+                s.infinity = (x == 0);
                 m_loop.caughtStackStart = true;
                 return;
             }
@@ -2899,12 +2912,15 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
     size_t mus_len = fr.fileSize();
     fr.seek(0, FileAndMemReader::SET);
 
-    uint8_t *mus = (uint8_t*)malloc(mus_len);
+    uint8_t *mus = (uint8_t*)std::malloc(mus_len + 20);
     if(!mus)
     {
         m_errorString = "Out of memory!";
         return false;
     }
+
+    std::memset(mus, 0, mus_len + 20);
+
     fsize = fr.read(mus, 1, mus_len);
     if(fsize < mus_len)
     {
@@ -2917,7 +2933,7 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
 
     uint8_t *mid = NULL;
     uint32_t mid_len = 0;
-    int m2mret = Convert_xmi2midi(mus, static_cast<uint32_t>(mus_len),
+    int m2mret = Convert_xmi2midi(mus, static_cast<uint32_t>(mus_len + 20),
                                   &mid, &mid_len, XMIDI_CONVERT_NOCONVERSION);
     if(mus)
         free(mus);
