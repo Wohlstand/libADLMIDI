@@ -1318,8 +1318,13 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                         m_currentPosition.wait += m_postSongWaitDelay; // One second delay until stop playing
                     }
                 }
+
                 m_currentPosition = s.startPosition;
                 m_loop.skipStackStart = true;
+
+                for(uint8_t i = 0; i < 16; i++)
+                    m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+
                 return true;
             }
             else
@@ -1330,6 +1335,10 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                 {
                     m_currentPosition = s.startPosition;
                     m_loop.skipStackStart = true;
+
+                    for(uint8_t i = 0; i < 16; i++)
+                        m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+
                     return true;
                 }
                 else
@@ -1353,6 +1362,9 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     {
         if(m_interface->onloopEnd) // Loop End hook
             m_interface->onloopEnd(m_interface->onloopEnd_userData);
+
+        for(uint8_t i = 0; i < 16; i++)
+            m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
 
         // Loop if song end or loop end point has reached
         m_loop.caughtEnd         = false;
