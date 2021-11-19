@@ -1881,8 +1881,8 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                 }
 
                 char x = data[0];
-                size_t s_addr = static_cast<size_t>(m_loop.stackLevel + 1);
-                while(s_addr >= m_loop.stack.size())
+                size_t slevel = static_cast<size_t>(m_loop.stackLevel + 1);
+                while(slevel >= m_loop.stack.size())
                 {
                     LoopStackEntry e;
                     e.loops = x;
@@ -1892,7 +1892,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     m_loop.stack.push_back(e);
                 }
 
-                LoopStackEntry &s = m_loop.stack[s_addr];
+                LoopStackEntry &s = m_loop.stack[slevel];
                 s.loops = static_cast<int>(x);
                 s.infinity = (x == 0);
                 m_loop.caughtStackStart = true;
