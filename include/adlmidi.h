@@ -658,6 +658,8 @@ enum ADL_Emulator
     ADLMIDI_EMU_OPAL,
     /*! Java */
     ADLMIDI_EMU_JAVA,
+   /*! VGM file dumper (required for MIDI2VGM) */
+    OPNMIDI_VGM_DUMPER,
     /*! Count instrument on the level */
     ADLMIDI_EMU_end
 };

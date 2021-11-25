@@ -60,6 +60,10 @@ static const unsigned OPLBase = 0x388;
 #   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
 #       include "chips/java_opl3.h"
 #   endif
+
+// VGM File dumper
+#ifdef OPNMIDI_MIDI2VGM
+#include "chips/vgm_file_dumper.h"
 #endif
 
 static const unsigned adl_emulatorSupport = 0
