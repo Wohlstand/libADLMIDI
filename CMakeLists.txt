@@ -367,6 +367,7 @@ if(WITH_MIDI2VGM)
         message(FATAL_ERROR "To build MIDI to VGM converter, you must enable -DUSE_VGM_FILE_DUMPER=ON flag!")
     endif()
     add_subdirectory(utils/midi2vgm)
+    endif()
 
 if(WITH_ADLMIDI2)
     add_subdirectory(utils/adlmidi-2)
