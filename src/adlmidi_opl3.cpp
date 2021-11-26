@@ -62,8 +62,9 @@ static const unsigned OPLBase = 0x388;
 #   endif
 
 // VGM File dumper
-#ifdef OPNMIDI_MIDI2VGM
-#include "chips/vgm_file_dumper.h"
+#   ifdef ADLMIDI_MIDI2VGM
+#      include "chips/vgm_file_dumper.h"
+#   endif
 #endif
 
 static const unsigned adl_emulatorSupport = 0
