@@ -84,6 +84,9 @@ static const unsigned adl_emulatorSupport = 0
 #   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
     | (1u << ADLMIDI_EMU_JAVA)
 #   endif
+#   ifdef ADLMIDI_MIDI2VGM
+    | (1u << OPNMIDI_VGM_DUMPER)
+#   endif       
 #endif
 ;
 
@@ -1735,11 +1738,21 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_insCache.clear();
     m_keyBlockFNumCache.clear();
     m_regBD.clear();
-
+#ifdef ADLMIDI_MIDI2VGM
+    if(emulator == ADLMIDI_VGM_DUMPER && (m_numChips > 2))
+        m_numChips = 2;// VGM Dumper can't work in multichip mode
+#endif       
 #ifndef ADLMIDI_HW_OPL
     m_chips.resize(m_numChips, AdlMIDI_SPtr<OPLChipBase>());
 #endif
 
+#ifdef ADLMIDI_MIDI2VGM
+    m_loopStartHook = NULL;
+    m_loopStartHookData = NULL;
+    m_loopEndHook = NULL;
+    m_loopEndHookData = NULL;
+#endif
+       
     const struct OplTimbre defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
     m_numChannels = m_numChips * NUM_OF_CHANNELS;
     m_insCache.resize(m_numChannels, defaultInsCache);
@@ -1776,7 +1789,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
         case ADLMIDI_EMU_NUKED: /* Latest Nuked OPL3 */
             chip = new NukedOPL3;
             break;
-        case ADLMIDI_EMU_NUKED_174: /* Old Nuked OPL3 1.4.7 modified and optimized */
+        case ADLMIDI_EMU_NUKED_174: /* Old Nuked OPL3 1.7.4 modified and optimized */
             chip = new NukedOPL3v174;
             break;
 #endif
@@ -1795,6 +1808,18 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             chip = new JavaOPL3;
             break;
 #endif
+#ifdef ADLMIDI_MIDI2VGM
+        case ADLMIDI_VGM_DUMPER:
+            chip = new VGMFileDumper(family, i, (i == 0 ? NULL : m_chips[0].get()));
+            if(i == 0)//Set hooks for first chip only
+            {
+                m_loopStartHook = &VGMFileDumper::loopStartHook;
+                m_loopStartHookData = chip;
+                m_loopEndHook  = &VGMFileDumper::loopEndHook;
+                m_loopEndHookData = chip;
+            }
+            break;
+#endif                      
         }
         m_chips[i].reset(chip);
         chip->setChipId((uint32_t)i);
