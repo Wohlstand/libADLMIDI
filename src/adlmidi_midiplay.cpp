@@ -160,7 +160,13 @@ void MIDIplay::applySetup()
     synth.reset(m_setup.emulator, m_setup.PCM_RATE, this);
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
-
+    #if defined(ADLMIDI_MIDI2VGM) && !defined(ADLMIDI_DISABLE_MIDI_SEQUENCER)
+    m_sequencerInterface->onloopStart = synth.m_loopStartHook;
+    m_sequencerInterface->onloopStart_userData = synth.m_loopStartHookData;
+    m_sequencerInterface->onloopEnd = synth.m_loopEndHook;
+    m_sequencerInterface->onloopEnd_userData = synth.m_loopEndHookData;
+    m_sequencer->setLoopHooksOnly(m_sequencerInterface->onloopStart != NULL);
+    #endif
     // Reset the arpeggio counter
     m_arpeggioCounter = 0;
 }
