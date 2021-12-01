@@ -23,7 +23,7 @@
 
 #include "opl_chip_base.h"
 
-class VGMFileDumper final : public ADLChipBaseBufferedT<VGMFileDumper>
+class VGMFileDumper final : public OPLChipBaseBufferedT<VGMFileDumper>
 {
     //! Output file instance
     FILE    *m_output;
@@ -90,7 +90,7 @@ class VGMFileDumper final : public ADLChipBaseBufferedT<VGMFileDumper>
     void writeWait(uint_fast16_t value);
     void flushWait();
 public:
-    explicit VGMFileDumper(ADLFamily f, int index, void *first);
+    explicit VGMFileDumper(OPLFamily f, int index, void *first);
     ~VGMFileDumper() override;
 
     bool canRunAtPcmRate() const override { return true; }

@@ -85,7 +85,7 @@ static const unsigned adl_emulatorSupport = 0
     | (1u << ADLMIDI_EMU_JAVA)
 #   endif
 #   ifdef ADLMIDI_MIDI2VGM
-    | (1u << OPNMIDI_VGM_DUMPER)
+    | (1u << ADLMIDI_VGM_DUMPER)
 #   endif       
 #endif
 ;
