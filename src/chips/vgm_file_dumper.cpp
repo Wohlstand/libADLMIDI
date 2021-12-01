@@ -171,7 +171,7 @@ void VGMFileDumper::writeCommand(uint_fast8_t cmd, uint_fast16_t key, uint_fast8
     m_bytes_written += 3;
 }
 
-VGMFileDumper::VGMFileDumper(ADLFamily f, int index, void *first)
+VGMFileDumper::VGMFileDumper(int index, void *first)
     : ADLChipBaseBufferedT(f)
 {
     m_output = NULL;
