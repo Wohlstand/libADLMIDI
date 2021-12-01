@@ -90,7 +90,7 @@ class VGMFileDumper final : public OPLChipBaseBufferedT<VGMFileDumper>
     void writeWait(uint_fast16_t value);
     void flushWait();
 public:
-    explicit VGMFileDumper(OPLFamily f, int index, void *first);
+    explicit VGMFileDumper(int index, void *first);
     ~VGMFileDumper() override;
 
     bool canRunAtPcmRate() const override { return true; }

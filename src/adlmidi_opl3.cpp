@@ -1810,7 +1810,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
 #endif
 #ifdef ADLMIDI_MIDI2VGM
         case ADLMIDI_VGM_DUMPER:
-            chip = new VGMFileDumper(family, i, (i == 0 ? NULL : m_chips[0].get()));
+            chip = new VGMFileDumper(i, (i == 0 ? NULL : m_chips[0].get()));
             if(i == 0)//Set hooks for first chip only
             {
                 m_loopStartHook = &VGMFileDumper::loopStartHook;
