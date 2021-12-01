@@ -848,7 +848,7 @@ int main(int argc, char **argv)
         std::fprintf(stdout, "\n");
     }
 
-    std::fprintf(stdout, " - Automatic arpeggion is turned %s\n", autoArpeggioEnabled ? "ON" : "OFF");
+    std::fprintf(stdout, " - Automatic arpeggio is turned %s\n", autoArpeggioEnabled ? "ON" : "OFF");
 
     std::fprintf(stdout, " - File [%s] opened!\n", musPath.c_str());
     flushout(stdout);
