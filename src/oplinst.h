@@ -106,6 +106,7 @@ struct OplBankSetup
     bool    deepTremolo;
     bool    deepVibrato;
     bool    scaleModulators;
+    bool    mt32defaults;
 };
 
 /**

@@ -5,7 +5,7 @@
 
 bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
                           const std::string &bankTitle, const char *prefix,
-                          bool percussive, bool noRhythmMode)
+                          bool percussive, bool noRhythmMode, bool mt32)
 {
 #ifdef HARD_BANKS
     writeIni("IBK", fn, prefix, bank, percussive ? INI_Drums : INI_Melodic);
@@ -23,7 +23,10 @@ bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
     }
     std::fclose(fp);
 
-    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_Generic);
+    uint_fast16_t bankSetup = mt32 ?
+                              BanksDump::BankEntry::SETUP_IBK_MT32 :
+                              BanksDump::BankEntry::SETUP_Generic;
+    size_t bankDb = db.initBank(bank, bankTitle, bankSetup);
     BanksDump::MidiBank bnk;
 
     unsigned offs1_base = 0x804, offs1_len = 9;

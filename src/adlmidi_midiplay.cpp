@@ -128,6 +128,7 @@ void MIDIplay::applySetup()
         synth.m_insBankSetup.volumeModel = (b.bankSetup & 0x00FF);
         synth.m_insBankSetup.deepTremolo = (b.bankSetup >> 8 & 0x0001) != 0;
         synth.m_insBankSetup.deepVibrato = (b.bankSetup >> 8 & 0x0002) != 0;
+        synth.m_insBankSetup.mt32defaults = (b.bankSetup >> 8 & 0x0004) != 0;
     }
 #endif
 
@@ -202,15 +203,15 @@ void MIDIplay::resetMIDIDefaults(int offset)
     for(size_t c = offset, n = m_midiChannels.size(); c < n; ++c)
     {
         MIDIchannel &ch = m_midiChannels[c];
-        if(synth.m_musicMode == Synth::MODE_XMIDI)
+
+        if(synth.m_musicMode == Synth::MODE_RSXX)
+            ch.def_volume = 127;
+        else if(synth.m_insBankSetup.mt32defaults)
         {
             ch.def_volume = 127;
             ch.def_bendsense_lsb = 0;
             ch.def_bendsense_msb = 12;
         }
-        else
-        if(synth.m_musicMode == Synth::MODE_RSXX)
-            ch.def_volume = 127;
     }
 }
 

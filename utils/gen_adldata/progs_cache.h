@@ -100,7 +100,9 @@ struct BanksDump
             /* Enable Deep-Tremolo flag */
             WOPL_FLAG_DEEP_TREMOLO = 0x01,
             /* Enable Deep-Vibrato flag */
-            WOPL_FLAG_DEEP_VIBRATO = 0x02
+            WOPL_FLAG_DEEP_VIBRATO = 0x02,
+            /* Enable MT32 defaults (127 initials and octave-wide pitch bend by default, etc.) */
+            WOPL_FLAG_MT32 = 0x04
         } WOPLFileFlags;
 
         /* Volume scaling model implemented in the libADLMIDI */
@@ -119,7 +121,7 @@ struct BanksDump
         } WOPL_VolumeModel;
 
         /**
-         * @brief Suggested bank setup in dependence from a driver that does use of this
+         * @brief Suggested bank setup depending from a driver that does use of this
          */
         enum BankSetup
         {
@@ -129,7 +131,9 @@ struct BanksDump
             SETUP_DMX     = 0x0002,
             SETUP_Apogee  = 0x0003,
             SETUP_AIL     = 0x0307,
+            SETUP_AIL_MT32= 0x0707,
             SETUP_IBK     = 0x0301,
+            SETUP_IBK_MT32= 0x0700,
             SETUP_IMF     = 0x0200,
             SETUP_CMF     = 0x0201,
             SETUP_HMI     = 0x0309
@@ -333,14 +337,14 @@ struct BanksDump
 namespace BankFormats
 {
 
-bool LoadMiles(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
+bool LoadMiles(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix, bool mt32);
 bool LoadBisqwit(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadBNK(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix, bool is_fat, bool percussive);
 bool LoadBNK2(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix,
                      const std::string &melo_filter,
                      const std::string &perc_filter);
 bool LoadEA(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
-bool LoadIBK(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix, bool percussive, bool noRhythmMode = false);
+bool LoadIBK(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix, bool percussive, bool noRhythmMode, bool mt32);
 bool LoadJunglevision(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);

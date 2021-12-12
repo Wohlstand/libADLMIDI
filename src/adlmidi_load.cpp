@@ -117,6 +117,7 @@ bool MIDIplay::LoadBank(FileAndMemReader &fr)
     synth.m_insBankSetup.scaleModulators = false;
     synth.m_insBankSetup.deepTremolo = (wopl->opl_flags & WOPL_FLAG_DEEP_TREMOLO) != 0;
     synth.m_insBankSetup.deepVibrato = (wopl->opl_flags & WOPL_FLAG_DEEP_VIBRATO) != 0;
+    synth.m_insBankSetup.mt32defaults = (wopl->opl_flags & WOPL_FLAG_MT32) != 0;
     synth.m_insBankSetup.volumeModel = wopl->volume_model;
     m_setup.deepTremoloMode = -1;
     m_setup.deepVibratoMode = -1;

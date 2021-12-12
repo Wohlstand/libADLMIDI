@@ -65,6 +65,7 @@ int main(int argc, char**argv)
             std::string filter_p;
             std::string format;
             bool noRhythmMode = false;
+            bool mt32defaults = false;
 
             ini.read("name",     bank_name, "Untitled");
             ini.read("format",   format,    "Unknown");
@@ -75,6 +76,7 @@ int main(int argc, char**argv)
             ini.read("filter-m", filter_m, "");
             ini.read("filter-p", filter_p, "");
             ini.read("no-rhythm-mode", noRhythmMode, false);
+            ini.read("mt32-defaults", mt32defaults, false);
 
             if(filepath.empty())
             {
@@ -88,7 +90,7 @@ int main(int argc, char**argv)
 
             if(format == "AIL")
             {
-                if(!BankFormats::LoadMiles(db, filepath.c_str(), bank, bank_name, prefix.c_str()))
+                if(!BankFormats::LoadMiles(db, filepath.c_str(), bank, bank_name, prefix.c_str(), mt32defaults))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -177,7 +179,7 @@ int main(int argc, char**argv)
             else
             if(format == "IBK")
             {
-                if(!BankFormats::LoadIBK(db, filepath.c_str(),  bank, bank_name, prefix.c_str(),   false))
+                if(!BankFormats::LoadIBK(db, filepath.c_str(),  bank, bank_name, prefix.c_str(),   false, false, mt32defaults))
                 {
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
@@ -185,7 +187,7 @@ int main(int argc, char**argv)
                 if(!filepath_d.empty())
                 {
                     //printf("Loading %s... \n", filepath_d.c_str());
-                    if(!BankFormats::LoadIBK(db, filepath_d.c_str(),bank, bank_name, prefix_d.c_str(), true, noRhythmMode))
+                    if(!BankFormats::LoadIBK(db, filepath_d.c_str(),bank, bank_name, prefix_d.c_str(), true, noRhythmMode, mt32defaults))
                     {
                         std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                         return 1;

@@ -60,7 +60,9 @@ typedef enum WOPLFileFlags
     /* Enable Deep-Tremolo flag */
     WOPL_FLAG_DEEP_TREMOLO = 0x01,
     /* Enable Deep-Vibrato flag */
-    WOPL_FLAG_DEEP_VIBRATO = 0x02
+    WOPL_FLAG_DEEP_VIBRATO = 0x02,
+    /* Enable MT32 defaults (127 initials and octave-wide pitch bend by default, etc.) */
+    WOPL_FLAG_MT32 = 0x04
 } WOPLFileFlags;
 
 /* Volume scaling model implemented in the libADLMIDI */

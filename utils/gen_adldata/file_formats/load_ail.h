@@ -13,7 +13,7 @@ struct GTL_Head // GTL file header entry structure
 };
 
 bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
-                            const std::string &bankTitle, const char *prefix)
+                            const std::string &bankTitle, const char *prefix, bool mt32)
 {
 #ifdef HARD_BANKS
     writeIni("AIL", fn, prefix, bank, INI_Both);
@@ -60,7 +60,10 @@ bool BankFormats::LoadMiles(BanksDump &db, const char *fn, unsigned bank,
     }
     while(data_pos < data_end);
 
-    size_t bankDb = db.initBank(bank, bankTitle, BanksDump::BankEntry::SETUP_AIL);
+    uint_fast16_t bankSetup = mt32 ?
+                              BanksDump::BankEntry::SETUP_AIL_MT32 :
+                              BanksDump::BankEntry::SETUP_AIL;
+    size_t bankDb = db.initBank(bank, bankTitle, bankSetup);
 
     std::vector<BanksDump::MidiBank> bnkMelodic;
     bnkMelodic.resize(max_bank_number + 1, BanksDump::MidiBank());
