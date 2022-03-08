@@ -21,12 +21,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if !defined(_WIN32)
-#include <pthread.h>
+#ifndef DOSBOX_NO_MUTEX
+#   if !defined(_WIN32)
+#       include <pthread.h>
 typedef pthread_mutex_t MutexNativeObject;
-#else
-#include <windows.h>
+#   else
+#       include <windows.h>
 typedef CRITICAL_SECTION MutexNativeObject;
+#   endif
 #endif
 
 class Mutex
@@ -37,7 +39,9 @@ public:
     void lock();
     void unlock();
 private:
+#if !defined(DOSBOX_NO_MUTEX)
     MutexNativeObject m;
+#endif
     Mutex(const Mutex &);
     Mutex &operator=(const Mutex &);
 };
@@ -53,7 +57,22 @@ private:
     MutexHolder &operator=(const MutexHolder &);
 };
 
-#if !defined(_WIN32)
+#if defined(DOSBOX_NO_MUTEX) // No mutex, just a dummy
+
+inline Mutex::Mutex()
+{}
+
+inline Mutex::~Mutex()
+{}
+
+inline void Mutex::lock()
+{}
+
+inline void Mutex::unlock()
+{}
+
+#elif !defined(_WIN32) // pthread
+
 inline Mutex::Mutex()
 {
     pthread_mutex_init(&m, NULL);
@@ -73,7 +92,9 @@ inline void Mutex::unlock()
 {
     pthread_mutex_unlock(&m);
 }
-#else
+
+#else // Win32
+
 inline Mutex::Mutex()
 {
     InitializeCriticalSection(&m);
