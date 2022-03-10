@@ -22,7 +22,10 @@
  */
 
 #ifndef DOSBOX_NO_MUTEX
-#   if !defined(_WIN32)
+#   if defined(USE_LIBOGC_MUTEX)
+#       include <ogc/mutex.h>
+typedef mutex_t MutexNativeObject;
+#   elif !defined(_WIN32)
 #       include <pthread.h>
 typedef pthread_mutex_t MutexNativeObject;
 #   else
@@ -30,6 +33,7 @@ typedef pthread_mutex_t MutexNativeObject;
 typedef CRITICAL_SECTION MutexNativeObject;
 #   endif
 #endif
+
 
 class Mutex
 {
@@ -70,6 +74,29 @@ inline void Mutex::lock()
 
 inline void Mutex::unlock()
 {}
+
+#elif defined(USE_LIBOGC_MUTEX)
+
+inline Mutex::Mutex()
+{
+    m = LWP_MUTEX_NULL;
+    LWP_MutexInit(&m, 0);
+}
+
+inline Mutex::~Mutex()
+{
+    LWP_MutexDestroy(m);
+}
+
+inline void Mutex::lock()
+{
+    LWP_MutexLock(m);
+}
+
+inline void Mutex::unlock()
+{
+    LWP_MutexUnlock(m);
+}
 
 #elif !defined(_WIN32) // pthread
 

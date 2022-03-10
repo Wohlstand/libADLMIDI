@@ -38,7 +38,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "NintendoWii")
     set(ADLMIDI_WII 1)
-    add_definitions(-DDOSBOX_NO_MUTEX)
+    add_definitions(-DUSE_LIBOGC_MUTEX)
 endif()
 
 #===========================================================================================
