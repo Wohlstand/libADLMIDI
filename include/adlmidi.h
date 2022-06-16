@@ -557,6 +557,13 @@ extern ADLMIDI_DECLSPEC void adl_setFullRangeBrightness(struct ADL_MIDIPlayer *d
 extern ADLMIDI_DECLSPEC void adl_setAutoArpeggio(struct ADL_MIDIPlayer *device, int aaEn);
 
 /**
+ * @brief Get the state of the automatical arpeggio system enable state
+ * @param device Instalce of the library
+ * @return 0 - disabled, 1 - enabled
+ */
+extern ADLMIDI_DECLSPEC int adl_getAutoArpeggio(struct ADL_MIDIPlayer *device);
+
+/**
  * @brief Enable or disable built-in loop (built-in loop supports 'loopStart' and 'loopEnd' tags to loop specific part)
  * @param device Instance of the library
  * @param loopEn 0 - disabled, 1 - enabled

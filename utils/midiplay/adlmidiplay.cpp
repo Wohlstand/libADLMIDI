@@ -403,7 +403,7 @@ int main(int argc, char **argv)
             "      will be combined into one\n"
             " --solo <track>             Selects a solo track to play\n"
             " --only <track1,...,trackN> Selects a subset of tracks to play\n"
-            " -na Disable the auto-arpeggio\n"
+            " -ea Enable the auto-arpeggio\n"
 #ifndef HARDWARE_OPL3
             " -fp Enables full-panning stereo support\n"
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
@@ -484,7 +484,7 @@ int main(int argc, char **argv)
     bool recordWave = false;
     int loopEnabled = 1;
 #endif
-    int autoArpeggioEnabled = 1;
+    int autoArpeggioEnabled = 0;
 
 #ifndef HARDWARE_OPL3
     int emulator = ADLMIDI_EMU_NUKED;
@@ -542,8 +542,10 @@ int main(int argc, char **argv)
         else if(!std::strcmp("-nl", argv[2]))
             loopEnabled = 0; //Enable loop
 #endif
-        else if(!std::strcmp("-na", argv[2]))
+        else if(!std::strcmp("-na", argv[2])) // Deprecated
             autoArpeggioEnabled = 0; //Enable auto-arpeggio
+        else if(!std::strcmp("-ea", argv[2]))
+            autoArpeggioEnabled = 1; //Enable auto-arpeggio
 
 #ifndef HARDWARE_OPL3
         else if(!std::strcmp("--emu-nuked", argv[2]))
@@ -848,7 +850,7 @@ int main(int argc, char **argv)
         std::fprintf(stdout, "\n");
     }
 
-    std::fprintf(stdout, " - Automatic arpeggio is turned %s\n", autoArpeggioEnabled ? "ON" : "OFF");
+    std::fprintf(stdout, " - Automatic arpeggio is turned %s\n", adl_getAutoArpeggio(myDevice) ? "ON" : "OFF");
 
     std::fprintf(stdout, " - File [%s] opened!\n", musPath.c_str());
     flushout(stdout);
