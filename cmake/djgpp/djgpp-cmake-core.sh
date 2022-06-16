@@ -9,9 +9,12 @@ djgpp_prefix=/usr/local/djgpp
 # export CFLAGS="$djgpp_c_flags"
 # export CXXFLAGS="$djgpp_c_flags"
 
-CUSTOM_PATH=${cmake_toolchain_root}:${djgpp_prefix}/bin:${djgpp_prefix}/libexec/gcc/i586-pc-msdosdjgpp/7.2.0:$PATH
+CUSTOM_PATH=${cmake_toolchain_root}:${djgpp_prefix}/bin:${djgpp_prefix}/libexec/gcc/i586-pc-msdosdjgpp/12.1.0:/usr/local/bin:$PATH
 
-if [[ "$1" != '--build' ]]; then
+if [[ "$1" == '-E' && "$2" == 'capabilities' ]]; then
+    PATH=${CUSTOM_PATH} cmake "$@"
+
+elif [[ "$1" != '--build' ]]; then
     echo "KEK [${CUSTOM_PATH}]"
 
     PATH=${CUSTOM_PATH} cmake \
@@ -25,10 +28,8 @@ if [[ "$1" != '--build' ]]; then
 #        -DLIB_INSTALL_DIR:PATH=${djgpp_prefix}/lib \\
 #        -DSYSCONF_INSTALL_DIR:PATH=${djgpp_prefix}/etc \\
 #        -DSHARE_INSTALL_DIR:PATH=${djgpp_prefix}/share \\
-
 else
     PATH=${CUSTOM_PATH} cmake "$@"
 fi
 
 #-DCMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/i686-pc-msdosdjgpp-wine
-
