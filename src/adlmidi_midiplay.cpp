@@ -1348,6 +1348,17 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
     const AdlChannel &chan = m_chipChannels[c];
     int64_t koff_ms = chan.koff_time_until_neglible_us / 1000;
     int64_t s = -koff_ms;
+    ADLMIDI_ChannelAlloc allocType = synth.m_channelAlloc;
+
+    if(allocType == ADLMIDI_ChanAlloc_AUTO)
+    {
+        if(synth.m_musicMode == Synth::MODE_CMF)
+            allocType = ADLMIDI_ChanAlloc_SameInst;
+        else if(synth.m_volumeScale == Synth::VOLUME_HMI)
+            allocType = ADLMIDI_ChanAlloc_AnyReleased; // HMI doesn't care about the same instrument
+        else
+            allocType = ADLMIDI_ChanAlloc_OffDelay;
+    }
 
     // Rate channel with a releasing note
     if(s < 0 && chan.users.empty())
@@ -1356,19 +1367,22 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
         s -= 40000;
 
         // If it's same instrument, better chance to get it when no free channels
-        if(synth.m_musicMode == Synth::MODE_CMF)
+        switch(allocType)
         {
+        case ADLMIDI_ChanAlloc_SameInst:
             if(isSame)
                 s = 0; // Re-use releasing channel with the same instrument
-        }
-        else if(synth.m_volumeScale == Synth::VOLUME_HMI)
-        {
-            s = 0; // HMI doesn't care about the same instrument
-        }
-        else
-        {
+            break;
+
+        case ADLMIDI_ChanAlloc_AnyReleased:
+            s = 0; // Re-use any releasing channel
+            break;
+
+        default:
+        case ADLMIDI_ChanAlloc_OffDelay:
             if(isSame)
                 s =  -koff_ms; // Wait until releasing sound will complete
+            break;
         }
 
         return s;

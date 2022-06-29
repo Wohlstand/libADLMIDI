@@ -868,7 +868,8 @@ OPL3::OPL3() :
     m_softPanning(false),
     m_masterVolume(MasterVolumeDefault),
     m_musicMode(MODE_MIDI),
-    m_volumeScale(VOLUME_Generic)
+    m_volumeScale(VOLUME_Generic),
+    m_channelAlloc(ADLMIDI_ChanAlloc_AUTO)
 {
     m_insBankSetup.volumeModel = OPL3::VOLUME_Generic;
     m_insBankSetup.deepTremolo = false;
@@ -1630,6 +1631,7 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
 {
     switch(volumeModel)
     {
+    default:
     case ADLMIDI_VolumeModel_AUTO://Do nothing until restart playing
         break;
 

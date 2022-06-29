@@ -125,7 +125,26 @@ enum ADLMIDI_VolumeModels
     /*! HMI Sound Operating System volume scaling model */
     ADLMIDI_VolumeModel_HMI = 10,
     /*! HMI Sound Operating System volume scaling model, older variant with bugs */
-    ADLMIDI_VolumeModel_HMI_OLD = 11
+    ADLMIDI_VolumeModel_HMI_OLD = 11,
+    /*! Count of available volume model modes */
+    ADLMIDI_VolumeModel_Count
+};
+
+/*!
+ * \brief Algorithms of channel allocation for new notes
+ */
+enum ADLMIDI_ChannelAlloc
+{
+    /*! Automatical choise of the method according to the volume model and internal preferrences */
+    ADLMIDI_ChanAlloc_AUTO = -1,
+    /*! Take only channels that has expired sounding delay */
+    ADLMIDI_ChanAlloc_OffDelay,
+    /*! Take any first released channel with the same instrument */
+    ADLMIDI_ChanAlloc_SameInst,
+    /*! Take any first released channel */
+    ADLMIDI_ChanAlloc_AnyReleased,
+    /*! Count of available channel allocation modes */
+    ADLMIDI_ChanAlloc_Count
 };
 
 /**
@@ -608,6 +627,20 @@ extern ADLMIDI_DECLSPEC void adl_setVolumeRangeModel(struct ADL_MIDIPlayer *devi
  * @return volume model on success, <0 when any error has occurred
  */
 extern ADLMIDI_DECLSPEC int adl_getVolumeRangeModel(struct ADL_MIDIPlayer *device);
+
+/**
+ * @brief Set the channel allocation mode
+ * @param device Instance of the library
+ * @param chanalloc Channel allocation mode (#ADLMIDI_ChannelAlloc)
+ */
+extern ADLMIDI_DECLSPEC void adl_setChannelAllocMode(struct ADL_MIDIPlayer *device, int chanalloc);
+
+/**
+ * @brief Get the current channel allocation mode
+ * @param device Instance of the library
+ * @return Channel allocation mode (#ADLMIDI_ChannelAlloc)
+ */
+extern ADLMIDI_DECLSPEC int adl_getChannelAllocMode(struct ADL_MIDIPlayer *device);
 
 /**
  * @brief Load WOPL bank file from File System

@@ -231,6 +231,25 @@ const char* volume_model_to_str(int vm)
     }
 }
 
+const char* chanalloc_to_str(int vm)
+{
+    switch(vm)
+    {
+    default:
+    case ADLMIDI_ChanAlloc_AUTO:
+        return "<auto>";
+
+    case ADLMIDI_ChanAlloc_OffDelay:
+        return "Off Delay";
+
+    case ADLMIDI_ChanAlloc_SameInst:
+        return "Same instrument";
+
+    case ADLMIDI_ChanAlloc_AnyReleased:
+        return "Any released";
+    }
+}
+
 
 static bool is_number(const std::string &s)
 {
@@ -485,6 +504,7 @@ int main(int argc, char **argv)
     int loopEnabled = 1;
 #endif
     int autoArpeggioEnabled = 0;
+    int chanAlloc = ADLMIDI_ChanAlloc_AUTO;
 
 #ifndef HARDWARE_OPL3
     int emulator = ADLMIDI_EMU_NUKED;
@@ -590,10 +610,20 @@ int main(int argc, char **argv)
         {
             if(argc <= 3)
             {
-                printError("The option --solo requires an argument!\n");
+                printError("The option -vm requires an argument!\n");
                 return 1;
             }
             volumeModel = std::strtol(argv[3], NULL, 10);
+            had_option = true;
+        }
+        else if(!std::strcmp("-ca", argv[2]))
+        {
+            if(argc <= 3)
+            {
+                printError("The option -carequires an argument!\n");
+                return 1;
+            }
+            chanAlloc = std::strtol(argv[3], NULL, 10);
             had_option = true;
         }
         else if(!std::strcmp("--solo", argv[2]))
@@ -646,6 +676,7 @@ int main(int argc, char **argv)
 #endif
 
     adl_setAutoArpeggio(myDevice, autoArpeggioEnabled);
+    adl_setChannelAllocMode(myDevice, chanAlloc);
 
 #ifdef DEBUG_TRACE_ALL_EVENTS
     //Hook all MIDI events are ticking while generating an output buffer
@@ -828,6 +859,7 @@ int main(int argc, char **argv)
     std::fprintf(stdout, " - Number of four-ops %d\n", adl_getNumFourOpsChnObtained(myDevice));
     std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
     std::fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
+    std::fprintf(stdout, " - Channel allocation mode: %s\n", chanalloc_to_str(adl_getChannelAllocMode(myDevice)));
 
     if(soloTrack != ~static_cast<size_t>(0))
     {

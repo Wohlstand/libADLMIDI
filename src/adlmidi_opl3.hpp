@@ -162,6 +162,9 @@ public:
         VOLUME_HMI_OLD
     } m_volumeScale;
 
+    //! Channel allocation algorithm
+    ADLMIDI_ChannelAlloc m_channelAlloc;
+
     //! Reserved
     char _padding3[8];
 

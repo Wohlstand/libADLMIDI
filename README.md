@@ -184,6 +184,7 @@ To build that example you will need to have installed SDL2 library.
  * Added an ability to disable/enable playing of selected MIDI channels
  * Fixed memory damages and crashes while playing XMI files
  * Added bank-specific MT32 defaults (to don't confuse XMI playback between different games, works for AIL and IBK only, and for WOPL if set at the header)
+ * Added the chip channels allocation mode option
 
 ## 1.5.0.1 2020-10-11
  * Fixed an incorrect timer processing when using a real-time interface

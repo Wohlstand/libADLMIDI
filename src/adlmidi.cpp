@@ -651,6 +651,29 @@ ADLMIDI_EXPORT int adl_getVolumeRangeModel(struct ADL_MIDIPlayer *device)
     return play->m_synth->getVolumeScaleModel();
 }
 
+ADLMIDI_EXPORT void adl_setChannelAllocMode(struct ADL_MIDIPlayer *device, int chanalloc)
+{
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    Synth &synth = *play->m_synth;
+
+    if(chanalloc < -1 || chanalloc >= ADLMIDI_ChanAlloc_Count)
+        chanalloc = ADLMIDI_ChanAlloc_AUTO;
+
+    synth.m_channelAlloc = static_cast<ADLMIDI_ChannelAlloc>(chanalloc);
+}
+
+ADLMIDI_EXPORT int adl_getChannelAllocMode(struct ADL_MIDIPlayer *device)
+{
+    if(!device)
+        return -1;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    return static_cast<int>(play->m_synth->m_channelAlloc);
+}
+
 ADLMIDI_EXPORT int adl_openBankFile(struct ADL_MIDIPlayer *device, const char *filePath)
 {
     if(device)
