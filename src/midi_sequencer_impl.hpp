@@ -2822,8 +2822,27 @@ bool BW_MidiSequencer::parseRMI(FileAndMemReader &fr)
 }
 
 #ifndef BWMIDI_DISABLE_MUS_SUPPORT
+namespace BWMIDI_Private_MUS
+{
+
+static const uint16_t c_mus_midi_channels = 16;
+
+struct MusHead
+{
+    char        head[4];    //!< Identifier "MUS" followed by 0x1A
+    uint16_t    lenSong;    //!< Length of the song data in bytes (the 16-bit value means songs can not be longer than 64kB)
+    uint16_t    offSong;    //!< Offset of first byte of song data, relative to start of file
+    uint16_t    primaryChannels; //!< Number of primary channels used in this song, starting from MUS channel 0
+    uint16_t    secondaryChannels; //!< Number of secondary channels used in this song, starting from MUS channel 10
+    uint16_t    numInstruments; //!< Number of instruments to read
+};
+
+}
+
 bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 {
+    using namespace BWMIDI_Private_MUS;
+    MusHead headData;
     const size_t headerSize = 14;
     char headerBuf[headerSize] = "";
     size_t fsize = 0;
@@ -2843,6 +2862,26 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     }
 
     size_t mus_len = fr.fileSize();
+
+    std::memcpy(headData.head, headerBuf, 4);
+    headData.lenSong = static_cast<uint16_t>(readLEint(headerBuf + 4, 2));
+    headData.offSong = static_cast<uint16_t>(readLEint(headerBuf + 6, 2));
+    headData.primaryChannels = static_cast<uint16_t>(readLEint(headerBuf + 8, 2));
+    headData.secondaryChannels = static_cast<uint16_t>(readLEint(headerBuf + 10, 2));
+    headData.numInstruments = static_cast<uint16_t>(readLEint(headerBuf + 12, 2));
+
+    if(mus_len < (uint32_t)headData.lenSong + headData.offSong)
+    {
+        m_errorString = fr.fileName() + ": Invalid song offset at MUS file\n";
+        return false;
+    }
+
+    if(headData.primaryChannels > c_mus_midi_channels - 1)
+    {
+        m_errorString = fr.fileName() + ": Invalid number of primary channels at MUS file\n";
+        return false;
+    }
+
 
     fr.seek(0, FileAndMemReader::SET);
     uint8_t *mus = (uint8_t *)malloc(mus_len);
