@@ -12,13 +12,20 @@
 
 int main(int argc, char *argv[])
 {
-    if(argc != 2)
+    int songNumber = 0;
+
+    (void)Convert_xmi2midi_multi; /* Shut up the warning */
+
+    if(argc != 2 && argc != 3)
     {
-        fprintf(stderr, "Usage: xmi2mid <midi-file>\n");
+        fprintf(stderr, "Usage: xmi2mid <midi-file> [song-number 0...N-1]\n");
         return 1;
     }
 
     const char *filename = argv[1];
+
+    if(argc > 2)
+        songNumber = atoi(argv[2]);
 
     FILE *fh = fopen(filename, "rb");
     if(!fh)
@@ -50,7 +57,8 @@ int main(int argc, char *argv[])
 
     uint8_t *xmidata = NULL;
     uint32_t xmisize = 0;
-    if(Convert_xmi2midi(filedata, insize, &xmidata, &xmisize, XMIDI_CONVERT_NOCONVERSION) < 0)
+
+    if(Convert_xmi2midi(filedata, insize, &xmidata, &xmisize, XMIDI_CONVERT_NOCONVERSION, songNumber) < 0)
     {
         fprintf(stderr, "Error converting XMI to SMF.\n");
         return 1;

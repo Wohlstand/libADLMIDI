@@ -141,6 +141,11 @@ void MIDIplay::initSequencerInterface()
 
     seq->onSongStart = rtSongBegin;
     seq->onSongStart_userData = this;
+
+    seq->onloopStart = hooks.onLoopStart;
+    seq->onloopStart_userData = hooks.onLoopStart_userData;
+    seq->onloopEnd = hooks.onLoopEnd;
+    seq->onloopEnd_userData = hooks.onLoopEnd_userData;
     /* NonStandard calls End */
 
     m_sequencer->setInterface(seq);

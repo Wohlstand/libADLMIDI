@@ -315,6 +315,7 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_tempoMultiplier(1.0),
     m_atEnd(false),
     m_loopCount(-1),
+    m_loadTrackNumber(0),
     m_trackSolo(~static_cast<size_t>(0)),
     m_triggerHandler(NULL),
     m_triggerUserData(NULL)
@@ -449,6 +450,37 @@ void BW_MidiSequencer::setSoloTrack(size_t track)
 {
     m_trackSolo = track;
 }
+
+void BW_MidiSequencer::setLoadTrack(int track)
+{
+    m_loadTrackNumber = track;
+
+    if(!m_rawSongsData.empty() && m_format == Format_XMIDI) // Reload the song
+    {
+        if(m_loadTrackNumber >= (int)m_rawSongsData.size())
+            m_loadTrackNumber = m_rawSongsData.size() - 1;
+
+        if(m_interface && m_interface->rt_controllerChange)
+        {
+            for(int i = 0; i < 15; i++)
+                m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+        }
+
+        m_atEnd            = false;
+        m_loop.fullReset();
+        m_loop.caughtStart = true;
+
+        m_smfFormat = 0;
+
+        FileAndMemReader fr;
+        fr.openData(m_rawSongsData[m_loadTrackNumber].data(),
+                    m_rawSongsData[m_loadTrackNumber].size());
+        parseSMF(fr);
+
+        m_format = Format_XMIDI;
+    }
+}
+
 
 void BW_MidiSequencer::setTriggerHandler(TriggerHandler handler, void *userData)
 {
@@ -2285,6 +2317,7 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
     m_smfFormat = 0;
 
     m_cmfInstruments.clear();
+    m_rawSongsData.clear();
 
     const size_t headerSize = 4 + 4 + 2 + 2 + 2; // 14
     char headerBuf[headerSize] = "";
@@ -2888,7 +2921,12 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
     const size_t headerSize = 14;
     char headerBuf[headerSize] = "";
     size_t fsize = 0;
-    BufferGuard<uint8_t> cvt_buf;
+//    BufferGuard<uint8_t> cvt_buf;
+    std::vector<uint8_t *> song_buf;
+    std::vector<uint32_t>  song_size;
+    bool ret;
+
+    (void)Convert_xmi2midi; /* Shut up the warning */
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -2931,24 +2969,41 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
     // Close source stream
     fr.close();
 
-    uint8_t *mid = NULL;
-    uint32_t mid_len = 0;
-    int m2mret = Convert_xmi2midi(mus, static_cast<uint32_t>(mus_len + 20),
-                                  &mid, &mid_len, XMIDI_CONVERT_NOCONVERSION);
+//    uint8_t *mid = NULL;
+//    uint32_t mid_len = 0;
+    int m2mret = Convert_xmi2midi_multi(mus, static_cast<uint32_t>(mus_len + 20),
+                                        song_buf, song_size, XMIDI_CONVERT_NOCONVERSION);
     if(mus)
         free(mus);
     if(m2mret < 0)
     {
+        for(size_t i = 0; i < song_buf.size(); ++i)
+            std::free(song_buf[i]);
         m_errorString = "Invalid XMI data format!";
         return false;
     }
 
-    cvt_buf.set(mid);
+    if(m_loadTrackNumber >= (int)song_buf.size())
+        m_loadTrackNumber = song_buf.size() - 1;
+
+    for(size_t i = 0; i < song_buf.size(); ++i)
+    {
+        m_rawSongsData.push_back(std::vector<uint8_t >(song_buf[i], song_buf[i] + song_size[i]));
+        std::free(song_buf[i]);
+    }
+
+    song_buf.clear();
+    song_size.clear();
+
+    // cvt_buf.set(mid);
     // Open converted MIDI file
-    fr.openData(mid, static_cast<size_t>(mid_len));
+    fr.openData(m_rawSongsData[m_loadTrackNumber].data(),
+                m_rawSongsData[m_loadTrackNumber].size());
     // Set format as XMIDI
     m_format = Format_XMIDI;
 
-    return parseSMF(fr);
+    ret = parseSMF(fr);
+
+    return ret;
 }
 #endif

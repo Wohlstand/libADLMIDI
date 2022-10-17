@@ -37,6 +37,10 @@ struct MIDIEventHooks
     MIDIEventHooks() :
         onNote(NULL),
         onNote_userData(NULL),
+        onLoopStart(NULL),
+        onLoopStart_userData(NULL),
+        onLoopEnd(NULL),
+        onLoopEnd_userData(NULL),
         onDebugMessage(NULL),
         onDebugMessage_userData(NULL)
     {}
@@ -45,6 +49,13 @@ struct MIDIEventHooks
     typedef void (*NoteHook)(void *userdata, int adlchn, int note, int ins, int pressure, double bend);
     NoteHook     onNote;
     void         *onNote_userData;
+
+    // Loop start/end hooks
+    ASL_LoopPointHook onLoopStart;
+    void              *onLoopStart_userData;
+    ASL_LoopPointHook onLoopEnd;
+    void              *onLoopEnd_userData;
+
 
     //! Library internal debug messages
     typedef void (*DebugMessageHook)(void *userdata, const char *fmt, ...);

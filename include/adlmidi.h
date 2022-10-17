@@ -600,6 +600,13 @@ extern ADLMIDI_DECLSPEC void adl_setLoopEnabled(struct ADL_MIDIPlayer *device, i
 extern ADLMIDI_DECLSPEC void adl_setLoopCount(struct ADL_MIDIPlayer *device, int loopCount);
 
 /**
+ * @brief Make song immediately stop on reaching a loop end point
+ * @param device Instance of the library
+ * @param loopHooksOnly 0 - disabled, 1 - enabled
+ */
+extern ADLMIDI_DECLSPEC void adl_setLoopHooksOnly(struct ADL_MIDIPlayer *device, int loopHooksOnly);
+
+/**
  * @brief Enable or disable soft panning with chip emulators
  * @param device Instance of the library
  * @param softPanEn 0 - disabled, 1 - enabled
@@ -823,6 +830,20 @@ extern ADLMIDI_DECLSPEC int adl_openFile(struct ADL_MIDIPlayer *device, const ch
  * @return 0 on success, <0 when any error has occurred
  */
 extern ADLMIDI_DECLSPEC int adl_openData(struct ADL_MIDIPlayer *device, const void *mem, unsigned long size);
+
+/**
+ * @brief Switch another song if multi-song file is playing (for example, XMI)
+ *
+ * Note: to set the initial song to load, you should call this function
+ * BBEFORE calling `adl_openFile` or `adl_openData`.  When loaded file has more than
+ * one built-in songs (Usually XMIformat), it will be started from the selected number.
+ * You may call this function to switch another song.
+ *
+ * @param device Instance of the library
+ * @param songNumber Identifier of the track to load (or -1 to mix all tracks as one song)
+ * @return
+ */
+extern ADLMIDI_DECLSPEC void adl_selectSongNum(struct ADL_MIDIPlayer *device, int songNumber);
 
 /**
  * @brief Resets MIDI player (per-channel setup) into initial state
@@ -1278,7 +1299,18 @@ typedef void (*ADL_NoteHook)(void *userdata, int adlchn, int note, int ins, int 
 typedef void (*ADL_DebugMessageHook)(void *userdata, const char *fmt, ...);
 
 /**
+ * @brief Loop start/end point reach hook
+ * @param userdata Pointer to user data (usually, context of someting)
+ */
+typedef void (*ASL_LoopPointHook)(void *userdata);
+
+/**
  * @brief Set raw MIDI event hook
+ *
+ * CAUTION: Don't call any libADLMIDI API functions from off this hook directly!
+ * Suggestion: Use boolean variables to mark the fact this hook got been called, and then,
+ * apply your action outside of this hook, for example, in the next after audio output call.
+ *
  * @param device Instance of the library
  * @param rawEventHook Pointer to the callback function which will be called on every MIDI event
  * @param userData Pointer to user data which will be passed through the callback.
@@ -1287,6 +1319,11 @@ extern ADLMIDI_DECLSPEC void adl_setRawEventHook(struct ADL_MIDIPlayer *device, 
 
 /**
  * @brief Set note hook
+ *
+ * CAUTION: Don't call any libADLMIDI API functions from off this hook directly!
+ * Suggestion: Use boolean variables to mark the fact this hook got been called, and then,
+ * apply your action outside of this hook, for example, in the next after audio output call.
+ *
  * @param device Instance of the library
  * @param noteHook Pointer to the callback function which will be called on every noteOn MIDI event
  * @param userData Pointer to user data which will be passed through the callback.
@@ -1295,11 +1332,45 @@ extern ADLMIDI_DECLSPEC void adl_setNoteHook(struct ADL_MIDIPlayer *device, ADL_
 
 /**
  * @brief Set debug message hook
+ *
+ * CAUTION: Don't call any libADLMIDI API functions from off this hook directly!
+ * Suggestion: Use boolean variables to mark the fact this hook got been called, and then,
+ * apply your action outside of this hook, for example, in the next after audio output call.
+ *
  * @param device Instance of the library
  * @param debugMessageHook Pointer to the callback function which will be called on every debug message
  * @param userData Pointer to user data which will be passed through the callback.
  */
 extern ADLMIDI_DECLSPEC void adl_setDebugMessageHook(struct ADL_MIDIPlayer *device, ADL_DebugMessageHook debugMessageHook, void *userData);
+
+/**
+ * @brief Set the look start point hook
+ *
+ * CAUTION: Don't call any libADLMIDI API functions from off this hook directly!
+ * Suggestion: Use boolean variables to mark the fact this hook got been called, and then,
+ * apply your action outside of this hook, for example, in the next after audio output call.
+ *
+ * @param device Instance of the library
+ * @param loopStartHook Pointer to the callback function which will be called on every loop start point passing
+ * @param userData Pointer to user data which will be passed through the callback.
+ */
+extern ADLMIDI_DECLSPEC void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopStartHook, void *userData);
+
+/**
+ * @brief Set the look start point hook
+ *
+ * CAUTION: Don't call any libADLMIDI API functions from off this hook directly!
+ * Suggestion: Use boolean variables to mark the fact this hook got been called, and then,
+ * apply your action outside of this hook, for example, in the next after audio output call.
+ *
+ * If you want to switch the song after calling this hook, suggested to call the function
+ * adl_setLoopHooksOnly(device, 1) to immediately stop the song on reaching the loop point
+ *
+ * @param device Instance of the library
+ * @param loopStartHook Pointer to the callback function which will be called on every loop start point passing
+ * @param userData Pointer to user data which will be passed through the callback.
+ */
+extern ADLMIDI_DECLSPEC void adl_setLoopEndHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopEndHook, void *userData);
 
 /**
  * @brief Get a textual description of the channel state. For display only.

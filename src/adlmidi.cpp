@@ -597,6 +597,19 @@ ADLMIDI_EXPORT void adl_setLoopCount(ADL_MIDIPlayer *device, int loopCount)
 #endif
 }
 
+ADLMIDI_EXPORT void adl_setLoopHooksOnly(ADL_MIDIPlayer *device, int loopHooksOnly)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_sequencer->setLoopHooksOnly(loopHooksOnly);
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(loopHooksOnly);
+#endif
+}
 
 ADLMIDI_EXPORT void adl_setSoftPanEnabled(ADL_MIDIPlayer *device, int softPanEn)
 {
@@ -772,6 +785,20 @@ ADLMIDI_EXPORT int adl_openData(ADL_MIDIPlayer *device, const void *mem, unsigne
     return -1;
 }
 
+ADLMIDI_EXPORT void adl_selectSongNum(struct ADL_MIDIPlayer *device, int songNumber)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return;
+
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_sequencer->setLoadTrack(songNumber);
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(songNumber);
+#endif
+}
 
 ADLMIDI_EXPORT const char *adl_emulatorName()
 {
@@ -1136,6 +1163,36 @@ ADLMIDI_EXPORT void adl_setDebugMessageHook(struct ADL_MIDIPlayer *device, ADL_D
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
     play->m_sequencerInterface->onDebugMessage = debugMessageHook;
     play->m_sequencerInterface->onDebugMessage_userData = userData;
+#endif
+}
+
+/* Set loop start hook */
+ADLMIDI_EXPORT void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopStartHook, void *userData)
+{
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->hooks.onLoopStart = loopStartHook;
+    play->hooks.onLoopStart_userData = userData;
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    play->m_sequencerInterface->onloopStart = loopStartHook;
+    play->m_sequencerInterface->onloopStart_userData = userData;
+#endif
+}
+
+/* Set loop end hook */
+ADLMIDI_EXPORT void adl_setLoopEndHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopEndHook, void *userData)
+{
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->hooks.onLoopEnd = loopEndHook;
+    play->hooks.onLoopEnd_userData = userData;
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    play->m_sequencerInterface->onloopEnd = loopEndHook;
+    play->m_sequencerInterface->onloopEnd_userData = userData;
 #endif
 }
 

@@ -283,6 +283,26 @@ static void sighandler(int dum)
 }
 #endif
 
+//#define DEBUG_SONG_CHANGE
+//#define DEBUG_SONG_CHANGE_BY_HOOK
+
+#ifdef DEBUG_SONG_CHANGE_BY_HOOK
+static bool gotXmiTrigger = false;
+
+static void xmiTriggerCallback(void *, unsigned trigger, size_t track)
+{
+    std::fprintf(stdout, " - Trigger hook: trigger %u, track: %u\n", trigger, (unsigned)track);
+    flushout(stdout);
+    gotXmiTrigger = true;
+}
+
+static void loopEndCallback(void *)
+{
+    std::fprintf(stdout, " - Loop End hook: trigger\n");
+    flushout(stdout);
+    gotXmiTrigger = true;
+}
+#endif
 
 static void debugPrint(void * /*userdata*/, const char *fmt, ...)
 {
@@ -422,6 +442,7 @@ int main(int argc, char **argv)
             "      will be combined into one\n"
             " --solo <track>             Selects a solo track to play\n"
             " --only <track1,...,trackN> Selects a subset of tracks to play\n"
+            " --song <song ID 0...N-1>   Selects a song to play (if XMI)\n"
             " -ea Enable the auto-arpeggio\n"
 #ifndef HARDWARE_OPL3
             " -fp Enables full-panning stereo support\n"
@@ -512,6 +533,7 @@ int main(int argc, char **argv)
 
     int volumeModel = ADLMIDI_VolumeModel_AUTO;
     size_t soloTrack = ~(size_t)0;
+    int songNumLoad = -1;
     std::vector<size_t> onlyTracks;
 
 #if !defined(HARDWARE_OPL3) && !defined(OUTPUT_WAVE_ONLY)
@@ -634,6 +656,16 @@ int main(int argc, char **argv)
                 return 1;
             }
             soloTrack = std::strtoul(argv[3], NULL, 10);
+            had_option = true;
+        }
+        else if(!std::strcmp("--song", argv[2]))
+        {
+            if(argc <= 3)
+            {
+                printError("The option --song requires an argument!\n");
+                return 1;
+            }
+            songNumLoad = std::strtol(argv[3], NULL, 10);
             had_option = true;
         }
         else if(!std::strcmp("--only", argv[2]))
@@ -847,6 +879,14 @@ int main(int argc, char **argv)
         }
     }
 
+#if defined(DEBUG_SONG_CHANGE_BY_HOOK)
+    adl_setTriggerHandler(myDevice, xmiTriggerCallback, NULL);
+    adl_setLoopEndHook(myDevice, loopEndCallback, NULL);
+    adl_setLoopHooksOnly(myDevice, 1);
+#endif
+    if(songNumLoad >= 0)
+        adl_selectSongNum(myDevice, songNumLoad);
+
     std::string musPath = argv[1];
     //Open MIDI file to play
     if(adl_openFile(myDevice, musPath.c_str()) != 0)
@@ -860,6 +900,8 @@ int main(int argc, char **argv)
     std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
     std::fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
     std::fprintf(stdout, " - Channel allocation mode: %s\n", chanalloc_to_str(adl_getChannelAllocMode(myDevice)));
+    if(songNumLoad >= 0)
+        std::fprintf(stdout, " - Attempt to load song number: %d\n", songNumLoad);
 
     if(soloTrack != ~static_cast<size_t>(0))
     {
@@ -949,6 +991,12 @@ int main(int argc, char **argv)
         audio_start();
 #   endif
 
+#   ifdef DEBUG_SONG_CHANGE
+        int delayBeforeSongChange = 50;
+        std::fprintf(stdout, "DEBUG: === Random song set test is active! ===\n");
+        flushout(stdout);
+#   endif
+
 #   ifdef DEBUG_SEEKING_TEST
         int delayBeforeSeek = 50;
         std::fprintf(stdout, "DEBUG: === Random position set test is active! ===\n");
@@ -1027,6 +1075,22 @@ int main(int argc, char **argv)
                 delayBeforeSeek = rand() % 50;
                 double seekTo = double((rand() % int(adl_totalTimeLength(myDevice)) - delayBeforeSeek - 1 ));
                 adl_positionSeek(myDevice, seekTo);
+            }
+#       endif
+
+#       ifdef DEBUG_SONG_CHANGE
+            if(delayBeforeSongChange-- <= 0)
+            {
+                delayBeforeSongChange = rand() % 100;
+                adl_selectSongNum(myDevice, rand() % 10);
+            }
+#       endif
+
+#       ifdef DEBUG_SONG_CHANGE_BY_HOOK
+            if(gotXmiTrigger)
+            {
+                gotXmiTrigger = false;
+                adl_selectSongNum(myDevice, (rand() % 10) + 1);
             }
 #       endif
 

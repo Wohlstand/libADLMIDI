@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include <vector>
+
 #ifdef __DJGPP__
 typedef signed char     int8_t;
 typedef unsigned char   uint8_t;
@@ -124,7 +126,7 @@ static int32_t xmi2mid_ConvertSystemMessage(struct xmi2mid_xmi_ctx *ctx,
 static int32_t xmi2mid_ConvertFiletoList(struct xmi2mid_xmi_ctx *ctx, const xmi2mid_rbrn *rbrn);
 static uint32_t xmi2mid_ConvertListToMTrk(struct xmi2mid_xmi_ctx *ctx, midi_event *mlist);
 static int xmi2mid_ParseXMI(struct xmi2mid_xmi_ctx *ctx);
-static int xmi2mid_ExtractTracks(struct xmi2mid_xmi_ctx *ctx);
+static int xmi2mid_ExtractTracks(struct xmi2mid_xmi_ctx *ctx, int32_t dstTrackNumber);
 static uint32_t xmi2mid_ExtractTracksFromXmi(struct xmi2mid_xmi_ctx *ctx);
 
 static uint32_t xmi2mid_read1(struct xmi2mid_xmi_ctx *ctx)
@@ -517,7 +519,82 @@ static const char xmi2mid_mt32asgs[256] = {
 
 static int Convert_xmi2midi(uint8_t *in, uint32_t insize,
                             uint8_t **out, uint32_t *outsize,
-                            uint32_t convert_type)
+                            uint32_t convert_type, int32_t trackNumber = -1)
+{
+    struct xmi2mid_xmi_ctx ctx;
+    unsigned int i;
+    int ret = -1;
+    int hasSelectedTrack = 0;
+
+    if (convert_type > XMIDI_CONVERT_MT32_TO_GS) {
+        /*_WM_ERROR_NEW("%s:%i:  %d is an invalid conversion type.", __FUNCTION__, __LINE__, convert_type);*/
+        return (ret);
+    }
+
+    memset(&ctx, 0, sizeof(struct xmi2mid_xmi_ctx));
+    ctx.src = ctx.src_ptr = in;
+    ctx.srcsize = insize;
+    ctx.src_end = ctx.src + insize;
+    ctx.convert_type = convert_type;
+
+    if (xmi2mid_ParseXMI(&ctx) < 0) {
+        /*_WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_NOT_XMI, NULL, 0);*/
+        goto _end;
+    }
+
+    if (xmi2mid_ExtractTracks(&ctx, trackNumber) < 0) {
+        /*_WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_NOT_MIDI, NULL, 0);*/
+        goto _end;
+    }
+
+    hasSelectedTrack = trackNumber >= 0;
+    if (trackNumber >= ctx.info.tracks)
+        trackNumber = ctx.info.tracks - 1;
+
+    ctx.dst = (uint8_t*)malloc(DST_CHUNK);
+    ctx.dst_ptr = ctx.dst;
+    ctx.dstsize = DST_CHUNK;
+    ctx.dstrem = DST_CHUNK;
+
+    /* Header is 14 bytes long and add the rest as well */
+    xmi2mid_write1(&ctx, 'M');
+    xmi2mid_write1(&ctx, 'T');
+    xmi2mid_write1(&ctx, 'h');
+    xmi2mid_write1(&ctx, 'd');
+
+    xmi2mid_write4(&ctx, 6);
+
+    xmi2mid_write2(&ctx, ctx.info.type);
+    xmi2mid_write2(&ctx, hasSelectedTrack ? 1 : ctx.info.tracks);
+    xmi2mid_write2(&ctx, ctx.timing[hasSelectedTrack ? trackNumber : 0]);/* write divisions from track0 */
+
+    if (hasSelectedTrack)
+        xmi2mid_ConvertListToMTrk(&ctx, ctx.events[trackNumber]);
+    else for (i = 0; i < ctx.info.tracks; i++)
+        xmi2mid_ConvertListToMTrk(&ctx, ctx.events[i]);
+    *out = ctx.dst;
+    *outsize = ctx.dstsize - ctx.dstrem;
+    ret = 0;
+
+_end:   /* cleanup */
+    if (ret < 0) {
+        free(ctx.dst);
+        *out = NULL;
+        *outsize = 0;
+    }
+    if (ctx.events) {
+        for (i = 0; i < ctx.info.tracks; i++)
+            xmi2mid_DeleteEventList(ctx.events[i]);
+        free(ctx.events);
+    }
+    free(ctx.timing);
+
+    return (ret);
+}
+
+static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
+                                  std::vector<uint8_t *> &out, std::vector<uint32_t> &outsize,
+                                  uint32_t convert_type)
 {
     struct xmi2mid_xmi_ctx ctx;
     unsigned int i;
@@ -539,39 +616,46 @@ static int Convert_xmi2midi(uint8_t *in, uint32_t insize,
         goto _end;
     }
 
-    if (xmi2mid_ExtractTracks(&ctx) < 0) {
+    if (xmi2mid_ExtractTracks(&ctx, 0) < 0) {
         /*_WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_NOT_MIDI, NULL, 0);*/
         goto _end;
     }
 
-    ctx.dst = (uint8_t*)malloc(DST_CHUNK);
-    ctx.dst_ptr = ctx.dst;
-    ctx.dstsize = DST_CHUNK;
-    ctx.dstrem = DST_CHUNK;
-
-    /* Header is 14 bytes long and add the rest as well */
-    xmi2mid_write1(&ctx, 'M');
-    xmi2mid_write1(&ctx, 'T');
-    xmi2mid_write1(&ctx, 'h');
-    xmi2mid_write1(&ctx, 'd');
-
-    xmi2mid_write4(&ctx, 6);
-
-    xmi2mid_write2(&ctx, ctx.info.type);
-    xmi2mid_write2(&ctx, ctx.info.tracks);
-    xmi2mid_write2(&ctx, ctx.timing[0]);/* write divisions from track0 */
-
     for (i = 0; i < ctx.info.tracks; i++)
+    {
+        ctx.dst = (uint8_t*)malloc(DST_CHUNK);
+        ctx.dst_ptr = ctx.dst;
+        ctx.dstsize = DST_CHUNK;
+        ctx.dstrem = DST_CHUNK;
+
+        /* Header is 14 bytes long and add the rest as well */
+        xmi2mid_write1(&ctx, 'M');
+        xmi2mid_write1(&ctx, 'T');
+        xmi2mid_write1(&ctx, 'h');
+        xmi2mid_write1(&ctx, 'd');
+
+        xmi2mid_write4(&ctx, 6);
+
+        xmi2mid_write2(&ctx, ctx.info.type);
+        xmi2mid_write2(&ctx, 1);
+        xmi2mid_write2(&ctx, ctx.timing[i]);/* write divisions from track0 */
+
         xmi2mid_ConvertListToMTrk(&ctx, ctx.events[i]);
-    *out = ctx.dst;
-    *outsize = ctx.dstsize - ctx.dstrem;
+        out.push_back(ctx.dst);
+        outsize.push_back(ctx.dstsize - ctx.dstrem);
+    }
+
     ret = 0;
 
 _end:   /* cleanup */
     if (ret < 0) {
-        free(ctx.dst);
-        *out = NULL;
-        *outsize = 0;
+        for(size_t j = 0; j < out.size(); ++j)
+        {
+            free(out[j]);
+            out[j] = NULL;
+        }
+        out.clear();
+        outsize.clear();
     }
     if (ctx.events) {
         for (i = 0; i < ctx.info.tracks; i++)
@@ -1222,13 +1306,13 @@ badfile:    /*_WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_CORUPT, "(too shor
     return (-1);
 }
 
-static int xmi2mid_ExtractTracks(struct xmi2mid_xmi_ctx *ctx) {
+static int xmi2mid_ExtractTracks(struct xmi2mid_xmi_ctx *ctx, int32_t dstTrackNumber) {
     uint32_t i;
 
     ctx->events = (midi_event **)calloc(ctx->info.tracks, sizeof(midi_event*));
     ctx->timing = (int16_t *)calloc(ctx->info.tracks, sizeof(int16_t));
     /* type-2 for multi-tracks, type-0 otherwise */
-    ctx->info.type = (ctx->info.tracks > 1)? 2 : 0;
+    ctx->info.type = (ctx->info.tracks > 1 && (dstTrackNumber < 0 || ctx->info.tracks >= dstTrackNumber))? 2 : 0;
 
     xmi2mid_seeksrc(ctx, ctx->datastart);
     i = xmi2mid_ExtractTracksFromXmi(ctx);
