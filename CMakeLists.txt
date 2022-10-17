@@ -284,6 +284,21 @@ set(libADLMIDI_SOURCES
     ${libADLMIDI_SOURCE_DIR}/src/wopl/wopl_file.c
 )
 
+# Make headers being properly visible at IDEs
+file(GLOB libADLMIDI_HEADERS
+    ${libADLMIDI_SOURCE_DIR}/src/*.h
+    ${libADLMIDI_SOURCE_DIR}/src/*.hpp
+    ${libADLMIDI_SOURCE_DIR}/src/wopl/*.h
+    ${libADLMIDI_SOURCE_DIR}/src/structures/*.hpp
+    ${libADLMIDI_SOURCE_DIR}/src/chips/*.h
+    ${libADLMIDI_SOURCE_DIR}/src/chips/common/*.hpp
+    ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/*.h
+    ${libADLMIDI_SOURCE_DIR}/src/chips/java/*.hpp
+    ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/*.h
+    ${libADLMIDI_SOURCE_DIR}/src/chips/opal/*.hpp
+)
+list(APPEND libADLMIDI_SOURCES ${libADLMIDI_HEADERS})
+
 # === Static library ====
 if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(ADLMIDI_static STATIC ${libADLMIDI_SOURCES})
