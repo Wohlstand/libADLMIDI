@@ -286,6 +286,7 @@ set(libADLMIDI_SOURCES
 
 # Make headers being properly visible at IDEs
 file(GLOB libADLMIDI_HEADERS
+    ${libADLMIDI_SOURCE_DIR}/include/*.h
     ${libADLMIDI_SOURCE_DIR}/src/*.h
     ${libADLMIDI_SOURCE_DIR}/src/*.hpp
     ${libADLMIDI_SOURCE_DIR}/src/wopl/*.h
