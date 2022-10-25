@@ -24,6 +24,8 @@ if(WIN32 AND NOT USE_SDL2_AUDIO)
     )
 endif()
 
+option(DEBUG_SONG_SWITCHING  "Enable song switching by left and right keys (Linux only)" OFF)
+
 add_executable(adlmidiplay ${ADLMIDI_PLAY_SRC})
 
 if(USE_SDL2_AUDIO)
@@ -33,6 +35,10 @@ elseif(WIN32)
 endif()
 
 set_nopie(adlmidiplay)
+
+if(DEBUG_SONG_SWITCHING)
+    target_compile_definitions(adlmidiplay PRIVATE DEBUG_SONG_SWITCHING)
+endif()
 
 if(MIDIPLAY_WAVE_ONLY)
     target_compile_definitions(adlmidiplay PUBLIC OUTPUT_WAVE_ONLY)

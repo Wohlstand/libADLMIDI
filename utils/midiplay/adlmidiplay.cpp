@@ -35,6 +35,52 @@
 #include <signal.h>
 #include <stdint.h>
 
+#ifdef DEBUG_SONG_SWITCHING
+#include <unistd.h>
+#include <sys/select.h>
+#include <termios.h>
+
+struct termios orig_termios;
+
+void reset_terminal_mode()
+{
+    tcsetattr(0, TCSANOW, &orig_termios);
+}
+
+void set_conio_terminal_mode()
+{
+    struct termios new_termios;
+
+    /* take two copies - one for now, one for later */
+    tcgetattr(0, &orig_termios);
+    memcpy(&new_termios, &orig_termios, sizeof(new_termios));
+
+    /* register cleanup handler, and set the new terminal mode */
+    atexit(reset_terminal_mode);
+    cfmakeraw(&new_termios);
+    tcsetattr(0, TCSANOW, &new_termios);
+}
+
+int kbhit()
+{
+    struct timeval tv = { 0L, 0L };
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(0, &fds);
+    return select(1, &fds, NULL, NULL, &tv) > 0;
+}
+
+int getch()
+{
+    int r;
+    unsigned char c;
+    if ((r = read(0, &c, sizeof(c))) < 0)
+        return r;
+    else
+        return c;
+}
+#endif
+
 #if defined(_MSC_VER) && _MSC_VER < 1900
 
 #define snprintf c99_snprintf
@@ -887,6 +933,12 @@ int main(int argc, char **argv)
     if(songNumLoad >= 0)
         adl_selectSongNum(myDevice, songNumLoad);
 
+#ifdef DEBUG_SONG_SWITCHING
+    set_conio_terminal_mode();
+    if(songNumLoad < 0)
+        songNumLoad = 0;
+#endif
+
     std::string musPath = argv[1];
     //Open MIDI file to play
     if(adl_openFile(myDevice, musPath.c_str()) != 0)
@@ -900,8 +952,12 @@ int main(int argc, char **argv)
     std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
     std::fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
     std::fprintf(stdout, " - Channel allocation mode: %s\n", chanalloc_to_str(adl_getChannelAllocMode(myDevice)));
+
+    int songsCount = adl_getSongsCount(myDevice);
     if(songNumLoad >= 0)
-        std::fprintf(stdout, " - Attempt to load song number: %d\n", songNumLoad);
+        std::fprintf(stdout, " - Attempt to load song number: %d / %d\n", songNumLoad, songsCount);
+    else if(songsCount > 0)
+        std::fprintf(stdout, " - File contains %d song(s)\n", songsCount);
 
     if(soloTrack != ~static_cast<size_t>(0))
     {
@@ -1068,6 +1124,40 @@ int main(int argc, char **argv)
             {
                 audio_delay(1);
             }
+
+#       ifdef DEBUG_SONG_SWITCHING
+            if(kbhit())
+            {
+                int code = getch();
+                if(code == '\033' && kbhit())
+                {
+                    getch();
+                    switch(getch())
+                    {
+                    case 'C':
+                        // code for arrow right
+                        songNumLoad++;
+                        if(songNumLoad >= songsCount)
+                            songNumLoad = songsCount;
+                        adl_selectSongNum(myDevice, songNumLoad);
+                        std::fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
+                        flushout(stdout);
+                        break;
+                    case 'D':
+                        // code for arrow left
+                        songNumLoad--;
+                        if(songNumLoad < 0)
+                            songNumLoad = 0;
+                        adl_selectSongNum(myDevice, songNumLoad);
+                        std::fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
+                        flushout(stdout);
+                        break;
+                    }
+                }
+                else if(code == 27) // Quit by ESC key
+                    stop = 1;
+            }
+#       endif
 
 #       ifdef DEBUG_SEEKING_TEST
             if(delayBeforeSeek-- <= 0)
