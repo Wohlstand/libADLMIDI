@@ -451,7 +451,7 @@ void BW_MidiSequencer::setSoloTrack(size_t track)
     m_trackSolo = track;
 }
 
-void BW_MidiSequencer::setLoadTrack(int track)
+void BW_MidiSequencer::setSongNum(int track)
 {
     m_loadTrackNumber = track;
 
@@ -479,6 +479,11 @@ void BW_MidiSequencer::setLoadTrack(int track)
 
         m_format = Format_XMIDI;
     }
+}
+
+int BW_MidiSequencer::getSongsCount()
+{
+    return (int)m_rawSongsData.size();
 }
 
 
@@ -2922,8 +2927,7 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
     char headerBuf[headerSize] = "";
     size_t fsize = 0;
 //    BufferGuard<uint8_t> cvt_buf;
-    std::vector<uint8_t *> song_buf;
-    std::vector<uint32_t>  song_size;
+    std::vector<std::vector<uint8_t > > song_buf;
     bool ret;
 
     (void)Convert_xmi2midi; /* Shut up the warning */
@@ -2972,13 +2976,12 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
 //    uint8_t *mid = NULL;
 //    uint32_t mid_len = 0;
     int m2mret = Convert_xmi2midi_multi(mus, static_cast<uint32_t>(mus_len + 20),
-                                        song_buf, song_size, XMIDI_CONVERT_NOCONVERSION);
+                                        song_buf, XMIDI_CONVERT_NOCONVERSION);
     if(mus)
         free(mus);
     if(m2mret < 0)
     {
-        for(size_t i = 0; i < song_buf.size(); ++i)
-            std::free(song_buf[i]);
+        song_buf.clear();
         m_errorString = "Invalid XMI data format!";
         return false;
     }
@@ -2988,12 +2991,10 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
 
     for(size_t i = 0; i < song_buf.size(); ++i)
     {
-        m_rawSongsData.push_back(std::vector<uint8_t >(song_buf[i], song_buf[i] + song_size[i]));
-        std::free(song_buf[i]);
+        m_rawSongsData.push_back(song_buf[i]);
     }
 
     song_buf.clear();
-    song_size.clear();
 
     // cvt_buf.set(mid);
     // Open converted MIDI file

@@ -846,6 +846,13 @@ extern ADLMIDI_DECLSPEC int adl_openData(struct ADL_MIDIPlayer *device, const vo
 extern ADLMIDI_DECLSPEC void adl_selectSongNum(struct ADL_MIDIPlayer *device, int songNumber);
 
 /**
+ * @brief Retrive the number of songs in a currently opened file
+ * @param device Instance of the library
+ * @return Number of songs in the file. If 1 or less, means, the file has only one song inside.
+ */
+extern ADLMIDI_DECLSPEC int adl_getSongsCount(struct ADL_MIDIPlayer *device);
+
+/**
  * @brief Resets MIDI player (per-channel setup) into initial state
  * @param device Instance of the library
  */

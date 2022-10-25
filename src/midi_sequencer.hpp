@@ -618,10 +618,16 @@ public:
     void setSoloTrack(size_t track);
 
     /**
-     * @brief Set the track number of a multi-track file (such as XMI)
-     * @param trackNumber Identifier of the track to load (or -1 to mix all tracks as one song)
+     * @brief Set the song number of a multi-song file (such as XMI)
+     * @param trackNumber Identifier of the song to load (or -1 to mix all songs as one song)
      */
-    void setLoadTrack(int track);
+    void setSongNum(int track);
+
+    /**
+     * @brief Retrive the number of songs in a currently opened file
+     * @return Number of songs in the file. If 1 or less, means, the file has only one song inside.
+     */
+    int getSongsCount();
 
     /**
      * @brief Defines a handler for callback trigger events

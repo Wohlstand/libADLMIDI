@@ -793,10 +793,25 @@ ADLMIDI_EXPORT void adl_selectSongNum(struct ADL_MIDIPlayer *device, int songNum
 
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    play->m_sequencer->setLoadTrack(songNumber);
+    play->m_sequencer->setSongNum(songNumber);
 #else
     ADL_UNUSED(device);
     ADL_UNUSED(songNumber);
+#endif
+}
+
+ADLMIDI_EXPORT int adl_getSongsCount(struct ADL_MIDIPlayer *device)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return 0;
+
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    return play->m_sequencer->getSongsCount();
+#else
+    ADL_UNUSED(device);
+    return 0;
 #endif
 }
 

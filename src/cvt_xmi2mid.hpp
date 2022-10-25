@@ -105,6 +105,8 @@ struct xmi2mid_xmi_ctx {
     int16_t *timing;
     midi_event *list;
     midi_event *current;
+    std::vector<std::vector<uint8_t > > *dyn_out;
+    std::vector<uint8_t > *dyn_out_cur;
 };
 
 typedef struct {
@@ -178,7 +180,11 @@ static void xmi2mid_copy(struct xmi2mid_xmi_ctx *ctx, char *b, uint32_t len)
 #define DST_CHUNK 8192
 static void xmi2mid_resize_dst(struct xmi2mid_xmi_ctx *ctx) {
     uint32_t pos = (uint32_t)(ctx->dst_ptr - ctx->dst);
-    ctx->dst = (uint8_t *)realloc(ctx->dst, ctx->dstsize + DST_CHUNK);
+    if (ctx->dyn_out && ctx->dyn_out_cur) {
+        ctx->dyn_out_cur->resize(ctx->dstsize + DST_CHUNK);
+        ctx->dst = ctx->dyn_out_cur->data();
+    } else
+        ctx->dst = (uint8_t *)realloc(ctx->dst, ctx->dstsize + DST_CHUNK);
     ctx->dstsize += DST_CHUNK;
     ctx->dstrem += DST_CHUNK;
     ctx->dst_ptr = ctx->dst + pos;
@@ -593,7 +599,7 @@ _end:   /* cleanup */
 }
 
 static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
-                                  std::vector<uint8_t *> &out, std::vector<uint32_t> &outsize,
+                                  std::vector<std::vector<uint8_t > > &out,
                                   uint32_t convert_type)
 {
     struct xmi2mid_xmi_ctx ctx;
@@ -610,6 +616,7 @@ static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
     ctx.srcsize = insize;
     ctx.src_end = ctx.src + insize;
     ctx.convert_type = convert_type;
+    ctx.dyn_out = &out;
 
     if (xmi2mid_ParseXMI(&ctx) < 0) {
         /*_WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_NOT_XMI, NULL, 0);*/
@@ -623,7 +630,10 @@ static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
 
     for (i = 0; i < ctx.info.tracks; i++)
     {
-        ctx.dst = (uint8_t*)malloc(DST_CHUNK);
+        out.push_back(std::vector<uint8_t>());
+        ctx.dyn_out_cur = &out.back();
+        ctx.dyn_out_cur->resize(DST_CHUNK);
+        ctx.dst = ctx.dyn_out_cur->data();
         ctx.dst_ptr = ctx.dst;
         ctx.dstsize = DST_CHUNK;
         ctx.dstrem = DST_CHUNK;
@@ -641,21 +651,14 @@ static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
         xmi2mid_write2(&ctx, ctx.timing[i]);/* write divisions from track0 */
 
         xmi2mid_ConvertListToMTrk(&ctx, ctx.events[i]);
-        out.push_back(ctx.dst);
-        outsize.push_back(ctx.dstsize - ctx.dstrem);
+        ctx.dyn_out_cur->resize(ctx.dstsize - ctx.dstrem);
     }
 
     ret = 0;
 
 _end:   /* cleanup */
     if (ret < 0) {
-        for(size_t j = 0; j < out.size(); ++j)
-        {
-            free(out[j]);
-            out[j] = NULL;
-        }
         out.clear();
-        outsize.clear();
     }
     if (ctx.events) {
         for (i = 0; i < ctx.info.tracks; i++)
