@@ -51,9 +51,9 @@ struct MIDIEventHooks
     void         *onNote_userData;
 
     // Loop start/end hooks
-    ASL_LoopPointHook onLoopStart;
+    ADL_LoopPointHook onLoopStart;
     void              *onLoopStart_userData;
-    ASL_LoopPointHook onLoopEnd;
+    ADL_LoopPointHook onLoopEnd;
     void              *onLoopEnd_userData;
 
 

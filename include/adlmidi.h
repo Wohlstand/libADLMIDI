@@ -1309,7 +1309,7 @@ typedef void (*ADL_DebugMessageHook)(void *userdata, const char *fmt, ...);
  * @brief Loop start/end point reach hook
  * @param userdata Pointer to user data (usually, context of someting)
  */
-typedef void (*ASL_LoopPointHook)(void *userdata);
+typedef void (*ADL_LoopPointHook)(void *userdata);
 
 /**
  * @brief Set raw MIDI event hook
@@ -1361,7 +1361,7 @@ extern ADLMIDI_DECLSPEC void adl_setDebugMessageHook(struct ADL_MIDIPlayer *devi
  * @param loopStartHook Pointer to the callback function which will be called on every loop start point passing
  * @param userData Pointer to user data which will be passed through the callback.
  */
-extern ADLMIDI_DECLSPEC void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopStartHook, void *userData);
+extern ADLMIDI_DECLSPEC void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ADL_LoopPointHook loopStartHook, void *userData);
 
 /**
  * @brief Set the look start point hook
@@ -1377,7 +1377,7 @@ extern ADLMIDI_DECLSPEC void adl_setLoopStartHook(struct ADL_MIDIPlayer *device,
  * @param loopStartHook Pointer to the callback function which will be called on every loop start point passing
  * @param userData Pointer to user data which will be passed through the callback.
  */
-extern ADLMIDI_DECLSPEC void adl_setLoopEndHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopEndHook, void *userData);
+extern ADLMIDI_DECLSPEC void adl_setLoopEndHook(struct ADL_MIDIPlayer *device, ADL_LoopPointHook loopEndHook, void *userData);
 
 /**
  * @brief Get a textual description of the channel state. For display only.

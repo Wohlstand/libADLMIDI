@@ -1182,7 +1182,7 @@ ADLMIDI_EXPORT void adl_setDebugMessageHook(struct ADL_MIDIPlayer *device, ADL_D
 }
 
 /* Set loop start hook */
-ADLMIDI_EXPORT void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopStartHook, void *userData)
+ADLMIDI_EXPORT void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ADL_LoopPointHook loopStartHook, void *userData)
 {
     if(!device)
         return;
@@ -1197,7 +1197,7 @@ ADLMIDI_EXPORT void adl_setLoopStartHook(struct ADL_MIDIPlayer *device, ASL_Loop
 }
 
 /* Set loop end hook */
-ADLMIDI_EXPORT void adl_setLoopEndHook(struct ADL_MIDIPlayer *device, ASL_LoopPointHook loopEndHook, void *userData)
+ADLMIDI_EXPORT void adl_setLoopEndHook(struct ADL_MIDIPlayer *device, ADL_LoopPointHook loopEndHook, void *userData)
 {
     if(!device)
         return;
