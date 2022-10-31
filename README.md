@@ -178,7 +178,7 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
-## 1.5.1   dev
+## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio
  * Added an ability to set the count of loops (how many times to play the song)
  * Added an ability to disable/enable playing of selected MIDI channels
