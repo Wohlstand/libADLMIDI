@@ -29,6 +29,9 @@
 bin/*
 obj/*
 
+# macOS garbage
+.DS_Store
+
 # Qt-Creator IDE
 build-*
 *.user*
@@ -45,4 +48,3 @@ cmake-build-*/*
 
 # Gen ADLDATA's deep-debug WAVs
 fm_banks/_deep_debug/*
-
