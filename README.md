@@ -178,6 +178,12 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
+## dev
+ * Fixed the work on big endian processors
+ * Fixed ARM64 build on some platforms
+ * Improved support of the EA-MUS files (Thanks to [dashodanger](https://github.com/dashodanger))
+ * Fixed crash on attempt to change the volume of a blank note
+
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio
  * Added an ability to set the count of loops (how many times to play the song)
