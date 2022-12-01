@@ -2250,7 +2250,7 @@ static bool detectRSXX(const char *head, FileAndMemReader &fr)
     bool ret = false;
 
     // Try to identify RSXX format
-    if(head[0] >= 0x5D && fr.fileSize() > head[0])
+    if(head[0] >= 0x5D && fr.fileSize() > reinterpret_cast<const uint8_t*>(head)[0])
     {
         fr.seek(head[0] - 0x10, FileAndMemReader::SET);
         fr.read(headerBuf, 1, 6);
