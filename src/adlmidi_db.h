@@ -31,7 +31,7 @@
 #include <stddef.h>
 #include <vector>
 
-#if !defined(_MSC_VER) && !defined(__aarch64__)
+#if !defined(_MSC_VER) && !defined(__aarch64__) && !defined(__3DS__)
 #define ATTRIB_PACKED __attribute__((__packed__))
 #else
 #define ATTRIB_PACKED
