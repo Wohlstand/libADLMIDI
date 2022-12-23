@@ -26,19 +26,24 @@ if(DJGPP OR MSDOS)
     add_definitions(-DADLMIDI_HW_OPL)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Nintendo3DS")
+if(Nintendo3DS)
     set(ADLMIDI_3DS 1)
     add_definitions(-DDOSBOX_NO_MUTEX)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "NintendoDS")
+if(NINTENDO_DS)
     set(ADLMIDI_DS 1)
     add_definitions(-DDOSBOX_NO_MUTEX)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "NintendoWii")
+if(NINTENDO_WII)
     set(ADLMIDI_WII 1)
     add_definitions(-DUSE_LIBOGC_MUTEX)
+endif()
+
+if(NINTENDO_WIIU)
+    set(ADLMIDI_WIIU 1)
+    add_definitions(-DUSE_WUT_MUTEX)
 endif()
 
 #===========================================================================================

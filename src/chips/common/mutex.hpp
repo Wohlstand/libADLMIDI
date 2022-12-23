@@ -25,6 +25,12 @@
 #   if defined(USE_LIBOGC_MUTEX)
 #       include <ogc/mutex.h>
 typedef mutex_t MutexNativeObject;
+#   elif defined(USE_WUT_MUTEX)
+#       if __cplusplus < 201103L || (defined(_MSC_VER) && _MSC_VER < 1900)
+#           define static_assert(x, y)
+#       endif
+#       include <coreinit/mutex.h>
+typedef OSMutex MutexNativeObject;
 #   elif !defined(_WIN32)
 #       include <pthread.h>
 typedef pthread_mutex_t MutexNativeObject;
@@ -74,6 +80,26 @@ inline void Mutex::lock()
 
 inline void Mutex::unlock()
 {}
+
+#elif defined(USE_WUT_MUTEX)
+
+inline Mutex::Mutex()
+{
+    OSInitMutex(&m);
+}
+
+inline Mutex::~Mutex()
+{}
+
+inline void Mutex::lock()
+{
+    OSLockMutex(&m);
+}
+
+inline void Mutex::unlock()
+{
+    OSUnlockMutex(&m);
+}
 
 #elif defined(USE_LIBOGC_MUTEX)
 
