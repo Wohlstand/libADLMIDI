@@ -26,7 +26,7 @@ if(DJGPP OR MSDOS)
     add_definitions(-DADLMIDI_HW_OPL)
 endif()
 
-if(Nintendo3DS)
+if(NINTENDO_3DS)
     set(ADLMIDI_3DS 1)
     add_definitions(-DDOSBOX_NO_MUTEX)
 endif()
