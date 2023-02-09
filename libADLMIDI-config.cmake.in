@@ -1,0 +1,30 @@
+include(FeatureSummary)
+set_package_properties(libADLMIDI PROPERTIES
+  URL "https://github.com/Wohlstand/libADLMIDI"
+  DESCRIPTION "libADLMIDI is a free Software MIDI synthesizer library with OPL3 emulation"
+)
+
+@PACKAGE_INIT@
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/libADLMIDI-shared-targets.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/libADLMIDI-shared-targets.cmake")
+endif()
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/libADLMIDI-static-targets.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/libADLMIDI-static-targets.cmake")
+endif()
+
+if(TARGET libADLMIDI::ADLMIDI_shared)
+    if(CMAKE_VERSION VERSION_LESS "3.18")
+        add_library(libADLMIDI::ADLMIDI INTERFACE IMPORTED)
+        set_target_properties(libADLMIDI::ADLMIDI PROPERTIES INTERFACE_LINK_LIBRARIES "libADLMIDI::ADLMIDI_shared")
+    else()
+        add_library(libADLMIDI::ADLMIDI ALIAS libADLMIDI::ADLMIDI_shared)
+    endif()
+else()
+    if(CMAKE_VERSION VERSION_LESS "3.18")
+        add_library(libADLMIDI::ADLMIDI INTERFACE IMPORTED)
+        set_target_properties(libADLMIDI::ADLMIDI PROPERTIES INTERFACE_LINK_LIBRARIES "libADLMIDI::ADLMIDI_static")
+    else()
+        add_library(libADLMIDI::ADLMIDI ALIAS libADLMIDI::ADLMIDI_static)
+    endif()
+endif()
