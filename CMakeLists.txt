@@ -459,11 +459,11 @@ install(FILES
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
         
 include(CMakePackageConfigHelpers)
-configure_package_config_file(libADLMIDI-config.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/libADLMIDI-config.cmake"
+configure_package_config_file(libADLMIDIConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/libADLMIDIConfig.cmake"
     PATH_VARS CMAKE_INSTALL_PREFIX CMAKE_INSTALL_FULL_BINDIR CMAKE_INSTALL_FULL_INCLUDEDIR CMAKE_INSTALL_FULL_LIBDIR
     INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libADLMIDI"
 )
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libADLMIDI-config.cmake
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libADLMIDIConfig.cmake
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libADLMIDI"
 )
 
