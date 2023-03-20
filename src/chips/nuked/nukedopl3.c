@@ -1402,7 +1402,7 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
         mix[0] += (int16_t)((accm * channel->rightpan) >> 16);
 #else
         mix[0] += (int16_t)((accm * chip->channel[ii].chr / 65535) & channel->chb);
- #endif
+#endif
         mix[1] += (int16_t)(accm & channel->chd);
     }
     chip->mixbuff[1] = mix[0];
