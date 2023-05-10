@@ -225,8 +225,15 @@ class BW_MidiSequencer
             {}
         };
         std::vector<TrackInfo> track;
-        Position(): began(false), wait(0.0), absTimePosition(0.0), track()
-        {}
+        Position():
+            began(false),
+            wait(0.0),
+            absTimePosition(0.0),
+            track()
+        {
+            for(size_t i = 0; i < 7; ++i)
+                __padding[i] = 0;
+        }
     };
 
     //! MIDI Output interface context
