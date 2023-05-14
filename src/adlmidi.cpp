@@ -1476,10 +1476,8 @@ ADLMIDI_EXPORT int adl_playFormat(ADL_MIDIPlayer *device, int sampleCount,
             Synth &synth = *player->m_synth;
             unsigned int chips = synth.m_numChips;
             if(chips == 1)
-            {
                 synth.m_chips[0]->generate32(out_buf, (size_t)in_generatedStereo);
-            }
-            else if(n_periodCountStereo > 0)
+            else/* if(n_periodCountStereo > 0)*/
             {
                 /* Generate data from every chip and mix result */
                 for(size_t card = 0; card < chips; ++card)
