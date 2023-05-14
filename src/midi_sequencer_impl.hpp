@@ -853,7 +853,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
     {
         fraction<uint64_t> currentTempo = m_tempo;
         double  time = 0.0;
-        uint64_t abs_position = 0;
+        // uint64_t abs_position = 0;
         size_t tempo_change_index = 0;
         MidiTrackQueue &track = m_trackData[tk];
         if(track.empty())
@@ -965,7 +965,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
             std::fflush(stdout);
 #endif
 
-            abs_position += pos.delay;
+            // abs_position += pos.delay;
             posPrev = &pos;
         }
 
