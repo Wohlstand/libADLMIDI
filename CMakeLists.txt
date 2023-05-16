@@ -101,10 +101,6 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_C_COMPILER_ID ST
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
 endif()
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
-
 # Disable bogus MSVC warnings
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
