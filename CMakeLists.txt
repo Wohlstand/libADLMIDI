@@ -86,6 +86,19 @@ if(NOT MSVC AND NOT MSDOS)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVITA -DVITA=1 -fcompare-debug-second")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVITA -DVITA=1 -fcompare-debug-second")
     endif()
+    if(NINTENDO_3DS OR NINTENDO_WII OR NINTENDO_WIIU OR NINTENDO_SWITCH)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcompare-debug-second")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcompare-debug-second")
+    endif()
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    if(NINTENDO_3DS OR NINTENDO_WII OR NINTENDO_WIIU OR NINTENDO_SWITCH)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu90")
+    else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89")
+    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -457,7 +470,7 @@ endif()
 install(FILES
         include/adlmidi.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-        
+
 include(CMakePackageConfigHelpers)
 configure_package_config_file(libADLMIDIConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/libADLMIDIConfig.cmake"
     PATH_VARS CMAKE_INSTALL_PREFIX CMAKE_INSTALL_FULL_BINDIR CMAKE_INSTALL_FULL_INCLUDEDIR CMAKE_INSTALL_FULL_LIBDIR
