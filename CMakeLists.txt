@@ -228,8 +228,6 @@ if(WITH_EMBEDDED_BANKS)
         make_directory("${CMAKE_BINARY_DIR}/instdb")
         set(ADLDATA_DATABASE "${CMAKE_BINARY_DIR}/instdb/inst_db.cpp")
     endif()
-else()
-    target_compile_definitions(${targetLib} PUBLIC DISABLE_EMBEDDED_BANKS)
 endif()
 
 function(handle_options targetLib)
