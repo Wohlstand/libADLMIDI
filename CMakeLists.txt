@@ -192,6 +192,7 @@ option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ${DEFAULT_HEAVY_EMULATORS})
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
 option(WITH_GENADLDATA_COMMENTS "Enable comments in a generated embedded instruments cache file" OFF)
+set(GENADLDATA_CUSTOM_BANKLIST "" CACHE PATH "Use the custom INI file to build the database")
 
 option(WITH_MIDIPLAY        "Build also demo MIDI player" OFF)
 option(MIDIPLAY_WAVE_ONLY   "Build Demo MIDI player without support of real time playing. It will output into WAV only." OFF)
@@ -218,6 +219,17 @@ if(NOT WIN32
     option(ENABLE_FPIC "Build static libraries as position independent code" ON)
 else()
     set(ENABLE_FPIC OFF)
+endif()
+
+if(WITH_EMBEDDED_BANKS)
+    if(NOT WITH_GENADLDATA OR "${GENADLDATA_CUSTOM_BANKLIST}" STREQUAL "")
+        set(ADLDATA_DATABASE "${libADLMIDI_SOURCE_DIR}/src/inst_db.cpp")
+    else()
+        make_directory("${CMAKE_BINARY_DIR}/instdb")
+        set(ADLDATA_DATABASE "${CMAKE_BINARY_DIR}/instdb/inst_db.cpp")
+    endif()
+else()
+    target_compile_definitions(${targetLib} PUBLIC DISABLE_EMBEDDED_BANKS)
 endif()
 
 function(handle_options targetLib)
@@ -281,9 +293,13 @@ function(handle_options targetLib)
     endif()
 
     if(WITH_EMBEDDED_BANKS)
-        target_sources(${targetLib} PRIVATE
-            ${libADLMIDI_SOURCE_DIR}/src/inst_db.cpp
-        )
+        target_sources(${targetLib} PRIVATE ${ADLDATA_DATABASE})
+        if(WITH_GENADLDATA)
+            set_property(SOURCE "${ADLDATA_DATABASE}" PROPERTY INCLUDE_DIRECTORIES "${libADLMIDI_SOURCE_DIR}/src")
+            if(NOT "${GENADLDATA_CUSTOM_BANKLIST}" STREQUAL "")
+                set_property(SOURCE "${ADLDATA_DATABASE}" PROPERTY GENERATED TRUE)
+            endif()
+        endif()
     else()
         target_compile_definitions(${targetLib} PUBLIC DISABLE_EMBEDDED_BANKS)
     endif()
@@ -293,7 +309,9 @@ function(handle_options targetLib)
     endif()
 
     if(WITH_EMBEDDED_BANKS AND WITH_GENADLDATA AND NOT ADLMIDI_DOS)
-        add_dependencies(${targetLib} gen-adldata-run)
+        if("${GENADLDATA_CUSTOM_BANKLIST}" STREQUAL "")
+            add_dependencies(${targetLib} gen-adldata-run)
+        endif()
     endif()
 
     if(WITH_HQ_RESAMPLER AND NOT ADLMIDI_DOS)

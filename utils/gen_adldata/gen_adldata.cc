@@ -17,26 +17,44 @@
 
 int main(int argc, char**argv)
 {
-    if(argc == 1)
+    if(argc < 4)
     {
         std::printf("Usage:\n"
                "\n"
-               "bin/gen_adldata src/adldata.cpp\n"
+               "bin/gen_adldata banks.ini src/inst_db.cpp adldata-cache.dat\n"
                "\n");
         return 1;
     }
 
-    const char *outFile_s = argv[1];
+    const char *iniFile_s = argv[1];
+    const char *outFile_s = argv[2];
+    const char *cacheFile_s = argv[3];
 
     BanksDump db;
 
     {
         IniProcessing ini;
-        if(!ini.open("banks.ini"))
+        if(!ini.open(iniFile_s))
         {
-            std::fprintf(stderr, "Can't open banks.ini!\n");
+            std::fprintf(stderr, "Can't open %s!\n", iniFile_s);
             return 1;
         }
+
+        std::string banksRoot(iniFile_s);
+        bool banksRootFoundSlash = true;
+
+        for(auto it = banksRoot.end() - 1; it != banksRoot.begin(); --it)
+        {
+            if(*it == '/' || *it == '\\')
+            {
+                banksRoot.erase(it, banksRoot.end());
+                banksRootFoundSlash = true;
+                break;
+            }
+        }
+
+        if(!banksRootFoundSlash)
+            banksRoot = "."; // Relative path to current directory
 
         uint32_t banks_count;
         ini.beginGroup("General");
@@ -45,7 +63,7 @@ int main(int argc, char**argv)
 
         if(!banks_count)
         {
-            std::fprintf(stderr, "Zero count of banks found in banks.ini!\n");
+            std::fprintf(stderr, "Zero count of banks found in %s!\n", iniFile_s);
             return 1;
         }
 
@@ -56,6 +74,7 @@ int main(int argc, char**argv)
                 std::fprintf(stderr, "Failed to find bank %u!\n", bank);
                 return 1;
             }
+
             std::string bank_name;
             std::string filepath;
             std::string filepath_d;
@@ -71,6 +90,10 @@ int main(int argc, char**argv)
             ini.read("format",   format,    "Unknown");
             ini.read("file",     filepath,  "");
             ini.read("file-p",   filepath_d,  "");
+            if(!filepath.empty())
+                filepath = banksRoot + "/" + filepath;
+            if(!filepath_d.empty())
+                filepath_d = banksRoot + "/" + filepath_d;
             ini.read("prefix",   prefix, "");
             ini.read("prefix-p", prefix_d, "");
             ini.read("filter-m", filter_m, "");
@@ -167,6 +190,7 @@ int main(int argc, char**argv)
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
                 }
+
                 if(!filepath_d.empty())
                 {
                     if(!BankFormats::LoadBNK(db, filepath_d.c_str(), bank, bank_name, prefix_d.c_str(), false, true))
@@ -184,6 +208,7 @@ int main(int argc, char**argv)
                     std::fprintf(stderr, "Failed to load bank %u, file %s!\n", bank, filepath.c_str());
                     return 1;
                 }
+
                 if(!filepath_d.empty())
                 {
                     //printf("Loading %s... \n", filepath_d.c_str());
@@ -215,7 +240,7 @@ int main(int argc, char**argv)
     bool dontOverride = false;
 
     {
-        measureCounter.LoadCache("fm_banks/adldata-cache.dat");
+        measureCounter.LoadCache(cacheFile_s);
         measureCounter.m_cache_matches = 0;
         measureCounter.m_done = 0;
         measureCounter.m_total = db.instruments.size();
@@ -232,7 +257,7 @@ int main(int argc, char**argv)
         {
             std::printf("-- Cache data was changed, saving...\n");
             std::fflush(stdout);
-            measureCounter.SaveCache("fm_banks/adldata-cache.dat");
+            measureCounter.SaveCache(cacheFile_s);
             dontOverride = false;
         }
         else

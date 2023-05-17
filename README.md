@@ -97,6 +97,7 @@ The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT
 ### Utils and extras
 * **WITH_GENADLDATA**  - (ON/OFF, default OFF) Build and execute the utility which will rebuild the embedded banks database (which is an adldata.cpp file).
 * **WITH_GENADLDATA_COMMENTS** - (ON/OFF, default OFF) Enable comments in generated ADLDATA cache file
+* **GENADLDATA_CUSTOM_BANKLIST** - (Path) Set the absolute path to the custom INI file that declares a list of embedded banks. If not specified, the banks.ini at the repository root will be used.
 
 * **WITH_MIDIPLAY** - (ON/OFF, default OFF) Build demo MIDI player (Requires SDL2 and also pthread on Windows with MinGW)
 * **MIDIPLAY_WAVE_ONLY** - (ON/OFF, default OFF) Build Demo MIDI player without support of real time playing. It will output into WAV only.
@@ -183,6 +184,7 @@ To build that example you will need to have installed SDL2 library.
  * Fixed ARM64 build on some platforms
  * Improved support of the EA-MUS files (Thanks to [dashodanger](https://github.com/dashodanger))
  * Fixed crash on attempt to change the volume of a blank note
+ * Added an ability to supply the custom list of embedded banks using `-DGENADLDATA_CUSTOM_BANKLIST=/path/to/ini/file.ini` argument
 
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio

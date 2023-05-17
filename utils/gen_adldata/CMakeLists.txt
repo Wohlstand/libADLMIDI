@@ -92,13 +92,19 @@ if(WITH_GENADLDATA_COMMENTS)
     target_compile_options(gen_adldata PUBLIC "-DADLDATA_WITH_COMMENTS")
 endif()
 
-set(ADLDATA_DATABASE
-    "${libADLMIDI_SOURCE_DIR}/src/inst_db.cpp"
-)
+if("${GENADLDATA_CUSTOM_BANKLIST}" STREQUAL "")
+    set(ADLDATA_INI_FILE "${libADLMIDI_SOURCE_DIR}/banks.ini")
+    set(ADLDATA_CACHE_FILE "${libADLMIDI_SOURCE_DIR}/fm_banks/adldata-cache.dat")
+else()
+    set(ADLDATA_INI_FILE "${GENADLDATA_CUSTOM_BANKLIST}")
+    set(ADLDATA_CACHE_FILE "${CMAKE_BINARY_DIR}/instdb/adldata-cache.dat")
+endif()
+
 add_custom_target(gen-adldata-run #OUTPUT ${ADLDATA_DATABASE}
-    COMMAND gen_adldata "${ADLDATA_DATABASE}"
+    COMMAND gen_adldata "${ADLDATA_INI_FILE}" "${ADLDATA_DATABASE}" "${ADLDATA_CACHE_FILE}"
     WORKING_DIRECTORY ${libADLMIDI_SOURCE_DIR}
-    DEPENDS gen_adldata "${libADLMIDI_SOURCE_DIR}/banks.ini"
+    DEPENDS gen_adldata
     COMMENT "Running Embedded FM banks database generation"
     VERBATIM
+    BYPRODUCTS "${ADLDATA_DATABASE}"
 )
