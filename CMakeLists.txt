@@ -271,6 +271,7 @@ function(handle_options targetLib)
             set(HAS_EMULATOR TRUE)
             target_sources(${targetLib} PRIVATE
                 ${libADLMIDI_SOURCE_DIR}/src/chips/opal_opl3.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/opal/opal.c
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_OPAL_EMULATOR)
@@ -343,7 +344,7 @@ file(GLOB libADLMIDI_HEADERS
     ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/*.h
     ${libADLMIDI_SOURCE_DIR}/src/chips/java/*.hpp
     ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/*.h
-    ${libADLMIDI_SOURCE_DIR}/src/chips/opal/*.hpp
+    ${libADLMIDI_SOURCE_DIR}/src/chips/opal/*.h
 )
 list(APPEND libADLMIDI_SOURCES ${libADLMIDI_HEADERS})
 

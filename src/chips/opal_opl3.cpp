@@ -19,14 +19,14 @@
  */
 
 #include "opal_opl3.h"
-#include "opal/opal.hpp"
+#include "opal/opal.h"
 #include <new>
 #include <cstring>
 
 OpalOPL3::OpalOPL3() :
     OPLChipBaseT()
 {
-    m_chip = new Opal(m_rate);
+    m_chip = new Opal;
     setRate(m_rate);
 }
 
@@ -40,39 +40,34 @@ void OpalOPL3::setRate(uint32_t rate)
 {
     OPLChipBaseT::setRate(rate);
     Opal *chip_r = reinterpret_cast<Opal *>(m_chip);
-    chip_r->~Opal();
-    new (chip_r) Opal(effectiveRate());
+    std::memset(chip_r, 0, sizeof(Opal));
+    Opal_Init(chip_r, effectiveRate());
 }
 
 void OpalOPL3::reset()
 {
     OPLChipBaseT::reset();
     Opal *chip_r = reinterpret_cast<Opal *>(m_chip);
-    chip_r->~Opal();
-    new (chip_r) Opal(effectiveRate());
+    std::memset(chip_r, 0, sizeof(Opal));
+    Opal_Init(chip_r, effectiveRate());
 }
 
 void OpalOPL3::writeReg(uint16_t addr, uint8_t data)
 {
     Opal *chip_r = reinterpret_cast<Opal *>(m_chip);
-    chip_r->Port(addr, data);
+    Opal_Port(chip_r, addr, data);
 }
 
 void OpalOPL3::writePan(uint16_t addr, uint8_t data)
 {
-#ifdef OPAL_HAVE_SOFT_PANNING
     Opal *chip_r = reinterpret_cast<Opal *>(m_chip);
-    chip_r->Pan(addr, data);
-#else
-    (void)addr;
-    (void)data;
-#endif
+    Opal_Pan(chip_r, addr, data);
 }
 
 void OpalOPL3::nativeGenerate(int16_t *frame)
 {
     Opal *chip_r = reinterpret_cast<Opal *>(m_chip);
-    chip_r->Sample(&frame[0], &frame[1]);
+    Opal_Sample(chip_r, &frame[0], &frame[1]);
 }
 
 const char *OpalOPL3::emulatorName()
