@@ -36,7 +36,7 @@ typedef enum OpalEnum_t
 {
     OpalOPL3SampleRate      = 49716,
     OpalNumChannels         = 18,
-    OpalNumOperators        = 36,
+    OpalNumOperators        = 36
 } OpalEnum;
 
 /* A single FM operator */
