@@ -1355,7 +1355,7 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
     {
         if(synth.m_musicMode == Synth::MODE_CMF)
             allocType = ADLMIDI_ChanAlloc_SameInst;
-        else if(synth.m_volumeScale == Synth::VOLUME_HMI)
+        else if(synth.m_volumeScale == Synth::VOLUME_HMI || synth.m_volumeScale == Synth::VOLUME_HMI_OLD)
             allocType = ADLMIDI_ChanAlloc_AnyReleased; // HMI doesn't care about the same instrument
         else
             allocType = ADLMIDI_ChanAlloc_OffDelay;
