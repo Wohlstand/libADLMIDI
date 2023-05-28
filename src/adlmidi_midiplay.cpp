@@ -76,20 +76,20 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
     m_setup.emulator = adl_getLowestEmulator();
     m_setup.runAtPcmRate = false;
 
-    m_setup.PCM_RATE   = sampleRate;
+    m_setup.PCM_RATE = sampleRate;
     m_setup.mindelay = 1.0 / (double)m_setup.PCM_RATE;
     m_setup.maxdelay = 512.0 / (double)m_setup.PCM_RATE;
 
-    m_setup.bankId    = 0;
+    m_setup.bankId = 0;
     m_setup.numFourOps = -1;
-    m_setup.numChips   = 2;
-    m_setup.deepTremoloMode     = -1;
-    m_setup.deepVibratoMode     = -1;
-    m_setup.rhythmMode   = -1;
-    m_setup.logarithmicVolumes  = false;
+    m_setup.numChips = 2;
+    m_setup.deepTremoloMode = -1;
+    m_setup.deepVibratoMode = -1;
+    m_setup.rhythmMode = -1;
+    m_setup.logarithmicVolumes = false;
     m_setup.volumeScaleModel = ADLMIDI_VolumeModel_AUTO;
     //m_setup.SkipForward = 0;
-    m_setup.scaleModulators     = -1;
+    m_setup.scaleModulators = -1;
     m_setup.fullRangeBrightnessCC74 = false;
     m_setup.enableAutoArpeggio = false;
     m_setup.delay = 0.0;
@@ -108,17 +108,14 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
 }
 
 MIDIplay::~MIDIplay()
-{
-}
+{}
 
 void MIDIplay::applySetup()
 {
     Synth &synth = *m_synth;
 
     synth.m_musicMode = Synth::MODE_MIDI;
-
     m_setup.tick_skip_samples_delay = 0;
-
     synth.m_runAtPcmRate = m_setup.runAtPcmRate;
 
 #ifndef DISABLE_EMBEDDED_BANKS
@@ -132,15 +129,15 @@ void MIDIplay::applySetup()
     }
 #endif
 
-    synth.m_deepTremoloMode     = m_setup.deepTremoloMode < 0 ?
-                            synth.m_insBankSetup.deepTremolo :
-                            (m_setup.deepTremoloMode != 0);
-    synth.m_deepVibratoMode     = m_setup.deepVibratoMode < 0 ?
-                            synth.m_insBankSetup.deepVibrato :
-                            (m_setup.deepVibratoMode != 0);
-    synth.m_scaleModulators     = m_setup.scaleModulators < 0 ?
-                            synth.m_insBankSetup.scaleModulators :
-                            (m_setup.scaleModulators != 0);
+    synth.m_deepTremoloMode = m_setup.deepTremoloMode < 0 ?
+                              synth.m_insBankSetup.deepTremolo :
+                              (m_setup.deepTremoloMode != 0);
+    synth.m_deepVibratoMode = m_setup.deepVibratoMode < 0 ?
+                              synth.m_insBankSetup.deepVibrato :
+                              (m_setup.deepVibratoMode != 0);
+    synth.m_scaleModulators = m_setup.scaleModulators < 0 ?
+                              synth.m_insBankSetup.scaleModulators :
+                              (m_setup.scaleModulators != 0);
 
     if(m_setup.logarithmicVolumes)
         synth.setVolumeScaleModel(ADLMIDI_VolumeModel_NativeOPL3);
@@ -1353,12 +1350,21 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
 
     if(allocType == ADLMIDI_ChanAlloc_AUTO)
     {
-        if(synth.m_musicMode == Synth::MODE_CMF)
+        switch(synth.m_musicMode)
+        {
+        case Synth::MODE_CMF:
             allocType = ADLMIDI_ChanAlloc_SameInst;
-        else if(synth.m_volumeScale == Synth::VOLUME_HMI || synth.m_volumeScale == Synth::VOLUME_HMI_OLD)
+            break;
+
+        case Synth::VOLUME_HMI:
+        case Synth::VOLUME_HMI_OLD:
             allocType = ADLMIDI_ChanAlloc_AnyReleased; // HMI doesn't care about the same instrument
-        else
+            break;
+
+        default:
             allocType = ADLMIDI_ChanAlloc_OffDelay;
+            break;
+        }
     }
 
     // Rate channel with a releasing note
@@ -1395,11 +1401,12 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
         const AdlChannel::LocationData &jd = j->value;
 
         int64_t kon_ms = jd.kon_time_until_neglible_us / 1000;
-        s -= (jd.sustained == AdlChannel::LocationData::Sustain_None) ?
-            (4000000 + kon_ms) : (500000 + (kon_ms / 2));
 
-        MIDIchannel::notes_iterator
-        k = const_cast<MIDIchannel &>(m_midiChannels[jd.loc.MidCh]).find_activenote(jd.loc.note);
+        s -= (jd.sustained == AdlChannel::LocationData::Sustain_None) ?
+                 (4000000 + kon_ms) :
+                 (500000 + (kon_ms / 2));
+
+        MIDIchannel::notes_iterator k = const_cast<MIDIchannel &>(m_midiChannels[jd.loc.MidCh]).find_activenote(jd.loc.note);
 
         if(!k.is_end())
         {
@@ -1410,8 +1417,7 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
             {
                 s += 300;
                 // Arpeggio candidate = even better
-                if(jd.vibdelay_us < 70000
-                   || jd.kon_time_until_neglible_us > 20000000)
+                if((jd.vibdelay_us < 70000) || (jd.kon_time_until_neglible_us > 20000000))
                     s += 10;
             }
 
@@ -1434,17 +1440,25 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
 
         for(size_t c2 = 0; c2 < static_cast<size_t>(synth.m_numChannels); ++c2)
         {
-            if(c2 == c) continue;
+            if(c2 == c)
+                continue;
 
-            if(synth.m_channelCategory[c2]
-               != synth.m_channelCategory[c]) continue;
+            if(synth.m_channelCategory[c2] != synth.m_channelCategory[c])
+                continue;
 
             for(AdlChannel::const_users_iterator m = m_chipChannels[c2].users.begin(); !m.is_end(); ++m)
             {
                 const AdlChannel::LocationData &md = m->value;
-                if(md.sustained != AdlChannel::LocationData::Sustain_None) continue;
-                if(md.vibdelay_us >= 200000) continue;
-                if(md.ins != jd.ins) continue;
+
+                if(md.sustained != AdlChannel::LocationData::Sustain_None)
+                    continue;
+
+                if(md.vibdelay_us >= 200000)
+                    continue;
+
+                if(md.ins != jd.ins)
+                    continue;
+
                 n_evacuation_stations += 1;
             }
         }
@@ -1473,13 +1487,10 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
         {
             // Collision: Kill old note,
             // UNLESS we're going to do arpeggio
-            MIDIchannel::notes_iterator i
-            (m_midiChannels[jd.loc.MidCh].ensure_find_activenote(jd.loc.note));
+            MIDIchannel::notes_iterator i (m_midiChannels[jd.loc.MidCh].ensure_find_activenote(jd.loc.note));
 
             // Check if we can do arpeggio.
-            if((jd.vibdelay_us < 70000
-                || jd.kon_time_until_neglible_us > 20000000)
-               && jd.ins == ins)
+            if(((jd.vibdelay_us < 70000) || (jd.kon_time_until_neglible_us > 20000000)) && jd.ins == ins)
             {
                 // Do arpeggio together with this note.
                 //doing_arpeggio = true;
@@ -1525,8 +1536,10 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
 
         if(c >= maxChannels)
             break;
+
         if(c == from_channel)
             continue;
+
         if(synth.m_channelCategory[c] != synth.m_channelCategory[from_channel])
             continue;
 
@@ -1544,8 +1557,10 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
 
             if(mv.vibdelay_us >= 200000
                && mv.kon_time_until_neglible_us < 10000000) continue;
+
             if(mv.ins != jd.ins)
                 continue;
+
             if(hooks.onNote)
             {
                 hooks.onNote(hooks.onNote_userData,
@@ -1611,7 +1626,9 @@ void MIDIplay::killSustainingNotes(int32_t midCh, int32_t this_adlchn, uint32_t 
                 int midiins = '?';
                 if(hooks.onNote)
                     hooks.onNote(hooks.onNote_userData, (int)c, jd.loc.note, midiins, 0, 0.0);
+
                 jd.sustained &= ~sustain_type;
+
                 if(jd.sustained == AdlChannel::LocationData::Sustain_None)
                     m_chipChannels[c].users.erase(j);//Remove only when note is clean from any holders
             }
@@ -1627,6 +1644,7 @@ void MIDIplay::markSostenutoNotes(int32_t midCh)
 {
     Synth &synth = *m_synth;
     uint32_t first = 0, last = synth.m_numChannels;
+
     for(uint32_t c = first; c < last; ++c)
     {
         if(m_chipChannels[c].users.empty())
@@ -1637,6 +1655,7 @@ void MIDIplay::markSostenutoNotes(int32_t midCh)
             AdlChannel::users_iterator j = jnext;
             AdlChannel::LocationData &jd = j->value;
             ++jnext;
+
             if((jd.loc.MidCh == midCh) && (jd.sustained == AdlChannel::LocationData::Sustain_None))
                 jd.sustained |= AdlChannel::LocationData::Sustain_Sostenuto;
         }
@@ -1828,6 +1847,7 @@ void MIDIplay::updateGlide(double amount)
     for(size_t channel = 0; channel < num_channels; ++channel)
     {
         MIDIchannel &midiChan = m_midiChannels[channel];
+
         if(midiChan.gliding_note_count == 0)
             continue;
 
@@ -1863,22 +1883,21 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
     uint32_t numChannels = synth.m_numChannels;
 
     uint32_t index = 0;
+
     while(index < numChannels && index < size - 1)
     {
         const AdlChannel &adlChannel = m_chipChannels[index];
 
         AdlChannel::const_users_iterator loc = adlChannel.users.begin();
         AdlChannel::const_users_iterator locnext(loc);
-        if(!loc.is_end()) ++locnext;
+
+        if(!loc.is_end())
+            ++locnext;
 
         if(loc.is_end())  // off
-        {
             str[index] = '-';
-        }
         else if(!locnext.is_end())  // arpeggio
-        {
             str[index] = '@';
-        }
         else  // on
         {
             switch(synth.m_channelCategory[index])
@@ -1897,7 +1916,7 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
         }
 
         uint8_t attribute = 0;
-        if (!loc.is_end())  // 4-bit color index of MIDI channel
+        if(!loc.is_end())  // 4-bit color index of MIDI channel
             attribute |= (uint8_t)(loc->value.loc.MidCh & 0xF);
 
         attr[index] = (char)attribute;
