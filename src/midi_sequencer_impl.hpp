@@ -33,6 +33,7 @@
 #include <assert.h>
 
 #if defined(VITA)
+#define timingsafe_memcmp  timingsafe_memcmp_workaround // Workaround to fix the C declaration conflict
 #include <psp2kern/kernel/sysclib.h> // snprintf
 #endif
 
