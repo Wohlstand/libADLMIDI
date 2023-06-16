@@ -1356,13 +1356,18 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
             allocType = ADLMIDI_ChanAlloc_SameInst;
             break;
 
-        case Synth::VOLUME_HMI:
-        case Synth::VOLUME_HMI_OLD:
-            allocType = ADLMIDI_ChanAlloc_AnyReleased; // HMI doesn't care about the same instrument
-            break;
-
         default:
-            allocType = ADLMIDI_ChanAlloc_OffDelay;
+            switch(synth.m_volumeScale)
+            {
+            case Synth::VOLUME_HMI:
+            case Synth::VOLUME_HMI_OLD:
+                allocType = ADLMIDI_ChanAlloc_AnyReleased; // HMI doesn't care about the same instrument
+                break;
+
+            default:
+                allocType = ADLMIDI_ChanAlloc_OffDelay;
+                break;
+            }
             break;
         }
     }
