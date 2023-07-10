@@ -1509,8 +1509,8 @@ void OPL3::setPan(size_t c, uint8_t value)
         {
 #endif
             int panning = 0;
-            if(value  < 64 + 32) panning |= OPL_PANNING_LEFT;
-            if(value >= 64 - 32) panning |= OPL_PANNING_RIGHT;
+            if(value  < 64 + 16) panning |= OPL_PANNING_LEFT;
+            if(value >= 64 - 16) panning |= OPL_PANNING_RIGHT;
             writePan(chip, g_channelsMapPan[cc], 64);
             writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | panning);
 #ifndef ADLMIDI_HW_OPL
