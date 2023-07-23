@@ -783,6 +783,7 @@ int main(int argc, char **argv)
             adl_close(myDevice);
             return 1;
         }
+
         if(spec.samples != obtained.samples)
         {
             std::fprintf(stderr, " - Audio wanted (format=%s,samples=%u,rate=%u,channels=%u);\n"
@@ -790,6 +791,7 @@ int main(int argc, char **argv)
                          audio_format_to_str(spec.format, spec.is_msb),         spec.samples,     spec.freq,     spec.channels,
                          audio_format_to_str(obtained.format, obtained.is_msb), obtained.samples, obtained.freq, obtained.channels);
         }
+
         switch(obtained.format)
         {
         case ADLMIDI_SampleType_S8:
