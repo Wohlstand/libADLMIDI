@@ -8,7 +8,7 @@ blocks:
   - name: Setup
     task:
       jobs:
-        - name: Setup
+        - name: Checkpoint repo
           commands:
             - checkout
         - name: Install dependencies
