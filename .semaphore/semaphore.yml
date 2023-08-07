@@ -1,0 +1,70 @@
+version: v1.0
+name: Initial Pipeline
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+blocks:
+  - name: Setup
+    task:
+      jobs:
+        - name: Setup
+          commands:
+            - checkout
+        - name: Install dependencies
+          commands:
+            - sudo apt-get update
+            - sudo apt-get install -qq libsdl2-dev ninja-build cmake libvlc-dev libvlccore-dev lftp
+  - name: Build
+    task:
+      jobs:
+        - name: Debug without of embedded banks and no GenAdlData
+          commands:
+            - mkdir build-debug-ne
+            - cd build-debug-ne
+            - cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_EMBEDDED_BANKS=OFF -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DEXAMPLE_SDL2_AUDIO=ON -DWITH_VLC_PLUGIN=OFF -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..
+            - cmake --build . --config Debug --target install -- -j 3
+            - cd ..
+        - name: Release without of embedded banks and no GenAdlData
+          commands:
+            - mkdir build-debug-ne
+            - cd build-debug-ne
+            - cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_EMBEDDED_BANKS=OFF -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DEXAMPLE_SDL2_AUDIO=ON -DWITH_VLC_PLUGIN=OFF -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..
+            - cmake --build . --config Debug --target install -- -j 3
+            - cd ..
+        - name: Debug with embedded banks and no GenAdlData
+          commands:
+            - mkdir build-debug-ne
+            - cd build-debug-ne
+            - cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DEXAMPLE_SDL2_AUDIO=ON -DWITH_VLC_PLUGIN=OFF -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..
+            - cmake --build . --config Debug --target install -- -j 3
+            - cd ..
+        - name: Release with embedded banks and no GenAdlData
+          commands:
+            - mkdir build-debug-ne
+            - cd build-debug-ne
+            - cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DEXAMPLE_SDL2_AUDIO=ON -DWITH_VLC_PLUGIN=OFF -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..
+            - cmake --build . --config Debug --target install -- -j 3
+            - cd ..
+        - name: DJGPP DOS Without Embedded banks
+          commands:
+            - mkdir build-dos-ne
+            - cd build-dos-ne
+            - 'wget http://wohlsoft.ru/docs/Software/DJGPP/djgpp-linux-x-dos-7.2.0.tar.gz -O djgpp.tar.gz'
+            - sudo tar -xf djgpp.tar.gz -C /usr/local/
+            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_EMBEDDED_BANKS=OFF -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
+            - ../cmake/djgpp/djgpp-cmake-core.sh --build . --config Release --target all -- -j 3
+            - cd ..
+        - name: DJGPP DOS With Embedded banks
+          commands:
+            - mkdir build-dos
+            - cd build-dos
+            - 'wget http://wohlsoft.ru/docs/Software/DJGPP/djgpp-linux-x-dos-7.2.0.tar.gz -O djgpp.tar.gz'
+            - 'wget http://wohlsoft.ru/docs/Software/DJGPP/v2misc/csdpmi7b.zip'
+            - sudo tar -xf djgpp.tar.gz -C /usr/local/
+            - unzip csdpmi7b.zip
+            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
+            - ../cmake/djgpp/djgpp-cmake-core.sh --build . --config Release --target all -- -j 3
+            - zip -j -9 adlmidi-dos32.zip adlmidi.exe adlmidi2.exe bin/CWSDPMI.EXE
+            - '# lftp -e "set ssl:verify-certificate no; put -O ./dos/ adlmidi-dos32.zip; exit" ${FTP_SERVER}'
+            - cd ..
