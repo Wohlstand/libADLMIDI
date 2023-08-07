@@ -10,7 +10,8 @@ blocks:
       jobs:
         - name: Checkpoint repo
           commands:
-            - checkout
+            - 'git clone https://github.com/Wohlstand/libADLMIDI.git'
+            - cd libADLMIDI
         - name: Install dependencies
           commands:
             - sudo apt-get update
