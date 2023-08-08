@@ -65,8 +65,7 @@ blocks:
           value: /home/semaphore/libADLMIDI/cmake/djgpp
       prologue:
         commands:
-          - 'git clone https://github.com/Wohlstand/libADLMIDI.git'
-          - cd libADLMIDI
+          - checkout
           - sudo apt-get update
           - sudo apt-get install -qq libsdl2-dev ninja-build cmake libvlc-dev libvlccore-dev lftp
       secrets:
