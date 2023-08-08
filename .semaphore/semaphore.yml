@@ -5,17 +5,6 @@ agent:
     type: e1-standard-2
     os_image: ubuntu2004
 blocks:
-  - name: Setup
-    task:
-      jobs:
-        - name: Checkpoint repo
-          commands:
-            - 'git clone https://github.com/Wohlstand/libADLMIDI.git'
-            - cd libADLMIDI
-        - name: Install dependencies
-          commands:
-            - sudo apt-get update
-            - sudo apt-get install -qq libsdl2-dev ninja-build cmake libvlc-dev libvlccore-dev lftp
   - name: Build
     task:
       jobs:
@@ -67,7 +56,7 @@ blocks:
             - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
             - ../cmake/djgpp/djgpp-cmake-core.sh --build . --config Release --target all -- -j 3
             - zip -j -9 adlmidi-dos32.zip adlmidi.exe adlmidi2.exe bin/CWSDPMI.EXE
-            - '# lftp -e "set ssl:verify-certificate no; put -O ./dos/ adlmidi-dos32.zip; exit" ${FTP_SERVER}'
+            - 'lftp -e "set ssl:verify-certificate no; put -O ./dos/ adlmidi-dos32.zip; exit" ${FTP_SERVER}'
             - cd ..
       env_vars:
         - name: ' FTP_SERVER'
@@ -76,5 +65,7 @@ blocks:
           value: /home/semaphore/libADLMIDI/cmake/djgpp
       prologue:
         commands:
-          - echo $PWD
-          - ls -la
+          - 'git clone https://github.com/Wohlstand/libADLMIDI.git'
+          - cd libADLMIDI
+          - sudo apt-get update
+          - sudo apt-get install -qq libsdl2-dev ninja-build cmake libvlc-dev libvlccore-dev lftp
