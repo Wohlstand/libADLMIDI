@@ -69,3 +69,5 @@ blocks:
           - cd libADLMIDI
           - sudo apt-get update
           - sudo apt-get install -qq libsdl2-dev ninja-build cmake libvlc-dev libvlccore-dev lftp
+      secrets:
+        - name: FTP upload credentials
