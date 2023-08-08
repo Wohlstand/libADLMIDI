@@ -69,6 +69,3 @@ blocks:
             - zip -j -9 adlmidi-dos32.zip adlmidi.exe adlmidi2.exe bin/CWSDPMI.EXE
             - '# lftp -e "set ssl:verify-certificate no; put -O ./dos/ adlmidi-dos32.zip; exit" ${FTP_SERVER}'
             - cd ..
-      prologue:
-        commands:
-          - cd libADLMIDI
