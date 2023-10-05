@@ -791,23 +791,42 @@ void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
         break; // Phaser effect depth. We don't do.
 
     case 98:
-        m_midiChannels[channel].lastlrpn = value;
-        m_midiChannels[channel].nrpn = true;
+        if(synth.m_musicMode != Synth::MODE_CMF)
+        {
+            m_midiChannels[channel].lastlrpn = value;
+            m_midiChannels[channel].nrpn = true;
+        }
         break;
 
     case 99:
-        m_midiChannels[channel].lastmrpn = value;
-        m_midiChannels[channel].nrpn = true;
+        if(synth.m_musicMode == Synth::MODE_CMF)
+        {
+            // CMF (ctrl 0x63) Depth control
+            synth.m_deepVibratoMode = (value & 1) != 0;
+            synth.m_deepTremoloMode = (value & 2) != 0;
+            synth.commitDeepFlags();
+        }
+        else
+        {
+            m_midiChannels[channel].lastmrpn = value;
+            m_midiChannels[channel].nrpn = true;
+        }
         break;
 
     case 100:
-        m_midiChannels[channel].lastlrpn = value;
-        m_midiChannels[channel].nrpn = false;
+        if(synth.m_musicMode != Synth::MODE_CMF)
+        {
+            m_midiChannels[channel].lastlrpn = value;
+            m_midiChannels[channel].nrpn = false;
+        }
         break;
 
     case 101:
-        m_midiChannels[channel].lastmrpn = value;
-        m_midiChannels[channel].nrpn = false;
+        if(synth.m_musicMode != Synth::MODE_CMF)
+        {
+            m_midiChannels[channel].lastmrpn = value;
+            m_midiChannels[channel].nrpn = false;
+        }
         break;
 
     case 113:
@@ -821,10 +840,10 @@ void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
         setRPN(channel, value, false);
         break;
 
-    case 103:
+    case 103: // CMF (ctrl 0x67) rhythm mode
         if(synth.m_musicMode == Synth::MODE_CMF)
             m_cmfPercussionMode = (value != 0);
-        break; // CMF (ctrl 0x67) rhythm mode
+        break;
 
     default:
         break;

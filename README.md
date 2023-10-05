@@ -185,6 +185,7 @@ To build that example you will need to have installed SDL2 library.
  * Improved support of the EA-MUS files (Thanks to [dashodanger](https://github.com/dashodanger))
  * Fixed crash on attempt to change the volume of a blank note
  * Added an ability to supply the custom list of embedded banks using `-DGENADLDATA_CUSTOM_BANKLIST=/path/to/ini/file.ini` argument
+ * Improved support of the CMF files: added support for previously missing transpose, depth control, and song marker controllers
 
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio

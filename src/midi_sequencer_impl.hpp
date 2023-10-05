@@ -1761,7 +1761,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
                 }
             }
 
-            if(m_format == Format_XMIDI)
+            else if(m_format == Format_XMIDI)
             {
                 switch(evt.data[0])
                 {
@@ -1807,6 +1807,38 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
                     evt.subtype = MidiEvent::ST_CALLBACK_TRIGGER;
                     evt.data.assign(1, evt.data[1]);
                     break;
+                }
+            }
+
+            else if(m_format == Format_CMF)
+            {
+                switch(evt.data[0])
+                {
+                case 102: // Song markers (0x66)
+                    evt.type = MidiEvent::T_SPECIAL;
+                    evt.subtype = MidiEvent::ST_CALLBACK_TRIGGER;
+                    evt.data.assign(1, evt.data[1]);
+                    break;
+
+                case 104: // Transpose Up (0x68), convert into pitch bend
+                {
+                    int16_t bend = 8192 + (((int)evt.data[1] * 8192) / 128);
+                    evt.type = MidiEvent::T_WHEEL;
+                    evt.data.resize(2);
+                    evt.data[0] = (bend & 0x7F);
+                    evt.data[1] = ((bend >> 7) & 0x7F);
+                    break;
+                }
+
+                case 105: // Transpose Down (0x69), convert into pitch bend
+                {
+                    int16_t bend = 8192 - (((int)evt.data[1] * 8192) / 128);
+                    evt.type = MidiEvent::T_WHEEL;
+                    evt.data.resize(2);
+                    evt.data[0] = (bend & 0x7F);
+                    evt.data[1] = ((bend >> 7) & 0x7F);
+                    break;
+                }
                 }
             }
         }
