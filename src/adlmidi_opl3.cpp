@@ -156,7 +156,7 @@ static const uint16_t g_channelsMap[NUM_OF_CHANNELS] =
     0x006, 0x007, 0x008, 0x008, 0x008 // <- hw percussions, hihats and cymbals using tom-tom's channel as pitch source
 };
 
-//! Channel map to regoster offsets (separated copy for panning)
+//! Channel map to regoster offsets (separated copy for panning and for CMF)
 static const uint16_t g_channelsMapPan[NUM_OF_CHANNELS] =
 {
     0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007, 0x008, // 0..8
@@ -1068,7 +1068,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     }
 
     ftone = octave + static_cast<uint32_t>(hertz /*+ 0.5*/);
-    uint32_t chn = g_channelsMap[cc1];
+    uint32_t chn = m_musicMode == MODE_CMF ? g_channelsMapPan[cc1] : g_channelsMap[cc1];
     const OplTimbre &patch1 = m_insCache[c1];
     const OplTimbre &patch2 = m_insCache[c2 < m_insCache.size() ? c2 : 0];
 
