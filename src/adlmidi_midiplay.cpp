@@ -445,16 +445,11 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
     voices[1].pseudo4op = pseudo_4op;
 #endif /* __WATCOMC__ */
 
-    if(
-        (synth.m_rhythmMode == 1) &&
-        (
-            ((ains->flags & OplInstMeta::Mask_RhythmMode) != 0) ||
-            (m_cmfPercussionMode && (channel >= 11))
-        )
-    )
-    {
+    bool rm_ains = (ains->flags & OplInstMeta::Mask_RhythmMode) != 0;
+    bool rm_cmf = m_cmfPercussionMode && (channel >= 11);
+
+    if(synth.m_rhythmMode && (rm_ains || rm_cmf))
         voices[1] = voices[0];//i[1] = i[0];
-    }
 
     bool isBlankNote = (ains->flags & OplInstMeta::Flag_NoSound) != 0;
 
@@ -507,24 +502,31 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
                 if(synth.m_rhythmMode)
                 {
-                    if(m_cmfPercussionMode)
-                    {
-                        expected_mode = channel  < 11 ? OPL3::ChanCat_Regular : (OPL3::ChanCat_Rhythm_Bass + (channel  - 11)); // CMF
-                    }
+                    if(m_cmfPercussionMode) // CMF
+                        expected_mode = channel  < 11 ? OPL3::ChanCat_Regular : (OPL3::ChanCat_Rhythm_Bass + (channel  - 11));
                     else
                     {
-                        expected_mode = OPL3::ChanCat_Regular;
-                        uint32_t rm = (ains->flags & OplInstMeta::Mask_RhythmMode);
-                        if(rm == OplInstMeta::Flag_RM_BassDrum)
+                        switch((ains->flags & OplInstMeta::Mask_RhythmMode))
+                        {
+                        default:
+                            expected_mode = OPL3::ChanCat_Regular;
+                            break;
+                        case OplInstMeta::Flag_RM_BassDrum:
                             expected_mode = OPL3::ChanCat_Rhythm_Bass;
-                        else if(rm == OplInstMeta::Flag_RM_Snare)
+                            break;
+                        case OplInstMeta::Flag_RM_Snare:
                             expected_mode = OPL3::ChanCat_Rhythm_Snare;
-                        else if(rm == OplInstMeta::Flag_RM_TomTom)
+                            break;
+                        case OplInstMeta::Flag_RM_TomTom:
                             expected_mode = OPL3::ChanCat_Rhythm_Tom;
-                        else if(rm == OplInstMeta::Flag_RM_Cymbal)
+                            break;
+                        case OplInstMeta::Flag_RM_Cymbal:
                             expected_mode = OPL3::ChanCat_Rhythm_Cymbal;
-                        else if(rm == OplInstMeta::Flag_RM_HiHat)
+                            break;
+                        case OplInstMeta::Flag_RM_HiHat:
                             expected_mode = OPL3::ChanCat_Rhythm_HiHat;
+                            break;
+                        }
                     }
                 }
 
