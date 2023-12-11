@@ -280,6 +280,10 @@ if(WIN32)
     option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
 endif()
 
+if(UNIX)
+    option(WITH_ALSASEQ     "Build an ALSA sequencer" OFF)
+endif()
+
 option(ENABLE_ADDRESS_SANITIZER "Enable the Address Sanitizer GCC feature" OFF)
 
 if(NOT WIN32
@@ -707,6 +711,10 @@ if(WIN32 AND WITH_WINMMDRV)
     add_subdirectory(utils/winmm_drv)
 endif()
 
+if(UNIX AND WITH_ALSASEQ)
+    add_subdirectory(utils/adlalsaseq)
+endif()
+
 if(libADLMIDI_STATIC)
     install(TARGETS ADLMIDI_static
             EXPORT libADLMIDIStaticTargets
@@ -824,4 +832,7 @@ message("WITH_XMI2MID             = ${WITH_XMI2MID}")
 message("EXAMPLE_SDL2_AUDIO       = ${EXAMPLE_SDL2_AUDIO}")
 if(WIN32)
     message("WITH_WINMMDRV            = ${WITH_WINMMDRV}")
+endif()
+if(UNIX)
+    message("WITH_ALSASEQ             = ${WITH_ALSASEQ}")
 endif()
