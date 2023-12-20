@@ -62,7 +62,7 @@ static ALSA_Seq_Data midi_open(void)
     data.port = snd_seq_create_simple_port(
                   data.handle, "libADLMIDI port",
                   SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE,
-                  SND_SEQ_PORT_TYPE_APPLICATION);
+                  SND_SEQ_PORT_TYPE_APPLICATION|SND_SEQ_PORT_TYPE_MIDI_GENERIC);
     check_seq_error(data.port, "Could not create sequencer port");
 
     data.n_connections = 0;
