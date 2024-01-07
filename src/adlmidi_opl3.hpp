@@ -62,6 +62,16 @@ public:
 #ifndef ADLMIDI_HW_OPL
     //! Running chip emulators
     std::vector<AdlMIDI_SPtr<OPLChipBase > > m_chips;
+#ifdef ADLMIDI_MIDI2VGM
+    //! Loop Start hook
+    void (*m_loopStartHook)(void*);
+    //! Loop Start hook data
+    void *m_loopStartHookData;
+    //! Loop End hook
+    void (*m_loopEndHook)(void*);
+    //! Loop End hook data
+    void *m_loopEndHookData;
+#endif
 #endif
 
 private:
