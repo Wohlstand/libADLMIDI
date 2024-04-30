@@ -15,7 +15,16 @@
 */
 
 #include <stdint.h>
+#include <limits.h>
 #include "opal.h"
+
+#ifndef INT_MAX
+#   define INT_MAX  2147483647
+#endif
+
+#ifndef INT_MIN
+#   define INT_MIN  -2147483648
+#endif
 
 /* Various constants */
 typedef enum OpalEnumPriv_t
@@ -491,6 +500,23 @@ void Opal_Pan(Opal *self, uint16_t reg_num, uint8_t pan)
 }
 
 
+static inline int64_t s_opal_Mul32To64(int32_t a, int32_t b)
+{
+    return (int64_t)(a) * b;
+}
+
+static inline int32_t s_opal_MulDivR(int32_t a, int32_t b, int32_t c)
+{
+    int64_t ret = (s_opal_Mul32To64(a, b) + ( c / 2 )) / c;
+
+    if(ret > INT_MAX)
+        return INT_MAX;
+    else if(ret < INT_MIN)
+        return INT_MIN;
+    else
+        return (int32_t)(ret);
+}
+
 
 /*==================================================================================================
  * Generate sample.  Every time you call this you will get two signed 16-bit samples (one for each
@@ -499,7 +525,7 @@ void Opal_Pan(Opal *self, uint16_t reg_num, uint8_t pan)
  *=================================================================================================*/
 void Opal_Sample(Opal *self, int16_t* left, int16_t* right)
 {
-    int32_t omblend;
+    int32_t fract;
 
     /* If the destination sample rate is higher than the OPL3 sample rate, we need to skip ahead */
     while(self->SampleAccum >= self->SampleRate)
@@ -513,9 +539,9 @@ void Opal_Sample(Opal *self, int16_t* left, int16_t* right)
     }
 
     /* Mix with the partial accumulation */
-    omblend = self->SampleRate - self->SampleAccum;
-    *left = (self->LastOutput[0] * omblend + self->CurrOutput[0] * self->SampleAccum) / self->SampleRate;
-    *right = (self->LastOutput[1] * omblend + self->CurrOutput[1] * self->SampleAccum) / self->SampleRate;
+    fract = s_opal_MulDivR(self->SampleAccum, 65536, self->SampleRate);
+    *left = (int16_t)(self->LastOutput[0] + ((fract * (self->CurrOutput[0] - self->LastOutput[0])) / 65536));
+    *right = (int16_t)(self->LastOutput[1] + ((fract * (self->CurrOutput[1] - self->LastOutput[1])) / 65536));
 
     self->SampleAccum += OpalOPL3SampleRate;
 }
