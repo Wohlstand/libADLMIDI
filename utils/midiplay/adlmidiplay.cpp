@@ -999,13 +999,17 @@ int main(int argc, char **argv)
 
 #   ifdef __DJGPP__
     //disable();
-    int haveYield;
     errno = 0;
     __dpmi_yield();
-    haveYield = errno ? 0 : 1;
+    int haveYield = errno ? 0 : 1;
+
+    if(!haveYield)
+        std::fprintf(stdout, " - [DOS] dmpi_yield failed, using hlt\n");
+
     outportb(0x43, 0x34);
     outportb(0x40, timerPeriod & 0xFF);
     outportb(0x40, timerPeriod >>   8);
+    std::fprintf(stdout, " - [DOS] Running clock with %d hz\n", newTimerFreq);
     //enable();
 #   endif//__DJGPP__
 
