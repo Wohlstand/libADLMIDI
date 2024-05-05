@@ -122,6 +122,7 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 #define HW_OPL_MSDOS
 #include <conio.h>
 #include <dos.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -998,6 +999,10 @@ int main(int argc, char **argv)
 
 #   ifdef __DJGPP__
     //disable();
+    int haveYield;
+    errno = 0;
+    __dpmi_yield();
+    haveYield = errno ? 0 : 1;
     outportb(0x43, 0x34);
     outportb(0x40, timerPeriod & 0xFF);
     outportb(0x40, timerPeriod >>   8);
@@ -1192,7 +1197,10 @@ int main(int argc, char **argv)
             //__asm__ volatile("sti\nhlt");
             //usleep(10000);
 #       ifdef __DJGPP__
-            __dpmi_yield();
+            if(haveYield)
+                __dpmi_yield();
+            else
+                __asm__ volatile("hlt");
 #       endif
 #       ifdef __WATCOMC__
             //dpmi_dos_yield();
