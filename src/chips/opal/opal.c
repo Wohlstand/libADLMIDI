@@ -500,14 +500,9 @@ void Opal_Pan(Opal *self, uint16_t reg_num, uint8_t pan)
 }
 
 
-static inline int64_t s_opal_Mul32To64(int32_t a, int32_t b)
-{
-    return (int64_t)(a) * b;
-}
-
 static inline int32_t s_opal_MulDivR(int32_t a, int32_t b, int32_t c)
 {
-    int64_t ret = (s_opal_Mul32To64(a, b) + ( c / 2 )) / c;
+    int64_t ret = (((int64_t)(a) * b) + ( c / 2 )) / c;
 
     if(ret > INT_MAX)
         return INT_MAX;
