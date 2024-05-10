@@ -1847,8 +1847,8 @@ void OPL3::initChip(size_t chip)
     /* Clean-up channels from any playing junk sounds */
     for(size_t a = 0; a < OPL3_CHANNELS_RHYTHM_BASE; ++a)
     {
-        writeRegI(chip, 0x20 + g_channelsMap[a * 2], 0x00);
-        writeRegI(chip, 0x20 + g_channelsMap[(a * 2) + 1], 0x00);
+        writeRegI(chip, 0x20 + g_operatorsMap[a * 2], 0x00);
+        writeRegI(chip, 0x20 + g_operatorsMap[(a * 2) + 1], 0x00);
         writeRegI(chip, 0xA0 + g_channelsMap[a], 0x00);
         writeRegI(chip, 0xB0 + g_channelsMap[a], 0x00);
     }
