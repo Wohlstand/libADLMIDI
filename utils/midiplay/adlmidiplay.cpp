@@ -534,7 +534,20 @@ static struct TimeCounter
     unsigned newTimerFreq;
     unsigned timerPeriod;
     int haveYield;
+    int haveDosIdle;
+    unsigned int ring;
     unsigned long BIOStimer_begin;
+
+    unsigned long timerNext;
+
+    enum wmethod
+    {
+        WM_NONE,
+        WM_YIELD,
+        WM_IDLE,
+        WM_HLT
+    } idleMethod;
+
 #endif
 
     TimeCounter()
@@ -551,6 +564,11 @@ static struct TimeCounter
         printsCounterPeriod = 20;
         setDosTimerHZ(209);
         haveYield = 0;
+        haveDosIdle = 0;
+        ring = 0;
+        idleMethod = WM_NONE;
+
+        timerNext = 0;
 #endif
     }
 
@@ -558,12 +576,52 @@ static struct TimeCounter
     void initDosTimer()
     {
 #   ifdef __DJGPP__
+        /* determine protection ring */
+        __asm__ ("mov %%cs, %0\n\t"
+                 "and $3, %0" : "=r" (ring));
+
         errno = 0;
         __dpmi_yield();
         haveYield = errno ? 0 : 1;
 
         if(!haveYield)
-            std::fprintf(stdout, " - [DOS] dmpi_yield failed, using hlt\n");
+        {
+            __dpmi_regs regs;
+            regs.x.ax = 0x1680;
+            __dpmi_int(0x28, &regs);
+            haveDosIdle = regs.h.al ? 0 : 1;
+
+            if(haveDosIdle)
+                idleMethod = WM_IDLE;
+            else if(ring == 0)
+                idleMethod = WM_HLT;
+            else
+                idleMethod = WM_NONE;
+        }
+        else
+        {
+            idleMethod = WM_YIELD;
+        }
+
+        const char *method;
+        switch(idleMethod)
+        {
+        default:
+        case WM_NONE:
+            method = "none";
+            break;
+        case WM_YIELD:
+            method = "yield";
+            break;
+        case WM_IDLE:
+            method = "idle";
+            break;
+        case WM_HLT:
+            method = "hlt";
+            break;
+        }
+
+        std::fprintf(stdout, " - [DOS] Using idle method: %s\n", method);
 #   endif
     }
 
@@ -617,10 +675,39 @@ static struct TimeCounter
 //__asm__ volatile("sti\nhlt");
 //usleep(10000);
 #       ifdef __DJGPP__
-        if(haveYield)
+        switch(idleMethod)
+        {
+        default:
+        case WM_NONE:
+            if(timerNext != 0)
+                while(BIOStimer < timerNext);
+            timerNext = BIOStimer + 1;
+            break;
+
+        case WM_YIELD:
             __dpmi_yield();
-        else
+            break;
+
+        case WM_IDLE:
+        {
+            __dpmi_regs regs;
+
+            /* the DOS Idle call is documented to return immediately if no other
+             * program is ready to run, therefore do one HLT if we can */
+            if(ring == 0)
+                __asm__ volatile ("hlt");
+
+            regs.x.ax = 0x1680;
+            __dpmi_int(0x28, &regs);
+            if (regs.h.al)
+                errno = ENOSYS;
+            break;
+        }
+
+        case WM_HLT:
             __asm__ volatile("hlt");
+            break;
+        }
 #       endif
 #       ifdef __WATCOMC__
         //dpmi_dos_yield();
