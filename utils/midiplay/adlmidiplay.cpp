@@ -213,17 +213,89 @@ typedef std::deque<uint8_t> AudioBuff;
 static AudioBuff g_audioBuffer;
 static MutexType g_audioBuffer_lock;
 static ADLMIDI_AudioFormat g_audioFormat;
+static float g_gaining = 2.0f;
+
+static void applyGain(uint8_t *buffer, size_t bufferSize)
+{
+    size_t i;
+
+    switch(g_audioFormat.type)
+    {
+    case ADLMIDI_SampleType_S8:
+    {
+        int8_t *buf = reinterpret_cast<int8_t *>(buffer);
+        size_t samples = bufferSize;
+        for(i = 0; i < samples; ++i)
+            *(buf++) *= g_gaining;
+        break;
+    }
+    case ADLMIDI_SampleType_U8:
+    {
+        uint8_t *buf = buffer;
+        size_t samples = bufferSize;
+        for(i = 0; i < samples; ++i)
+        {
+            int8_t s = static_cast<int8_t>(static_cast<int32_t>(*buf) + (-0x7f - 1)) * g_gaining;
+            *(buf++) = static_cast<uint8_t>(static_cast<int32_t>(s) - (-0x7f - 1));
+        }
+        break;
+    }
+    case ADLMIDI_SampleType_S16:
+    {
+        int16_t *buf = reinterpret_cast<int16_t *>(buffer);
+        size_t samples = bufferSize / g_audioFormat.containerSize;
+        for(i = 0; i < samples; ++i)
+            *(buf++) *= g_gaining;
+        break;
+    }
+    case ADLMIDI_SampleType_U16:
+    {
+        uint16_t *buf = reinterpret_cast<uint16_t *>(buffer);
+        size_t samples = bufferSize / g_audioFormat.containerSize;
+        for(i = 0; i < samples; ++i)
+        {
+            int16_t s = static_cast<int16_t>(static_cast<int32_t>(*buf) + (-0x7fff - 1)) * g_gaining;
+            *(buf++) = static_cast<uint16_t>(static_cast<int32_t>(s) - (-0x7fff - 1));
+        }
+        break;
+    }
+    case ADLMIDI_SampleType_S32:
+    {
+        int32_t *buf = reinterpret_cast<int32_t *>(buffer);
+        size_t samples = bufferSize / g_audioFormat.containerSize;
+        for(i = 0; i < samples; ++i)
+            *(buf++) *= g_gaining;
+        break;
+    }
+    case ADLMIDI_SampleType_F32:
+    {
+        float *buf = reinterpret_cast<float *>(buffer);
+        size_t samples = bufferSize / g_audioFormat.containerSize;
+        for(i = 0; i < samples; ++i)
+            *(buf++) *= g_gaining;
+        break;
+    }
+    default:
+        break;
+    }
+}
 
 static void SDL_AudioCallbackX(void *, uint8_t *stream, int len)
 {
+    unsigned ate = static_cast<unsigned>(len); // number of bytes
+
     audio_lock();
     //short *target = (short *) stream;
-    g_audioBuffer_lock.Lock();
-    unsigned ate = static_cast<unsigned>(len); // number of bytes
+    g_audioBuffer_lock.Lock();    
+
     if(ate > g_audioBuffer.size())
         ate = (unsigned)g_audioBuffer.size();
+
     for(unsigned a = 0; a < ate; ++a)
         stream[a] = g_audioBuffer[a];
+
+    applyGain(stream, len);
+
     g_audioBuffer.erase(g_audioBuffer.begin(), g_audioBuffer.begin() + ate);
     g_audioBuffer_lock.Unlock();
     audio_unlock();
@@ -1025,6 +1097,7 @@ int main(int argc, char **argv)
             " -ea Enable the auto-arpeggio\n"
 #ifndef HARDWARE_OPL3
             " -fp Enables full-panning stereo support\n"
+            " --gain <value> Set the gaining factor (default 2.0)\n"
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
             " --emu-nuked7 Uses Nuked OPL3 v 1.7.4 emulator\n"
             " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
@@ -1211,6 +1284,18 @@ int main(int argc, char **argv)
             multibankFromEnbededTest = true;
         else if(!std::strcmp("-s", argv[2]))
             adl_setScaleModulators(myDevice, 1);//Turn on modulators scaling by volume
+#ifndef ADLMIDI_HW_OPL
+        else if(!std::strcmp("--gain", argv[2]))
+        {
+            if(argc <= 3)
+            {
+                printError("The option --gain requires an argument!\n");
+                return 1;
+            }
+            had_option = true;
+            g_gaining = std::atof(argv[3]);
+        }
+#endif // HARDWARE_OPL3
 
 #ifdef HARDWARE_OPL3
         else if(!std::strcmp("--time-freq", argv[2]))
@@ -1475,6 +1560,15 @@ int main(int argc, char **argv)
     std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
     std::fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
     std::fprintf(stdout, " - Channel allocation mode: %s\n", chanalloc_to_str(adl_getChannelAllocMode(myDevice)));
+
+#ifndef HARDWARE_OPL3
+#   ifdef ADLMIDI_ENABLE_HW_SERIAL
+    if(!hwSerial)
+#   endif
+    {
+        std::fprintf(stdout, " - Gain level: %g\n", g_gaining);
+    }
+#endif
 
     int songsCount = adl_getSongsCount(myDevice);
     if(songNumLoad >= 0)
