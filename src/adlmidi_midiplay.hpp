@@ -76,6 +76,7 @@ public:
     void resetMIDI();
 
 private:
+    void chipReset();
     void resetMIDIDefaults(int offset = 0);
 
 public:
@@ -526,6 +527,14 @@ public:
     {
         int          emulator;
         bool         runAtPcmRate;
+
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+        bool         serial;
+        std::string  serialName;
+        unsigned int serialBaud;
+        unsigned int serialProtocol;
+#endif
+
         unsigned int bankId;
         int          numFourOps;
         unsigned int numChips;

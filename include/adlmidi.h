@@ -738,6 +738,30 @@ typedef struct {
 extern ADLMIDI_DECLSPEC int adl_setRunAtPcmRate(struct ADL_MIDIPlayer *device, int enabled);
 
 /**
+ * @brief The list of serial port protocols
+ */
+enum ADL_SerialProtocol
+{
+    ADLMIDI_SerialProtocol_Unknown = 0,
+    ADLMIDI_SerialProtocol_ArduinoOPL2,
+    ADLMIDI_SerialProtocol_NukeYktOPL3,
+    ADLMIDI_SerialProtocol_RetroWaveOPL3,
+    ADLMIDI_SerialProtocol_END
+};
+
+/**
+ * @brief Switch the synthesizer into hardware mode using Serial port
+ * @param name The name of the serial port device (it may look different on various platforms. On UNIX-like systems don't type the /dev/ prefix: only name).
+ * @param baud The baud speed of the serial port
+ * @param protocol The binary protocol used to communicate the device (#ADL_SerialProtocol)
+ * @return 0 on success, <0 when any error has occurred
+ */
+extern ADLMIDI_DECLSPEC int adl_switchSerialHW(struct ADL_MIDIPlayer *device,
+                                               const char *name,
+                                               unsigned baud,
+                                               unsigned protocol);
+
+/**
  * @brief Set 4-bit device identifier. Used by the SysEx processor.
  * @param device Instance of the library
  * @param id 4-bit device identifier
@@ -1151,6 +1175,39 @@ extern ADLMIDI_DECLSPEC int  adl_generateFormat(struct ADL_MIDIPlayer *device, i
  * @return desired number of seconds until next call. Pass this value into `seconds` field in next time
  */
 extern ADLMIDI_DECLSPEC double adl_tickEvents(struct ADL_MIDIPlayer *device, double seconds, double granulality);
+
+/**
+ * @brief Periodic tick handler without iterators.
+ *
+ * Unlike adl_tickEvents(), it doesn't handles iterators, you need to perform
+ * them naually via adl_tickIterators().
+ *
+ * Notice: The function is provided to use it with Hardware OPL3 mode or for the purpose to iterate
+ * MIDI playback without of sound generation.
+ *
+ * DON'T USE IT TOGETHER WITH adl_play() and adl_playFormat() calls
+ * as there are all using this function internally!!!
+ *
+ * @param device Instance of the library
+ * @param seconds Previous delay. On a first moment, pass the `0.0`
+ * @param granulality Minimal size of one MIDI tick in seconds.
+ * @return desired number of seconds until next call. Pass this value into `seconds` field in next time
+ */
+extern ADLMIDI_DECLSPEC double adl_tickEventsOnly(struct ADL_MIDIPlayer *device, double seconds, double granulality);
+
+
+/**
+ * @brief Periodic tick hander for the real-time hardware output
+ *
+ * This function runs a single step of vibrato, auto-arpeggio, and the portamento of @seconds duration.
+ *
+ * When running the libADLMIDI as a real-time driver for the ral hardware, call
+ * this function from the timer and specify the @seconds value with a delay of the single cycle.
+ *
+ * @param device Instance of the library
+ * @param seconds Previous delay. On a first moment, pass the `0.0`
+ */
+extern ADLMIDI_DECLSPEC void adl_tickIterators(struct ADL_MIDIPlayer *device, double seconds);
 
 
 

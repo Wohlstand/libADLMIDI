@@ -156,8 +156,8 @@ double MIDIplay::Tick(double s, double granularity)
     MidiSequencer &seqr = *m_sequencer;
     double ret = seqr.Tick(s, granularity);
 
-    s *= seqr.getTempoMultiplier();
-    TickIterators(s);
+    // s *= seqr.getTempoMultiplier();
+    // TickIterators(s);
 
     return ret;
 }

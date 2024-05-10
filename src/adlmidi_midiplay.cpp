@@ -76,6 +76,13 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
     m_setup.emulator = adl_getLowestEmulator();
     m_setup.runAtPcmRate = false;
 
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+    m_setup.serial = false;
+    m_setup.serialName = std::string();
+    m_setup.serialBaud = 0;
+    m_setup.serialProtocol = 0;
+#endif
+
     m_setup.PCM_RATE = sampleRate;
     m_setup.mindelay = 1.0 / (double)m_setup.PCM_RATE;
     m_setup.maxdelay = 512.0 / (double)m_setup.PCM_RATE;
@@ -155,7 +162,7 @@ void MIDIplay::applySetup()
     else
         adlCalculateFourOpChannels(this, true);
 
-    synth.reset(m_setup.emulator, m_setup.PCM_RATE, this);
+    chipReset();
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
 
@@ -169,7 +176,7 @@ void MIDIplay::partialReset()
     realTime_panic();
     m_setup.tick_skip_samples_delay = 0;
     synth.m_runAtPcmRate = m_setup.runAtPcmRate;
-    synth.reset(m_setup.emulator, m_setup.PCM_RATE, this);
+    chipReset();
     m_chipChannels.clear();
     m_chipChannels.resize((size_t)synth.m_numChannels);
     resetMIDIDefaults();
@@ -191,6 +198,21 @@ void MIDIplay::resetMIDI()
     caugh_missing_instruments.clear();
     caugh_missing_banks_melodic.clear();
     caugh_missing_banks_percussion.clear();
+}
+
+void MIDIplay::chipReset()
+{
+    Synth &synth = *m_synth;
+
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+    if(m_setup.serial)
+    {
+        synth.resetSerial(m_setup.serialName, m_setup.serialBaud, m_setup.serialProtocol);
+        return;
+    }
+#endif
+
+    synth.reset(m_setup.emulator, m_setup.PCM_RATE, this);
 }
 
 void MIDIplay::resetMIDIDefaults(int offset)
@@ -252,7 +274,11 @@ void MIDIplay::TickIterators(double s)
 
     updateVibrato(s);
     updateArpeggio(s);
+
 #if !defined(ADLMIDI_AUDIO_TICK_HANDLER)
+#   ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    s *= m_sequencer->getTempoMultiplier(); // Glide will follow the tempo
+#   endif
     updateGlide(s);
 #endif
 }

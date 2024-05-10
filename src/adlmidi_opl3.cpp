@@ -60,6 +60,11 @@ static const unsigned OPLBase = 0x388;
 #   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
 #       include "chips/java_opl3.h"
 #   endif
+
+// HW OPL Serial
+#   ifdef ADLMIDI_ENABLE_HW_SERIAL
+#       include "chips/opl_serial_port.h"
+#   endif
 #endif
 
 static const unsigned adl_emulatorSupport = 0
@@ -860,6 +865,11 @@ static OplInstMeta makeEmptyInstrument()
 const OplInstMeta OPL3::m_emptyInstrument = makeEmptyInstrument();
 
 OPL3::OPL3() :
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+    m_serial(false),
+    m_serialBaud(0),
+    m_serialProtocol(0),
+#endif
     m_numChips(1),
     m_numFourOps(0),
     m_deepTremoloMode(false),
@@ -1739,6 +1749,11 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_chips.resize(m_numChips, AdlMIDI_SPtr<OPLChipBase>());
 #endif
 
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+    if(emulator >= 0) // If less than zero - it's hardware synth!
+        m_serial = false;
+#endif
+
     const struct OplTimbre defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
     m_numChannels = m_numChips * NUM_OF_CHANNELS;
     m_insCache.resize(m_numChannels, defaultInsCache);
@@ -1754,16 +1769,21 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             m_channelCategory[p++] = ChanCat_Rhythm_Secondary;
     }
 
-    static const uint16_t data[] =
-    {
-        0x004, 96, 0x004, 128,        // Pulse timer
-        0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable
-        0x001, 32, 0x105, 1           // Enable wave, OPL3 extensions
-    };
 //    size_t fours = m_numFourOps;
 
     for(size_t i = 0; i < m_numChips; ++i)
     {
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+        if(emulator < 0)
+        {
+            OPL_SerialPort *serial = new OPL_SerialPort;
+            serial->connectPort(m_serialName, m_serialBaud, m_serialProtocol);
+            m_chips[i].reset(serial);
+            initChip(i);
+            break; // Only one REAL chip!
+        }
+#endif
+
 #ifndef ADLMIDI_HW_OPL
         OPLChipBase *chip;
         switch(emulator)
@@ -1795,23 +1815,52 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             break;
 #endif
         }
+
         m_chips[i].reset(chip);
         chip->setChipId((uint32_t)i);
         chip->setRate((uint32_t)PCM_RATE);
+
         if(m_runAtPcmRate)
             chip->setRunningAtPcmRate(true);
+
 #   if defined(ADLMIDI_AUDIO_TICK_HANDLER)
         chip->setAudioTickHandlerInstance(audioTickHandler);
 #   endif
 #endif // ADLMIDI_HW_OPL
 
-        /* Clean-up channels from any playing junk sounds */
-        for(size_t a = 0; a < OPL3_CHANNELS_RHYTHM_BASE; ++a)
-            writeRegI(i, 0xB0 + g_channelsMap[a], 0x00);
-        for(size_t a = 0; a < sizeof(data) / sizeof(*data); a += 2)
-            writeRegI(i, data[a], (data[a + 1]));
+        initChip(i);
     }
 
     updateChannelCategories();
     silenceAll();
 }
+
+void OPL3::initChip(size_t chip)
+{
+    static const uint16_t data[] =
+    {
+        0x004, 96, 0x004, 128,        // Pulse timer
+        0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable
+        0x001, 32, 0x105, 1           // Enable wave, OPL3 extensions
+    };
+
+    /* Clean-up channels from any playing junk sounds */
+    for(size_t a = 0; a < OPL3_CHANNELS_RHYTHM_BASE; ++a)
+        writeRegI(chip, 0xB0 + g_channelsMap[a], 0x00);
+
+    for(size_t a = 0; a < sizeof(data) / sizeof(*data); a += 2)
+        writeRegI(chip, data[a], (data[a + 1]));
+}
+
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+void OPL3::resetSerial(const std::string &serialName, unsigned int baud, unsigned int protocol)
+{
+    m_serial = true;
+    m_serialName = serialName;
+    m_serialBaud = baud;
+    m_serialProtocol = protocol;
+    m_numChips = 1; // Only one chip!
+    m_softPanning = false; // Soft-panning doesn't work on hardware
+    reset(-1, 0, NULL);
+}
+#endif

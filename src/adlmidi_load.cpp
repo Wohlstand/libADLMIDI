@@ -261,7 +261,7 @@ bool MIDIplay::LoadMIDI_post()
     resetMIDIDefaults();
 
     m_setup.tick_skip_samples_delay = 0;
-    synth.reset(m_setup.emulator, m_setup.PCM_RATE, this); // Reset OPL3 chip
+    chipReset(); // Reset OPL3 chip
     //opl.Reset(); // ...twice (just in case someone misprogrammed OPL3 previously)
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);

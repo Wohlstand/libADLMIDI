@@ -74,6 +74,13 @@ private:
     //! Cached BD registry value (flags register: DeepTremolo, DeepVibrato, and RhythmMode)
     std::vector<uint32_t>   m_regBD;
 
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+    bool        m_serial;
+    std::string m_serialName;
+    unsigned    m_serialBaud;
+    unsigned    m_serialProtocol;
+#endif
+
 public:
     /**
      * @brief MIDI bank entry
@@ -321,12 +328,12 @@ public:
      */
     ADLMIDI_VolumeModels getVolumeScaleModel();
 
-    #ifndef ADLMIDI_HW_OPL
+#ifndef ADLMIDI_HW_OPL
     /**
      * @brief Clean up all running emulated chip instances
      */
     void clearChips();
-    #endif
+#endif
 
     /**
      * @brief Reset chip properties and initialize them
@@ -335,6 +342,18 @@ public:
      * @param audioTickHandler PCM-accurate clock hook
      */
     void reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler);
+
+    void initChip(size_t chip);
+
+#ifdef ADLMIDI_ENABLE_HW_SERIAL
+    /**
+     * @brief Reset chip properties for hardware use
+     * @param emulator
+     * @param PCM_RATE
+     * @param audioTickHandler
+     */
+    void resetSerial(const std::string &serialName, unsigned int baud, unsigned int protocol);
+#endif
 };
 
 /**
