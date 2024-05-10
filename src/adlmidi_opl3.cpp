@@ -1841,7 +1841,8 @@ void OPL3::initChip(size_t chip)
     {
         0x004, 96, 0x004, 128,        // Pulse timer
         0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable
-        0x001, 32, 0x105, 1           // Enable wave, OPL3 extensions
+        0x001, 32, 0x105, 1,          // Enable wave, OPL3 extensions
+        0x08, 0                       // CSW/Note Sel
     };
 
     /* Clean-up channels from any playing junk sounds */
