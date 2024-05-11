@@ -27,7 +27,7 @@
 #include <string>
 #include "opl_chip_base.h"
 
-class ChipSerialPort;
+class ChipSerialPortBase;
 
 class OPL_SerialPort : public OPLChipBaseT<OPL_SerialPort>
 {
@@ -56,7 +56,7 @@ public:
     ChipType chipType() override;
 
 private:
-    ChipSerialPort *m_port;
+    ChipSerialPortBase *m_port;
     int m_protocol;
 };
 

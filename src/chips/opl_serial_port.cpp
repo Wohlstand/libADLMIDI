@@ -97,7 +97,7 @@ bool OPL_SerialPort::connectPort(const std::string& name, unsigned baudRate, uns
 void OPL_SerialPort::writeReg(uint16_t addr, uint8_t data)
 {
     uint8_t sendBuffer[16];
-    ChipSerialPort *port = m_port;
+    ChipSerialPortBase *port = m_port;
 
     if(!port || !port->isOpen())
         return;

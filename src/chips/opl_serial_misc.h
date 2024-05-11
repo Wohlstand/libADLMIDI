@@ -43,19 +43,19 @@ public:
     ChipSerialPortBase() {}
     virtual ~ChipSerialPortBase() {}
 
-    bool isOpen()
+    virtual bool isOpen()
     {
         return false;
     }
 
-    void close() {}
+    virtual void close() {}
 
-    bool open(const std::string &/*portName*/, unsigned /*baudRate*/)
+    virtual bool open(const std::string &/*portName*/, unsigned /*baudRate*/)
     {
         return false;
     }
 
-    int write(uint8_t */*data*/, size_t /*size*/)
+    virtual int write(uint8_t * /*data*/, size_t /*size*/)
     {
         return 0;
     }
@@ -112,7 +112,8 @@ class ChipSerialPort : public ChipSerialPortBase
     }
 
 public:
-    ChipSerialPort() : ChipSerialPortBase()
+    ChipSerialPort() :
+        ChipSerialPortBase()
     {
         m_port = 0;
         std::memset(&m_portSetup, 0, sizeof(struct termios));
