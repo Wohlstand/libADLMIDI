@@ -474,7 +474,7 @@ static block_t *DecodeBlock (decoder_t *p_dec, block_t **pp_block)
 
     unsigned samples = (p_block->i_pts - date_Get (&p_sys->end_date)) * 441 / 10000;
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
-    double delay  = (p_block->i_pts - date_Get (&p_sys->end_date)) / 1000000.0;
+    double delay = ((p_block->i_pts - date_Get (&p_sys->end_date)) / 1000000.0) / 2.0;
 #endif
 
     if (samples == 0)
