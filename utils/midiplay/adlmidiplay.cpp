@@ -37,6 +37,7 @@
 
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
 #   include <time.h>
+#   include <unistd.h>
 #endif
 
 #ifdef DEBUG_SONG_SWITCHING
