@@ -28,6 +28,11 @@
 #include <cstring>
 #include <cstdio>
 #include <errno.h>
+#include <sys/ioctl.h>
+#endif
+
+#ifdef __APPLE__
+#include <IOKit/serial/ioss.h>
 #endif
 
 #ifdef _WIN32
@@ -171,7 +176,12 @@ public:
         m_portSetup.c_cflag &= ~CBAUD;
 #endif
 
+#if defined (BSD) || defined(__FreeBSD__)
+        cfsetispeed(&m_portSetup, baudRate);
+        cfsetospeed(&m_portSetup, baudRate);
+#elif !defined(__APPLE__)
         cfsetospeed(&m_portSetup, baud2enum(baudRate));
+#endif
 
         if(tcsetattr(m_port, TCSANOW, &m_portSetup) != 0)
         {
@@ -180,6 +190,16 @@ public:
             close();
             return false;
         }
+
+#ifdef __APPLE__
+        if(ioctl(m_port, IOSSIOSPEED, &baudRate) == -1)
+        {
+            std::fprintf(stderr, "-- OPL Serial ERROR: Failed to set MacOS specific tty attributes for `%s': %s", portPath.c_str(), strerror(errno));
+            std::fflush(stderr);
+            close();
+            return false;
+        }
+#endif
 
         return true;
     }
