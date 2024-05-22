@@ -38,6 +38,13 @@
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
 #   include <time.h>
 #   include <unistd.h>
+#   include <assert.h>
+static inline long long s_getTime()
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_nsec + (t.tv_sec * 1000000000);
+}
 #endif
 
 #ifdef DEBUG_SONG_SWITCHING
@@ -788,7 +795,6 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
 {
     double tick_delay = 0.00000001;
     double tick_wait = 0.0;
-    struct timespec timerBeg, timerEnd;
     long long timeBegL, timeEndL;
     const double minDelay = 0.005;
     double eat_delay;
@@ -798,7 +804,7 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
 
     while(!stop)
     {
-        clock_gettime(CLOCK_REALTIME, &timerBeg);
+        timeBegL = s_getTime();
 
         tick_delay = adl_tickEventsOnly(myDevice, tick_delay, 0.000000001);
         adl_tickIterators(myDevice, tick_delay < minDelay ? tick_delay : minDelay);
@@ -810,13 +816,13 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
         s_timeCounter.printTime(adl_positionTell(myDevice));
 #   endif
 
-        clock_gettime(CLOCK_REALTIME, &timerEnd);
+        timeEndL = s_getTime();
+
+        if(timeEndL < timeBegL)
+            timeEndL = timeBegL;
 
         if(tick_delay < 0.00000001)
             tick_delay = 0.00000001;
-
-        timeBegL = timerBeg.tv_nsec + (timerBeg.tv_sec * 1000000000);
-        timeEndL = timerEnd.tv_nsec + (timerEnd.tv_sec * 1000000000);
 
         eat_delay = (double)(timeEndL - timeBegL) / 1000000000;
         tick_wait += tick_delay - eat_delay;
@@ -831,15 +837,15 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
 
             while(tick_wait > 0.0)
             {
-                clock_gettime(CLOCK_REALTIME, &timerBeg);
+                timeBegL = s_getTime();
                 if(!tickSkip)
                     adl_tickIterators(myDevice, minDelay);
                 else
                     tickSkip = false;
-                clock_gettime(CLOCK_REALTIME, &timerEnd);
+                timeEndL = s_getTime();
 
-                timeBegL = timerBeg.tv_nsec + (timerBeg.tv_sec * 1000000000);
-                timeEndL = timerEnd.tv_nsec + (timerEnd.tv_sec * 1000000000);
+                if(timeEndL < timeBegL)
+                    timeEndL = timeBegL;
 
                 double microDelay = minDelay - ((timeEndL - timeBegL) / 1000000000.0);
 
