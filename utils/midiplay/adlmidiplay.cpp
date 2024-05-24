@@ -36,15 +36,34 @@
 #include <stdint.h>
 
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
+#   ifdef ADLMIDI_USE_SDL2
+#   include <SDL2/SDL_timer.h>
+static inline double s_getTime()
+{
+    return SDL_GetTicks64() / 1000.0;
+}
+
+static inline void s_sleepU(double s)
+{
+    SDL_Delay((Uint32)(s * 1000));
+}
+#   else
+
 #   include <time.h>
 #   include <unistd.h>
 #   include <assert.h>
-static inline long long s_getTime()
+static inline double s_getTime()
 {
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_nsec + (t.tv_sec * 1000000000);
+    return (t.tv_nsec + (t.tv_sec * 1000000000)) / 1000000000.0;
 }
+
+static inline void s_sleepU(double s)
+{
+    usleep((uint32_t)(s * 1000000));
+}
+#   endif
 #endif
 
 #ifdef DEBUG_SONG_SWITCHING
@@ -795,7 +814,7 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
 {
     double tick_delay = 0.00000001;
     double tick_wait = 0.0;
-    long long timeBegL, timeEndL;
+    double timeBegL, timeEndL;
     const double minDelay = 0.005;
     double eat_delay;
     bool tickSkip = true;
@@ -821,18 +840,16 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
         if(timeEndL < timeBegL)
             timeEndL = timeBegL;
 
-        if(tick_delay < 0.00000001)
-            tick_delay = 0.00000001;
-
-        eat_delay = (double)(timeEndL - timeBegL) / 1000000000;
+        eat_delay = timeEndL - timeBegL;
         tick_wait += tick_delay - eat_delay;
 
         if(tick_wait > 0.0)
         {
             if(tick_wait < minDelay)
             {
-                usleep(tick_wait * 1000000);
-                tick_wait = 0.0;
+                if(tick_wait > 0.0)
+                    s_sleepU(tick_wait);
+                tick_wait -= minDelay;
             }
 
             while(tick_wait > 0.0)
@@ -847,10 +864,10 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
                 if(timeEndL < timeBegL)
                     timeEndL = timeBegL;
 
-                double microDelay = minDelay - ((timeEndL - timeBegL) / 1000000000.0);
+                double microDelay = minDelay - (timeEndL - timeBegL);
 
                 if(microDelay > 0.0)
-                    usleep(microDelay * 1000000);
+                    s_sleepU(microDelay);
 
                 tick_wait -= minDelay;
             }

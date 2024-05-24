@@ -30,6 +30,7 @@ add_executable(adlmidiplay ${ADLMIDI_PLAY_SRC})
 
 if(USE_SDL2_AUDIO)
     target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL2)
+    target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL2)
 elseif(WIN32)
     target_link_libraries(adlmidiplay PRIVATE winmm)
 endif()
