@@ -48,3 +48,8 @@ cmake-build-*/*
 
 # Gen ADLDATA's deep-debug WAVs
 fm_banks/_deep_debug/*
+
+# MSVC Cmake integration
+.vs/
+/out/
+CMakeSettings.json
