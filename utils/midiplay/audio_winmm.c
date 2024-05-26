@@ -210,6 +210,8 @@ void audio_stop(void)
         WaitForSingleObject(g_thread, INFINITE);
         CloseHandle(g_event);
         CloseHandle(g_thread);
+        g_event = NULL;
+        g_thread = NULL;
     }
     audio_unlock();
 }
