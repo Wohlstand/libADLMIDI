@@ -549,6 +549,7 @@ static struct TimeCounter
     char totalHMS[25];
     char loopStartHMS[25];
     char loopEndHMS[25];
+    char realHMS[25];
 
     bool hasLoop;
     uint64_t milliseconds_prev;
@@ -556,6 +557,8 @@ static struct TimeCounter
     int printsCounterPeriod;
     int complete_prev;
     double totalTime;
+
+    double realTimeStart;
 
 #ifdef HARDWARE_OPL3
     unsigned newTimerFreq;
@@ -747,6 +750,8 @@ static struct TimeCounter
     {
         totalTime = total;
         secondsToHMSM(total, totalHMS, 25);
+        realTimeStart = s_getTime();
+        secondsToHMSM(s_getTime() - realTimeStart, realHMS, 25);
     }
 
     void setLoop(double loopStart, double loopEnd)
@@ -777,8 +782,9 @@ static struct TimeCounter
             {
                 printsCounter = -1;
                 secondsToHMSM(pos, posHMS, 25);
+                secondsToHMSM(s_getTime() - realTimeStart, realHMS, 25);
                 std::fprintf(stdout, "                                               \r");
-                std::fprintf(stdout, "Time position: %s / %s\r", posHMS, totalHMS);
+                std::fprintf(stdout, "Time position: %s / %s [Real time: %s]\r", posHMS, totalHMS, realHMS);
                 flushout(stdout);
                 milliseconds_prev = milliseconds;
             }
@@ -817,12 +823,34 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
     double timeBegL, timeEndL;
     const double minDelay = 0.005;
     double eat_delay;
-    bool tickSkip = true;
+    // bool tickSkip = true;
 
     s_timeCounter.clearLineR();
 
     while(!stop)
     {
+        timeBegL = s_getTime();
+        tick_delay = adl_tickEvents(myDevice, tick_delay < minDelay ? tick_delay : minDelay, minDelay / 10.0);
+        // adl_tickIterators(myDevice, minDelay);
+#   ifndef DEBUG_TRACE_ALL_EVENTS
+        s_timeCounter.printTime(adl_positionTell(myDevice));
+#   endif
+        timeEndL = s_getTime();
+
+        eat_delay = timeEndL - timeBegL;
+
+        if(tick_delay < minDelay)
+            tick_wait = tick_delay - eat_delay;
+        else
+            tick_wait = minDelay - eat_delay;
+
+        if(adl_atEnd(myDevice) && tick_delay <= 0)
+            stop = true;
+
+        if(tick_wait > 0.0)
+            s_sleepU(tick_wait);
+
+#if 0
         timeBegL = s_getTime();
 
         tick_delay = adl_tickEventsOnly(myDevice, tick_delay, 0.000000001);
@@ -872,6 +900,7 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
                 tick_wait -= minDelay;
             }
         }
+#endif
     }
 
     s_timeCounter.clearLine();
