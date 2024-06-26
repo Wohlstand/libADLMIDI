@@ -457,6 +457,13 @@ private:
         //! Current level on the loop stack (<0 - out of loop, 0++ - the index in the loop stack)
         int                         stackLevel;
 
+        //! Constructor to initialize member variables
+        LoopState()
+                : caughtStart(false), caughtEnd(false), caughtStackStart(false),
+                caughtStackEnd(false), caughtStackBreak(false), skipStackStart(false),
+                invalidLoop(false), temporaryBroken(false), loopsCount(-1), loopsLeft(0),
+                stackLevel(-1)
+                {}
         /**
          * @brief Reset loop state to initial
          */
