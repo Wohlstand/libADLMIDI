@@ -35,9 +35,14 @@
 #include <signal.h>
 #include <stdint.h>
 
+
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
 #   ifdef ADLMIDI_USE_SDL2
 #   include <SDL2/SDL_timer.h>
+#ifdef __APPLE__
+#   include <unistd.h>
+#endif
+
 static inline double s_getTime()
 {
     return SDL_GetTicks64() / 1000.0;
@@ -45,7 +50,17 @@ static inline double s_getTime()
 
 static inline void s_sleepU(double s)
 {
+#ifdef __APPLE__
+    static double debt = 0.0;
+    double target = s_getTime() + s - debt;
+
+    while(s_getTime() < target)
+        usleep(100);
+
+    debt = s_getTime() - target;
+#else
     SDL_Delay((Uint32)(s * 1000));
+#endif
 }
 #   else
 
