@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <signal.h>
 #include <stdint.h>
-
+#include "utf8main.h"
 
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
 #   ifdef ADLMIDI_USE_SDL2

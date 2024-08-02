@@ -7,9 +7,12 @@ if(NOT ADLMIDI_DOS AND NOT MIDIPLAY_WAVE_ONLY)
     endif()
 endif()
 
+include(utf8main.cmake)
+
 set(ADLMIDI_PLAY_SRC
     adlmidiplay.cpp
     wave_writer.c
+    ${UTF8MAIN_SRCS}
 )
 
 if(USE_SDL2_AUDIO)
