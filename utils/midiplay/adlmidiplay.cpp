@@ -55,7 +55,7 @@ static inline void s_sleepU(double s)
     double target = s_getTime() + s - debt;
 
     while(s_getTime() < target)
-        usleep(100);
+        usleep(1000);
 
     debt = s_getTime() - target;
 #else
@@ -76,7 +76,13 @@ static inline double s_getTime()
 
 static inline void s_sleepU(double s)
 {
-    usleep((uint32_t)(s * 1000000));
+    static double debt = 0.0;
+    double target = s_getTime() + s - debt;
+
+    while(s_getTime() < target)
+        usleep(1000);
+
+    debt = s_getTime() - target;
 }
 #   endif
 #endif
