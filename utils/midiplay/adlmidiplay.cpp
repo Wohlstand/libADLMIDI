@@ -51,6 +51,8 @@ static inline double s_getTime()
 static inline void s_sleepU(double s)
 {
 #ifdef __APPLE__
+    // For unknown reasons, any sleep functions to way WAY LONGER than requested
+    // So, implementing an own one.
     static double debt = 0.0;
     double target = s_getTime() + s - debt;
 
@@ -846,7 +848,7 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
     double tick_wait = 0.0;
     double timeBegL, timeEndL;
 #if _WIN32
-    const double minDelay = 0.050;
+    const double minDelay = 0.050; // On Windows, the Serial bandwith is WAY SLOWER, so, bigger granuality.
 #else
     const double minDelay = 0.005;
 #endif
