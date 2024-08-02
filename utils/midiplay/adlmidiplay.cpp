@@ -423,9 +423,12 @@ static bool is_number(const std::string &s)
     return !s.empty() && it == s.end();
 }
 
-static void printError(const char *err)
+static void printError(const char *err, const char *what = NULL)
 {
-    std::fprintf(stderr, "\nERROR: %s\n\n", err);
+    if(what)
+        std::fprintf(stderr, "\nERROR (%s): %s\n\n", what, err);
+    else
+        std::fprintf(stderr, "\nERROR: %s\n\n", err);
     flushout(stderr);
 }
 
@@ -1590,7 +1593,7 @@ int main(int argc, char **argv)
             //Choose one of embedded banks
             if(adl_setBank(myDevice, bankno) != 0)
             {
-                printError(adl_errorInfo(myDevice));
+                printError(adl_errorInfo(myDevice), "Can't set an embedded bank");
                 adl_close(myDevice);
                 return 1;
             }
@@ -1607,7 +1610,7 @@ int main(int argc, char **argv)
             {
                 std::fprintf(stdout, "FAILED!\n");
                 flushout(stdout);
-                printError(adl_errorInfo(myDevice));
+                printError(adl_errorInfo(myDevice), "Can't open a custom bank file");
                 adl_close(myDevice);
                 return 1;
             }
@@ -1634,14 +1637,14 @@ int main(int argc, char **argv)
             ADL_Bank bank;
             if(adl_getBank(myDevice, &id[i], ADLMIDI_Bank_Create, &bank) < 0)
             {
-                printError(adl_errorInfo(myDevice));
+                printError(adl_errorInfo(myDevice), "Can't get an embedded bank");
                 adl_close(myDevice);
                 return 1;
             }
 
             if(adl_loadEmbeddedBank(myDevice, &bank, banks[i]) < 0)
             {
-                printError(adl_errorInfo(myDevice));
+                printError(adl_errorInfo(myDevice), "Can't load an embedded bank");
                 adl_close(myDevice);
                 return 1;
             }
@@ -1663,7 +1666,7 @@ int main(int argc, char **argv)
     //Set count of concurrent emulated chips count to excite channels limit of one chip
     if(adl_setNumChips(myDevice, numOfChips) != 0)
     {
-        printError(adl_errorInfo(myDevice));
+        printError(adl_errorInfo(myDevice), "Can't set number of chips");
         adl_close(myDevice);
         return 1;
     }
@@ -1680,7 +1683,7 @@ int main(int argc, char **argv)
         //Set total count of 4-operator channels between all emulated chips
         if(adl_setNumFourOpsChn(myDevice, std::atoi(argv[4])) != 0)
         {
-            printError(adl_errorInfo(myDevice));
+            printError(adl_errorInfo(myDevice), "Can't set number of 4-op channels");
             adl_close(myDevice);
             return 1;
         }
@@ -1705,7 +1708,7 @@ int main(int argc, char **argv)
     //Open MIDI file to play
     if(adl_openFile(myDevice, musPath.c_str()) != 0)
     {
-        printError(adl_errorInfo(myDevice));
+        printError(adl_errorInfo(myDevice), "Can't open MIDI file");
         adl_close(myDevice);
         return 2;
     }
