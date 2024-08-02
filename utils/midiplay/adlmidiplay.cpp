@@ -845,7 +845,11 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
     double tick_delay = 0.00000001;
     double tick_wait = 0.0;
     double timeBegL, timeEndL;
+#if _WIN32
+    const double minDelay = 0.050;
+#else
     const double minDelay = 0.005;
+#endif
     double eat_delay;
     // bool tickSkip = true;
 
