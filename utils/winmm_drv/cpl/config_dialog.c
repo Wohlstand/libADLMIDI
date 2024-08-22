@@ -99,6 +99,11 @@ static void syncWidget(HWND hwnd)
     else
         SendDlgItemMessage(hwnd, IDC_BANK_INTERNAL, BM_SETCHECK, 1, 0);
 
+    SendDlgItemMessage(hwnd, IDC_GAIN, TBM_SETRANGE, TRUE, MAKELPARAM(0, 1000));
+    SendDlgItemMessage(hwnd, IDC_GAIN, TBM_SETPAGESIZE, 0, 10);
+    SendDlgItemMessage(hwnd, IDC_GAIN, TBM_SETTICFREQ, 100, 0);
+    SendDlgItemMessage(hwnd, IDC_GAIN, TBM_SETPOS, TRUE, g_setup.gain100);
+
     syncBankType(hwnd, g_setup.useExternalBank);
 
     SendDlgItemMessage(hwnd, IDC_FLAG_TREMOLO, BM_SETCHECK, g_setup.flagDeepTremolo, 0);
@@ -264,6 +269,16 @@ INT_PTR CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
         buildLists(hwnd);
         syncWidget(hwnd);
         return TRUE;
+
+    case WM_HSCROLL:
+        if(lParam == GetDlgItem(hwnd, IDC_GAIN))
+        {
+            g_setup.gain100 = SendMessageW((HWND)lParam, (UINT)TBM_GETPOS, (WPARAM)0, (LPARAM)0);
+            saveGain(&g_setup);
+            sendSignal(DRV_SIGNAL_UPDATE_GAIN);
+            break;
+        }
+        break;
 
     case WM_COMMAND:
         switch(LOWORD(wParam))

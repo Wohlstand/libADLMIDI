@@ -163,11 +163,13 @@ void setupDefault(DriverSettings *setup)
     setup->flagFullBrightness = BST_UNCHECKED;
 
     setup->volumeModel = 0;
-    setup->chanAlloc = 0;
+    setup->chanAlloc = -1;
     setup->numChips = 4;
     setup->num4ops = -1;
 
     setup->outputDevice = (UINT)-1;
+
+    setup->gain100 = 100;
 }
 
 
@@ -224,6 +226,9 @@ void loadSetup(DriverSettings *setup)
 
     if(readUIntFromRegistry(HKEY_CURRENT_USER, s_regPath, L"outputDevice", &uVal))
         setup->outputDevice = uVal;
+
+    if(readUIntFromRegistry(HKEY_CURRENT_USER, s_regPath, L"gain100", &uVal))
+        setup->gain100 = uVal;
 }
 
 void saveSetup(DriverSettings *setup)
@@ -246,8 +251,20 @@ void saveSetup(DriverSettings *setup)
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"numChips", setup->numChips);
     writeIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"num4ops", setup->num4ops);
     writeUIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"outputDevice", setup->outputDevice);
+    writeUIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"gain100", setup->gain100);
 }
 
+void getGain(DriverSettings *setup)
+{
+    UINT uVal;
+    if(readUIntFromRegistry(HKEY_CURRENT_USER, s_regPath, L"gain100", &uVal))
+        setup->gain100 = uVal;
+}
+
+void saveGain(DriverSettings *setup)
+{
+    writeUIntToRegistry(HKEY_CURRENT_USER, s_regPath, L"gain100", setup->gain100);
+}
 
 static const PWCHAR s_regPathNotify = L"SOFTWARE\\Wohlstand\\libADLMIDI\\notify";
 

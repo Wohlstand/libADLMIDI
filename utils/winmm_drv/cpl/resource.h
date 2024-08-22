@@ -32,5 +32,7 @@
 #define IDC_CA_LABEL                            1029
 #define IDC_AUDIOOUT                            1030
 #define IDC_AUDIOOUT_LABEL                      1031
+#define IDC_GAIN                                1032
+#define IDC_GAIN_LABEL                          1033
 #define IDC_DRIVERNAME                          40000
 #define IDC_DRIVERDESC                          40001

@@ -52,6 +52,9 @@ private:
     Bit8u reverbMode;
     Bit8u reverbTime;
     Bit8u reverbLevel;
+    float volumeFactorL;
+    float volumeFactorR;
+    float gain;
 
     float *buffer;
     DWORD framesRendered;
@@ -82,7 +85,11 @@ public:
     void PushMIDI(DWORD msg);
     void PlaySysex(Bit8u *bufpos, DWORD len);
 
+    void SetVolume(DWORD vol);
+    DWORD GetVolume();
+
     void loadSetup();
+    void loadGain();
 
     void LoadSynthSetup();
 };

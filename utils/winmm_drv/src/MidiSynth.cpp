@@ -464,6 +464,16 @@ void MidiSynth::Render(float *bufpos, DWORD totalFrames)
         adl_generateFormat(synth, framesToRender * s_audioChannels,
                            (ADL_UInt8*)bufpos, (ADL_UInt8*)bufpos + synthAudioFormat.containerSize,
                            &synthAudioFormat);
+
+        // Apply the volume
+        float g_l = volumeFactorL * gain;
+        float g_r = volumeFactorR * gain;
+        for(size_t i = 0; i < framesToRender * s_audioChannels; i += s_audioChannels)
+        {
+            bufpos[i + 0] *= g_l;
+            bufpos[i + 1] *= g_r;
+        }
+
         synthEvent.Release();
         framesRendered += framesToRender;
         bufpos += s_audioChannels * framesToRender; // each frame consists of two samples for both the Left and Right channels
@@ -484,13 +494,17 @@ void MidiSynth::CheckForSignals()
 
     switch(cmd)
     {
-    case 1: // Reload settings on the fly
+    case DRV_SIGNAL_RELOAD_SETUP: // Reload settings on the fly
         this->loadSetup();
         LoadSynthSetup();
         break;
 
-    case 2:
+    case DRV_SIGNAL_RESET_SYNTH:
         adl_reset(synth);
+        break;
+
+    case DRV_SIGNAL_UPDATE_GAIN:
+        this->loadGain();
         break;
 
     default:
@@ -513,6 +527,9 @@ void MidiSynth::LoadSettings()
     chunkSize = MillisToFrames(10);
     midiLatency = MillisToFrames(0);
     useRingBuffer = false;
+    volumeFactorL = 1.0f;
+    volumeFactorR = 1.0f;
+    gain = 1.0f;
 
     if(!useRingBuffer)
     {
@@ -621,9 +638,27 @@ void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len)
     synthEvent.Release();
 }
 
+void MidiSynth::SetVolume(DWORD vol)
+{
+    volumeFactorR = (float)0xFFFF / HIWORD(vol);
+    volumeFactorL = (float)0xFFFF / LOWORD(vol);
+}
+
+DWORD MidiSynth::GetVolume()
+{
+    return MAKELONG((DWORD)(0xFFFF * volumeFactorL), (DWORD)(0xFFFF * volumeFactorR));
+}
+
 void MidiSynth::loadSetup()
 {
     ::loadSetup(&m_setup);
+    gain = (float)m_setup.gain100 / 100.f;
+}
+
+void MidiSynth::loadGain()
+{
+    ::getGain(&m_setup);
+    gain = (float)m_setup.gain100 / 100.f;
 }
 
 void MidiSynth::LoadSynthSetup()
