@@ -266,8 +266,12 @@ void DoCallback(int driverNum, DWORD_PTR clientNum, DWORD msg, DWORD_PTR param1,
 {
     Driver::Client *client = &drivers[driverNum].clients[clientNum];
 #ifdef __MINGW32__
-    if(s_DriverCallback)
+    if(!s_DriverCallback)
+    {
         initWorkarounds();
+        if(!s_DriverCallback)
+            return; // Ouch!
+    }
 #endif
     DriverCallback(client->callback, client->flags, drivers[driverNum].hdrvr, msg, client->instance, param1, param2);
 }
