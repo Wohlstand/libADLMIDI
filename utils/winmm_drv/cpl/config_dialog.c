@@ -271,7 +271,7 @@ INT_PTR CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
         return TRUE;
 
     case WM_HSCROLL:
-        if(lParam == GetDlgItem(hwnd, IDC_GAIN))
+        if(lParam == (LPARAM)GetDlgItem(hwnd, IDC_GAIN))
         {
             g_setup.gain100 = SendMessageW((HWND)lParam, (UINT)TBM_GETPOS, (WPARAM)0, (LPARAM)0);
             saveGain(&g_setup);
