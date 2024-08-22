@@ -133,7 +133,7 @@ private:
     bool        stopProcessing;
 
 public:
-    int Init(Bit16s *buffer, unsigned int bufferSize, unsigned int chunkSize, bool useRingBuffer, unsigned int sampleRate)
+    int Init(Bit16s *buffer, unsigned int bufferSize, unsigned int chunkSize, bool useRingBuffer, unsigned int sampleRate, UINT outDevice)
     {
         DWORD callbackType = CALLBACK_NULL;
         DWORD_PTR callback = (DWORD_PTR)NULL;
@@ -148,7 +148,7 @@ public:
         PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};
 
         // Open waveout device
-        int wResult = waveOutOpen(&hWaveOut, WAVE_MAPPER, (LPWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
+        int wResult = waveOutOpen(&hWaveOut, outDevice, (LPWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
         if(wResult != MMSYSERR_NOERROR)
         {
             MessageBoxW(NULL, L"Failed to open waveform output device", L"libADLMIDI", MB_OK | MB_ICONEXCLAMATION);
@@ -308,17 +308,21 @@ void WaveOutWin32::RenderingThread(void *)
         while(!s_waveOut.stopProcessing)
         {
             bool allBuffersRendered = true;
+
             for(UINT i = 0; i < s_waveOut.chunks; i++)
             {
                 if(s_waveOut.WaveHdr[i].dwFlags & WHDR_DONE)
                 {
                     allBuffersRendered = false;
                     midiSynth.Render((Bit16s *)s_waveOut.WaveHdr[i].lpData, s_waveOut.WaveHdr[i].dwBufferLength / 4);
+
                     if(waveOutWrite(s_waveOut.hWaveOut, &s_waveOut.WaveHdr[i], sizeof(WAVEHDR)) != MMSYSERR_NOERROR)
                         MessageBoxW(NULL, L"Failed to write block to device", L"libADLMIDI", MB_OK | MB_ICONEXCLAMATION);
+
                     midiSynth.CheckForSignals();
                 }
             }
+
             if(allBuffersRendered)
                 WaitForSingleObject(s_waveOut.hEvent, INFINITE);
         }
@@ -518,8 +522,12 @@ int MidiSynth::Init()
     m_setupInit = false;
     LoadSynthSetup();
 
-    UINT wResult = s_waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate);
-    if(wResult) return wResult;
+    UINT wResult = s_waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate, m_setup.outputDevice);
+
+    if(wResult)
+        return wResult;
+
+    m_setupCurrent.outputDevice = m_setup.outputDevice;
 
     // Start playing stream
     adl_generate(synth, bufferSize * 2, buffer);
@@ -662,6 +670,12 @@ void MidiSynth::LoadSynthSetup()
     {
         adl_setVolumeRangeModel(synth, m_setup.volumeModel);
         m_setupCurrent.volumeModel = m_setup.volumeModel;
+    }
+
+    if(!m_setupInit || m_setupCurrent.chanAlloc != m_setup.chanAlloc)
+    {
+        adl_setChannelAllocMode(synth, m_setup.chanAlloc);
+        m_setupCurrent.chanAlloc = m_setup.chanAlloc;
     }
 
     if(!m_setupInit || m_setupCurrent.numChips != m_setup.numChips)

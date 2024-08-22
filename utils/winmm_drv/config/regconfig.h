@@ -25,8 +25,11 @@ typedef struct DriverSettings_t
     BOOL    flagFullBrightness;
 
     int     volumeModel;
+    int     chanAlloc;
     int     numChips;
     int     num4ops;
+
+    UINT    outputDevice;
 } DriverSettings;
 
 extern const WCHAR g_adlSignalMemory[];
