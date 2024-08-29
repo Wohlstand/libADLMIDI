@@ -43,6 +43,7 @@
 #   include <unistd.h>
 #endif
 
+#   define HAS_S_GETTIME
 static inline double s_getTime()
 {
     return SDL_GetTicks64() / 1000.0;
@@ -575,7 +576,9 @@ static struct TimeCounter
     char totalHMS[25];
     char loopStartHMS[25];
     char loopEndHMS[25];
+#ifdef HAS_S_GETTIME
     char realHMS[25];
+#endif
 
     bool hasLoop;
     uint64_t milliseconds_prev;
@@ -584,7 +587,9 @@ static struct TimeCounter
     int complete_prev;
     double totalTime;
 
+#ifdef HAS_S_GETTIME
     double realTimeStart;
+#endif
 
 #ifdef HARDWARE_OPL3
     unsigned newTimerFreq;
@@ -776,8 +781,10 @@ static struct TimeCounter
     {
         totalTime = total;
         secondsToHMSM(total, totalHMS, 25);
+#ifdef HAS_S_GETTIME
         realTimeStart = s_getTime();
         secondsToHMSM(s_getTime() - realTimeStart, realHMS, 25);
+#endif
     }
 
     void setLoop(double loopStart, double loopEnd)
@@ -808,9 +815,15 @@ static struct TimeCounter
             {
                 printsCounter = -1;
                 secondsToHMSM(pos, posHMS, 25);
+#ifdef HAS_S_GETTIME
                 secondsToHMSM(s_getTime() - realTimeStart, realHMS, 25);
+#endif
                 std::fprintf(stdout, "                                               \r");
+#ifdef HAS_S_GETTIME
                 std::fprintf(stdout, "Time position: %s / %s [Real time: %s]\r", posHMS, totalHMS, realHMS);
+#else
+                std::fprintf(stdout, "Time position: %s / %s\r", posHMS, totalHMS);
+#endif
                 flushout(stdout);
                 milliseconds_prev = milliseconds;
             }
