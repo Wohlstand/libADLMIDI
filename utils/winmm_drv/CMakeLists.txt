@@ -16,7 +16,11 @@ set(ADLMIDI_DRIVER_SRC
     src/winmm_drv.def
     src/winmm_drv.cpp
     src/MidiSynth.cpp
+    src/MidiSynth.h
+    src/stdafx.h
+    src/targetver.h
     config/regconfig.c
+    config/regconfig.h
 )
 
 add_library(adlmididrv MODULE ${ADLMIDI_DRIVER_SRC})
@@ -85,7 +89,9 @@ configure_file(installer/uninstall.bat ${CMAKE_BINARY_DIR}/uninstall.bat COPYONL
 
 add_executable(drvtest test/test.c)
 target_link_libraries(drvtest PRIVATE winmm)
-target_compile_options(drvtest PRIVATE "-Wno-cast-function-type")
+if(NOT MSVC)
+    target_compile_options(drvtest PRIVATE "-Wno-cast-function-type")
+endif()
 if(WITH_WINMMDRV_MINGWEX)
     set_property(TARGET drvtest APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lmingwex -Wl,-Bdynamic,--no-whole-archive")
 endif()
@@ -99,10 +105,17 @@ set(ADLMIDI_DRIVER_SRC
     cpl/adlconfig.def
     cpl/adlconfig.rc
     cpl/config_dialog.c
+    cpl/config_dialog.h
+    cpl/resource.h
+    cpl/targetver.h
     config/regconfig.c
+    config/regconfig.h
 )
 
-add_library(adlmidiconfig MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlconfig.c cpl/res-cpl.rc)
+add_library(adlmidiconfig MODULE ${ADLMIDI_DRIVER_SRC} cpl/adlconfig.c)
+if(NOT MSVC)
+    target_sources(adlmidiconfig PRIVATE cpl/res-cpl.rc)
+endif()
 set_target_properties(adlmidiconfig PROPERTIES PREFIX "" OUTPUT_NAME "libadlconfig" SUFFIX ".cpl")
 target_include_directories(adlmidiconfig PRIVATE config)
 target_compile_definitions(adlmidiconfig PRIVATE
@@ -117,7 +130,10 @@ target_compile_definitions(adlmidiconfig PRIVATE
 target_link_libraries(adlmidiconfig PRIVATE winmm comctl32 gdi32 user32)
 
 
-add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlconfig-tool.c cpl/res-tool.rc)
+add_executable(adlmidiconfigtool ${ADLMIDI_DRIVER_SRC} cpl/adlconfig-tool.c)
+if(NOT MSVC)
+    target_sources(adlmidiconfigtool PRIVATE cpl/res-tool.rc)
+endif()
 set_target_properties(adlmidiconfigtool PROPERTIES WIN32_EXECUTABLE ON)
 target_include_directories(adlmidiconfigtool PRIVATE config)
 target_compile_definitions(adlmidiconfigtool PRIVATE
