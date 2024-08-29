@@ -12,6 +12,8 @@ include(utf8main.cmake)
 set(ADLMIDI_PLAY_SRC
     adlmidiplay.cpp
     wave_writer.c
+    wave_writer.h
+    audio.h
     ${UTF8MAIN_SRCS}
 )
 

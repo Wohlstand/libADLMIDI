@@ -19,6 +19,7 @@
 #include <vector> // vector
 #include <deque>  // deque
 #include <cmath>  // exp, log, ceil
+#include "utf8main.h"
 
 #include <assert.h>
 
@@ -1611,19 +1612,21 @@ static int ParseCommandLine(char *cmdline, char **argv)
 
 extern int main(int argc, char **argv);
 
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
-{
-    (void)hInst;
-    (void)hPrev;
-    (void)szCmdLine;
-    (void)sw;
-    //extern int main(int, char **);
-    char *cmdline = GetCommandLine();
-    int argc = ParseCommandLine(cmdline, NULL);
-    char **argv = new char *[argc + 1];
-    ParseCommandLine(cmdline, argv);
-    return main(argc, argv);
-}
+// Replaced by UTF8Main
+
+//int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
+//{
+//    (void)hInst;
+//    (void)hPrev;
+//    (void)szCmdLine;
+//    (void)sw;
+//    //extern int main(int, char **);
+//    char *cmdline = GetCommandLine();
+//    int argc = ParseCommandLine(cmdline, NULL);
+//    char **argv = new char *[argc + 1];
+//    ParseCommandLine(cmdline, argv);
+//    return main(argc, argv);
+//}
 #endif
 
 static void adlEventHook(void *ui, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 /*channel*/, const ADL_UInt8 *data, size_t len)
