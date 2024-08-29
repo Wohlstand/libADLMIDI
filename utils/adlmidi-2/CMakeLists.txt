@@ -59,6 +59,7 @@ endif()
 
 if(WIN32)
     target_link_libraries(adlmidi2 PRIVATE winmm)
+    set_property(TARGET adlmidi2 PROPERTY WIN32_EXECUTABLE TRUE)
 elseif(NOT ADLMIDI_DOS)
     if(NOT OPENBSD_LOCALBASE AND NOT HAIKU)
         target_link_libraries(adlmidi2 PRIVATE dl)

@@ -41,7 +41,7 @@
 #   define _In_opt_
 #endif
 
-extern int  main(int argc, char *argv[]);
+extern int  main(int argc, char **argv);
 
 static void buildUtf8Args(std::vector<std::string> &utf8_args)
 {
