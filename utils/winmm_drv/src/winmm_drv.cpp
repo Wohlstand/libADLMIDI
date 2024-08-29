@@ -201,6 +201,7 @@ EXTERN_C HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
 
     CHAR synthName[] = "libADLMIDI synth\0";
     WCHAR synthNameW[] = L"libADLMIDI synth\0";
+    DWORD support = MIDICAPS_VOLUME | MIDICAPS_LRVOLUME;
 
     switch(capsSize)
     {
@@ -214,7 +215,7 @@ EXTERN_C HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
         myCapsA->wVoices = 0;
         myCapsA->wNotes = 0;
         myCapsA->wChannelMask = 0xffff;
-        myCapsA->dwSupport = 0;
+        myCapsA->dwSupport = support;
         return MMSYSERR_NOERROR;
 
     case(sizeof(MIDIOUTCAPSW)):
@@ -227,7 +228,7 @@ EXTERN_C HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
         myCapsW->wVoices = 0;
         myCapsW->wNotes = 0;
         myCapsW->wChannelMask = 0xffff;
-        myCapsW->dwSupport = 0;
+        myCapsW->dwSupport = support;
         return MMSYSERR_NOERROR;
 
     case(sizeof(MIDIOUTCAPS2A)):
@@ -240,7 +241,7 @@ EXTERN_C HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
         myCaps2A->wVoices = 0;
         myCaps2A->wNotes = 0;
         myCaps2A->wChannelMask = 0xffff;
-        myCaps2A->dwSupport = 0;
+        myCaps2A->dwSupport = support;
         return MMSYSERR_NOERROR;
 
     case(sizeof(MIDIOUTCAPS2W)):
@@ -253,7 +254,7 @@ EXTERN_C HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
         myCaps2W->wVoices = 0;
         myCaps2W->wNotes = 0;
         myCaps2W->wChannelMask = 0xffff;
-        myCaps2W->dwSupport = 0;
+        myCaps2W->dwSupport = support;
         return MMSYSERR_NOERROR;
 
     default:
@@ -265,8 +266,12 @@ void DoCallback(int driverNum, DWORD_PTR clientNum, DWORD msg, DWORD_PTR param1,
 {
     Driver::Client *client = &drivers[driverNum].clients[clientNum];
 #ifdef __MINGW32__
-    if(s_DriverCallback)
+    if(!s_DriverCallback)
+    {
         initWorkarounds();
+        if(!s_DriverCallback)
+            return; // Ouch!
+    }
 #endif
     DriverCallback(client->callback, client->flags, drivers[driverNum].hdrvr, msg, client->instance, param1, param2);
 }
@@ -316,7 +321,8 @@ LONG CloseDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DW
     return MMSYSERR_NOERROR;
 }
 
-EXTERN_C DWORD __declspec(dllexport) __stdcall modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+EXTERN_C DWORD __declspec(dllexport) __stdcall
+modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
     MIDIHDR *midiHdr;
     Driver *driver = &drivers[uDeviceID];
@@ -375,6 +381,15 @@ EXTERN_C DWORD __declspec(dllexport) __stdcall modMessage(DWORD uDeviceID, DWORD
         midiHdr->dwFlags |= MHDR_DONE;
         midiHdr->dwFlags &= ~MHDR_INQUEUE;
         DoCallback(uDeviceID, dwUser, MOM_DONE, dwParam1, (DWORD_PTR)NULL);
+        return MMSYSERR_NOERROR;
+
+    case MODM_GETVOLUME:
+        if(dwParam1)
+            *(DWORD *)dwParam1 = midiSynth.GetVolume();
+        return MMSYSERR_NOERROR;
+
+    case MODM_SETVOLUME:
+        midiSynth.SetVolume(dwParam1);
         return MMSYSERR_NOERROR;
 
     case MODM_GETNUMDEVS:

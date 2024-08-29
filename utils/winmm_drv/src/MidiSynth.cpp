@@ -23,6 +23,8 @@ namespace OPL3Emu
 
 static MidiSynth &midiSynth = MidiSynth::getInstance();
 
+static const unsigned int s_audioChannels = 2;
+
 static class MidiStream
 {
 private:
@@ -133,10 +135,13 @@ private:
     bool        stopProcessing;
 
 public:
-    int Init(Bit16s *buffer, unsigned int bufferSize, unsigned int chunkSize, bool useRingBuffer, unsigned int sampleRate)
+    int Init(float *buffer, unsigned int bufferSize,
+             unsigned int chunkSize, bool useRingBuffer,
+             unsigned int sampleRate, UINT outDevice)
     {
         DWORD callbackType = CALLBACK_NULL;
         DWORD_PTR callback = (DWORD_PTR)NULL;
+
         hEvent = NULL;
         if(!useRingBuffer)
         {
@@ -145,10 +150,18 @@ public:
             callbackType = CALLBACK_EVENT;
         }
 
-        PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};
+        PCMWAVEFORMAT wFormat =
+        {
+            WAVE_FORMAT_IEEE_FLOAT, s_audioChannels,
+            sampleRate,
+            (DWORD)(sampleRate * sizeof(float) * s_audioChannels),
+            s_audioChannels * sizeof(float),
+            8 * sizeof(float)
+        };
 
         // Open waveout device
-        int wResult = waveOutOpen(&hWaveOut, WAVE_MAPPER, (LPWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
+        int wResult = waveOutOpen(&hWaveOut, outDevice, (LPWAVEFORMATEX)&wFormat,
+                                  callback, (DWORD_PTR)&midiSynth, callbackType);
         if(wResult != MMSYSERR_NOERROR)
         {
             MessageBoxW(NULL, L"Failed to open waveform output device", L"libADLMIDI", MB_OK | MB_ICONEXCLAMATION);
@@ -158,13 +171,15 @@ public:
         // Prepare headers
         chunks = useRingBuffer ? 1 : bufferSize / chunkSize;
         WaveHdr = new WAVEHDR[chunks];
+
         LPSTR chunkStart = (LPSTR)buffer;
-        DWORD chunkBytes = 4 * chunkSize;
+        DWORD chunkBytes = s_audioChannels * sizeof(float) * chunkSize;
+
         for(UINT i = 0; i < chunks; i++)
         {
             if(useRingBuffer)
             {
-                WaveHdr[i].dwBufferLength = 4 * bufferSize;
+                WaveHdr[i].dwBufferLength = s_audioChannels * sizeof(float) * bufferSize;
                 WaveHdr[i].lpData = chunkStart;
                 WaveHdr[i].dwFlags = WHDR_BEGINLOOP | WHDR_ENDLOOP;
                 WaveHdr[i].dwLoops = -1L;
@@ -237,7 +252,7 @@ public:
                 return 4;
             }
         }
-        _beginthread(RenderingThread, 16384, this);
+        _beginthread(RenderingThread, 16384 * 2, this);
         return 0;
     }
 
@@ -288,6 +303,7 @@ public:
             std::cout << "OPL3: GetPos() wrap: " << delta << "\n";
             ++getPosWraps;
         }
+
         prevPlayPos = mmTime.u.sample;
         return mmTime.u.sample + getPosWraps * (1 << 27);
     }
@@ -308,17 +324,22 @@ void WaveOutWin32::RenderingThread(void *)
         while(!s_waveOut.stopProcessing)
         {
             bool allBuffersRendered = true;
+
             for(UINT i = 0; i < s_waveOut.chunks; i++)
             {
                 if(s_waveOut.WaveHdr[i].dwFlags & WHDR_DONE)
                 {
                     allBuffersRendered = false;
-                    midiSynth.Render((Bit16s *)s_waveOut.WaveHdr[i].lpData, s_waveOut.WaveHdr[i].dwBufferLength / 4);
+                    midiSynth.Render((float *)s_waveOut.WaveHdr[i].lpData,
+                                     s_waveOut.WaveHdr[i].dwBufferLength / (sizeof(float) * 2));
+
                     if(waveOutWrite(s_waveOut.hWaveOut, &s_waveOut.WaveHdr[i], sizeof(WAVEHDR)) != MMSYSERR_NOERROR)
                         MessageBoxW(NULL, L"Failed to write block to device", L"libADLMIDI", MB_OK | MB_ICONEXCLAMATION);
+
                     midiSynth.CheckForSignals();
                 }
             }
+
             if(allBuffersRendered)
                 WaitForSingleObject(s_waveOut.hEvent, INFINITE);
         }
@@ -369,12 +390,12 @@ void MidiSynth::RenderAvailableSpace()
             return;
         }
     }
-    midiSynth.Render(buffer + 2 * framesRendered, framesToRender);
+    midiSynth.Render(buffer + sizeof(float) * framesRendered, framesToRender);
 }
 
 // Renders totalFrames frames starting from bufpos
 // The number of frames rendered is added to the global counter framesRendered
-void MidiSynth::Render(Bit16s *bufpos, DWORD totalFrames)
+void MidiSynth::Render(float *bufpos, DWORD totalFrames)
 {
     while(totalFrames > 0)
     {
@@ -440,10 +461,22 @@ void MidiSynth::Render(Bit16s *bufpos, DWORD totalFrames)
         }
 
         synthEvent.Wait();
-        adl_generate(synth, framesToRender * 2, bufpos);
+        adl_generateFormat(synth, framesToRender * s_audioChannels,
+                           (ADL_UInt8*)bufpos, (ADL_UInt8*)bufpos + synthAudioFormat.containerSize,
+                           &synthAudioFormat);
+
+        // Apply the volume
+        float g_l = volumeFactorL * gain;
+        float g_r = volumeFactorR * gain;
+        for(size_t i = 0; i < framesToRender * s_audioChannels; i += s_audioChannels)
+        {
+            bufpos[i + 0] *= g_l;
+            bufpos[i + 1] *= g_r;
+        }
+
         synthEvent.Release();
         framesRendered += framesToRender;
-        bufpos += 2 * framesToRender; // each frame consists of two samples for both the Left and Right channels
+        bufpos += s_audioChannels * framesToRender; // each frame consists of two samples for both the Left and Right channels
         totalFrames -= framesToRender;
     }
 
@@ -461,13 +494,17 @@ void MidiSynth::CheckForSignals()
 
     switch(cmd)
     {
-    case 1: // Reload settings on the fly
+    case DRV_SIGNAL_RELOAD_SETUP: // Reload settings on the fly
         this->loadSetup();
         LoadSynthSetup();
         break;
 
-    case 2:
+    case DRV_SIGNAL_RESET_SYNTH:
         adl_reset(synth);
+        break;
+
+    case DRV_SIGNAL_UPDATE_GAIN:
+        this->loadGain();
         break;
 
     default:
@@ -490,6 +527,10 @@ void MidiSynth::LoadSettings()
     chunkSize = MillisToFrames(10);
     midiLatency = MillisToFrames(0);
     useRingBuffer = false;
+    volumeFactorL = 1.0f;
+    volumeFactorR = 1.0f;
+    gain = 1.0f;
+
     if(!useRingBuffer)
     {
         // Number of chunks should be ceil(bufferSize / chunkSize)
@@ -502,7 +543,7 @@ void MidiSynth::LoadSettings()
 int MidiSynth::Init()
 {
     LoadSettings();
-    buffer = new Bit16s[2 * bufferSize]; // each frame consists of two samples for both the Left and Right channels
+    buffer = new float[s_audioChannels * bufferSize]; // each frame consists of two samples for both the Left and Right channels
 
     // Init synth
     if(synthEvent.Init())
@@ -515,14 +556,25 @@ int MidiSynth::Init()
         return 1;
     }
 
+    synthAudioFormat.type = ADLMIDI_SampleType_F32;
+    synthAudioFormat.sampleOffset = s_audioChannels * sizeof(float);
+    synthAudioFormat.containerSize = sizeof(float);
+
     m_setupInit = false;
     LoadSynthSetup();
 
-    UINT wResult = s_waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate);
-    if(wResult) return wResult;
+    UINT wResult = s_waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate, m_setup.outputDevice);
+
+    if(wResult)
+        return wResult;
+
+    m_setupCurrent.outputDevice = m_setup.outputDevice;
 
     // Start playing stream
-    adl_generate(synth, bufferSize * 2, buffer);
+    adl_generateFormat(synth, bufferSize * s_audioChannels,
+                       (ADL_UInt8*)buffer,
+                       (ADL_UInt8*)buffer + synthAudioFormat.containerSize,
+                       &synthAudioFormat);
     framesRendered = 0;
 
     wResult = s_waveOut.Start();
@@ -586,9 +638,27 @@ void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len)
     synthEvent.Release();
 }
 
+void MidiSynth::SetVolume(DWORD vol)
+{
+    volumeFactorR = (float)0xFFFF / HIWORD(vol);
+    volumeFactorL = (float)0xFFFF / LOWORD(vol);
+}
+
+DWORD MidiSynth::GetVolume()
+{
+    return MAKELONG((DWORD)(0xFFFF * volumeFactorL), (DWORD)(0xFFFF * volumeFactorR));
+}
+
 void MidiSynth::loadSetup()
 {
     ::loadSetup(&m_setup);
+    gain = (float)m_setup.gain100 / 100.f;
+}
+
+void MidiSynth::loadGain()
+{
+    ::getGain(&m_setup);
+    gain = (float)m_setup.gain100 / 100.f;
 }
 
 void MidiSynth::LoadSynthSetup()
@@ -662,6 +732,12 @@ void MidiSynth::LoadSynthSetup()
     {
         adl_setVolumeRangeModel(synth, m_setup.volumeModel);
         m_setupCurrent.volumeModel = m_setup.volumeModel;
+    }
+
+    if(!m_setupInit || m_setupCurrent.chanAlloc != m_setup.chanAlloc)
+    {
+        adl_setChannelAllocMode(synth, m_setup.chanAlloc);
+        m_setupCurrent.chanAlloc = m_setup.chanAlloc;
     }
 
     if(!m_setupInit || m_setupCurrent.numChips != m_setup.numChips)
