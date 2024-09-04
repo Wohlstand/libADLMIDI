@@ -100,7 +100,7 @@
 #if defined(_WIN32)
 #   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, COM1, COM2, COM3, etc.)")
 #elif defined(__APPLE__)
-#   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, ttyACM0, ttyACM1, etc.)")
+#   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, \"cu.usbmodem2401\", etc.)")
 #else
 #   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, ttyACM0, ttyACM1, etc.)")
 #endif
