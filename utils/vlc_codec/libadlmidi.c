@@ -92,13 +92,18 @@
 
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
 
-#define SERIAL_ENABLE_TEXT N_("Enable Serial hardware mode")
+#define SERIAL_ENABLE_TEXT N_("Enable Serial hardware mode [EXPERIMENTAL]")
 #define SERIAL_ENABLE_LONGTEXT N_( \
-    "Use the hardware OPL3 chip via Serial port.")
+    "Use the hardware OPL3 chip via Serial port.\n\nNote: In the VLC this feature is EXPERIMENTAL and has some deffects like a short tempo boost at begining.")
 
 #define SERIAL_NAME_TEXT N_("Serial device name")
-#define SERIAL_NAME_LONGTEXT N_( \
-    "Name of the Serial device to use.")
+#if defined(_WIN32)
+#   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, COM1, COM2, COM3, etc.)")
+#elif defined(__APPLE__)
+#   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, ttyACM0, ttyACM1, etc.)")
+#else
+#   define SERIAL_NAME_LONGTEXT N_( "Name of the Serial device to use. (For example, ttyACM0, ttyACM1, etc.)")
+#endif
 
 #define SERIAL_BAUD_TEXT N_("Serial baud speed")
 #define SERIAL_BAUD_LONGTEXT N_( \
