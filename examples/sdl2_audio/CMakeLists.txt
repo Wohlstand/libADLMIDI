@@ -25,7 +25,7 @@ set_nopie(adlmidi_sdl2_demo)
 if(NOT MSVC)
     target_link_libraries(adlmidi_sdl2_demo PRIVATE pthread)
 endif()
-if(NOT WIN32)
+if(NOT WIN32 AND NOT HAIKU)
     target_link_libraries(adlmidi_sdl2_demo PRIVATE dl m)
 endif()
 
