@@ -106,6 +106,7 @@ The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT
 * **WITH_WINMMDRV** - (ON/OFF, default OFF) (Windows platform only) Compile the WinMM MIDI driver to use libOPNMIDI as a system MIDI device.
   * **WITH_WINMMDRV_PTHREADS** - (ON/OFF, default ON) Link libwinpthreads statically (when using pthread-based builds).
   * **WITH_WINMMDRV_MINGWEX** - (ON/OFF, default OFF) Link libmingwex statically (when using vanilla MinGW builds). Useful for targetting to pre-XP Windows versions.
+* **WITH_ALSASEQ** - (ON/OFF, default OFF) (Linux and compatible environments) Build the ADLMIDI ALSA sequencer client (Requires SDL2).
 * **WITH_OLD_UTILS** - (ON/OFF, default OFF) Build old utilities to dump some bank formats, made by original creator of ADLMIDI
 * **EXAMPLE_SDL2_AUDIO** - (ON/OFF, default OFF) Build also a simple SDL2 demo MIDI player
 
