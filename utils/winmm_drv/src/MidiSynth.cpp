@@ -296,7 +296,8 @@ public:
                 return 4;
             }
         }
-        _beginthread(RenderingThread, 16384 * 2, this);
+
+        _beginthread(RenderingThread, 8192 * sizeSample, this);
         return 0;
     }
 
