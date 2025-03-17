@@ -4,8 +4,37 @@
 
 typedef DWORD (WINAPI * MessagePtr)(UINT, UINT, DWORD, DWORD, DWORD);
 
+#ifndef MMNOMIDI
+
+typedef struct midiopenstrmid_tag
+{
+    DWORD dwStreamID;
+    UINT uDeviceID;
+} MIDIOPENSTRMID;
+
+typedef struct midiopendesc_tag {
+    HMIDI hMidi;
+    DWORD_PTR dwCallback;
+    DWORD_PTR dwInstance;
+    DWORD_PTR dnDevNode;
+    DWORD cIds;
+    MIDIOPENSTRMID rgIds[1];
+} MIDIOPENDESC;
+
+typedef MIDIOPENDESC FAR *LPMIDIOPENDESC;
+
+#endif // MMNOMIDI
+
 #ifndef MODM_GETDEVCAPS
 #define MODM_GETDEVCAPS     2
+#endif
+
+#ifndef MODM_OPEN
+#define MODM_OPEN           3
+#endif
+
+#ifndef MODM_CLOSE
+#define MODM_CLOSE          4
 #endif
 
 LONG testDriver()
@@ -17,10 +46,12 @@ LONG testDriver()
     DWORD modRet;
     MIDIOUTCAPSA myCapsA;
     MessagePtr modMessagePtr;
+    MIDIOPENDESC desc;
+    LONG totalClientNum = 0;
 
     printf("Open...\n");
     // Open the driver (no additional parameters needed this time).
-    if((hdrvr = OpenDriver(L"adlmididrv.dll", 0, 0)) == 0)
+    if((hdrvr = OpenDriver(L".\\adlmididrv.dll", 0, 0)) == 0)
     {
         printf("!!! Can't open the driver\n");
         return -1;
@@ -67,6 +98,28 @@ LONG testDriver()
         }
 
         printf("<-- %s\n", myCapsA.szPname);
+
+        printf("Trying to open driver\n");
+        ZeroMemory(&desc, sizeof(desc));
+        desc.dwInstance = (DWORD_PTR)hdrvr;
+        modRet = modMessagePtr(0, MODM_OPEN, (DWORD_PTR)&totalClientNum, (DWORD_PTR)&desc, sizeof(desc));
+        if(modRet != MMSYSERR_NOERROR)
+        {
+            CloseDriver(hdrvr, 0, 0);
+            printf("!!! modMessage returned an error!\n");
+            return -1;
+        }
+
+        printf("<-- Client Num: %d\n", totalClientNum);
+
+        printf("Trying to close\n");
+        modRet = modMessagePtr(0, MODM_CLOSE, (DWORD_PTR)NULL, NULL, 0);
+        if(modRet != MMSYSERR_NOERROR)
+        {
+            CloseDriver(hdrvr, 0, 0);
+            printf("!!! modMessage returned an error!\n");
+            return -1;
+        }
     }
     else
     {
