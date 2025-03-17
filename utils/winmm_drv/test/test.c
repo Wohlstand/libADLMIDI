@@ -110,10 +110,10 @@ LONG testDriver()
             return -1;
         }
 
-        printf("<-- Client Num: %d\n", totalClientNum);
+        printf("<-- Client Number: %ld\n", totalClientNum);
 
         printf("Trying to close\n");
-        modRet = modMessagePtr(0, MODM_CLOSE, (DWORD_PTR)NULL, NULL, 0);
+        modRet = modMessagePtr(0, MODM_CLOSE, (DWORD_PTR)NULL, (DWORD_PTR)NULL, 0);
         if(modRet != MMSYSERR_NOERROR)
         {
             CloseDriver(hdrvr, 0, 0);
