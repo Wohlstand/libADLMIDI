@@ -56,7 +56,8 @@ private:
     float volumeFactorR;
     float gain;
 
-    float *buffer;
+    unsigned char *buffer;
+    size_t bufferSizeB;
     DWORD framesRendered;
 
     ADL_MIDIPlayer *synth;
@@ -80,7 +81,7 @@ public:
     void ResetSynth();
     void PanicSynth();
     void RenderAvailableSpace();
-    void Render(float *bufpos, DWORD totalFrames);
+    void Render(Bit8u *bufpos_p, DWORD bufSize);
     void CheckForSignals();
     void PushMIDI(DWORD msg);
     void PlaySysex(Bit8u *bufpos, DWORD len);
