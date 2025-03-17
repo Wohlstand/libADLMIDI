@@ -303,9 +303,14 @@ LONG OpenDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DWO
     driver->clients[clientNum].flags = HIWORD(dwParam2);
     driver->clients[clientNum].callback = desc->dwCallback;
     driver->clients[clientNum].instance = desc->dwInstance;
-    *(LONG *)dwUser = clientNum;
+
+    if(dwUser)
+        *(LONG *)dwUser = clientNum;
+
     driver->clientCount++;
+
     DoCallback(uDeviceID, clientNum, MOM_OPEN, (DWORD_PTR)NULL, (DWORD_PTR)NULL);
+
     return MMSYSERR_NOERROR;
 }
 
