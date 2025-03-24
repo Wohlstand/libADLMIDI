@@ -2161,7 +2161,7 @@ ESFM_reg_write_chan_idx(esfm_chip *chip, uint16_t reg)
 	else
 	{
 		uint8_t reg_low = reg & 0xff;
-		esbool high = reg & 0x100;
+		esbool high = (reg & 0x100) != 0;
 		esbool is_key_on_reg = reg_low >= 0xb0 && reg_low < 0xb9;
 		if (is_key_on_reg)
 		{

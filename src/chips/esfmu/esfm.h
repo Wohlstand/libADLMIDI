@@ -74,7 +74,7 @@ int16_t ESFM_get_channel_output_native(esfm_chip *chip, int channel_idx);
 
 /* These are fake types just for syntax sugar. */
 /* Beware of their underlying types when reading/writing to them. */
-typedef int esbool;
+typedef int8_t esbool;
 #define estrue 1
 #define esfalse 0
 typedef uint8_t flag;
