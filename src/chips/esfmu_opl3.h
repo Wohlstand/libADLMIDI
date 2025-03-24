@@ -26,20 +26,6 @@
 class ESFMuOPL3 final : public OPLChipBaseT<ESFMuOPL3>
 {
     void *m_chip;
-
-    static const size_t c_queueSize = 500;
-
-    struct Reg
-    {
-        uint32_t addr;
-        uint8_t data;
-    };
-
-    Reg m_queue[c_queueSize];
-    size_t m_headPos;
-    size_t m_tailPos;
-    long m_queueCount;
-
 public:
     ESFMuOPL3();
     ~ESFMuOPL3() override;
