@@ -23,10 +23,13 @@
 #include <cstring>
 
 ESFMuOPL3::ESFMuOPL3() :
-    OPLChipBaseT()
+    OPLChipBaseT(),
+    m_headPos(0),
+    m_tailPos(0),
+    m_queueCount(0)
 {
     m_chip = new esfm_chip;
-    setRate(m_rate);
+    ESFMuOPL3::setRate(m_rate);
 }
 
 ESFMuOPL3::~ESFMuOPL3()
@@ -53,19 +56,49 @@ void ESFMuOPL3::reset()
 
 void ESFMuOPL3::writeReg(uint16_t addr, uint8_t data)
 {
-    esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
-    ESFM_write_reg_buffered_fast(chip_r, addr, data);
+    Reg &back = m_queue[m_headPos++];
+    back.addr = addr;
+    back.data = data;
+
+    if(m_headPos >= c_queueSize)
+        m_headPos = 0;
+
+    ++m_queueCount;
+    // esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
+    // ESFM_write_reg_buffered(chip_r, addr, data);
 }
 
 void ESFMuOPL3::writePan(uint16_t addr, uint8_t data)
 {
-    esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
-    // OPL3_WritePan(chip_r, addr, data);
+    // FIXME: Implement panning support
+    // esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
+    // ESFM_write?pan(chip_r, addr, data);
+    (void)(addr);
+    (void)(data);
 }
 
 void ESFMuOPL3::nativeGenerate(int16_t *frame)
 {
     esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
+    uint32_t addr = 0xffff, data;
+
+    // see if there is data to be written; if so, extract it and dequeue
+    if(m_queueCount > 0)
+    {
+        const Reg &front = m_queue[m_tailPos++];
+
+        if(m_tailPos >= c_queueSize)
+            m_tailPos = 0;
+        --m_queueCount;
+
+        addr = front.addr;
+        data = front.data;
+    }
+
+    // write to the chip
+    if(addr != 0xffff)
+        ESFM_write_reg(chip_r, addr, data);
+
     ESFM_generate(chip_r, frame);
 }
 
