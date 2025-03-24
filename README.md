@@ -120,7 +120,12 @@ You need to make in the any IDE a library project and put into it next files
 * `ADLMIDI_DISABLE_MIDI_SEQUENCER` - Completely disables built-in MIDI sequencer.
 * `ADLMIDI_DISABLE_DOSBOX_EMULATOR` - Disables DosBox 0.74 OPL3 emulator.
 * `ADLMIDI_DISABLE_NUKED_EMULATOR` - Disables Nuked OPL3 emulator.
+* `ADLMIDI_DISABLE_JAVA_EMULATOR` - Disable JavaOPL3 emulator.
+* `ADLMIDI_DISABLE_OPAL_EMULATOR` - Disable Opal OPL3-only emulator.
+* `ADLMIDI_DISABLE_ESFMU_EMULATOR` - Disable ESFMu ESFM/OPL3 emulator.
+* `ENABLE_HW_OPL_SERIAL_PORT` and `ADLMIDI_ENABLE_HW_SERIAL` - Enable support of the Serial Port support for hardware OPL3 chip interfaces.
 * `DISABLE_EMBEDDED_BANKS` - Disables usage of embedded banks. Use it to use custom-only banks.
+* `ADLMIDI_ENABLE_HQ_RESAMPLER` - Enable high-quality resampler (requires `zipa-resampler` external dependency).
 
 ### Public header (include)
 * adlmidi.h     - Library Public API header, use it to control library
@@ -186,6 +191,7 @@ To build that example you will need to have installed SDL2 library.
  * Fixed crash on attempt to change the volume of a blank note
  * Added an ability to supply the custom list of embedded banks using `-DGENADLDATA_CUSTOM_BANKLIST=/path/to/ini/file.ini` argument
  * Improved support of the CMF files: added support for previously missing transpose, depth control, and song marker controllers
+ * Added ESFMu emulator for the future ESFM support (Currently used as one another OPL3 emulator and without panned stereo support yet).
 
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio
