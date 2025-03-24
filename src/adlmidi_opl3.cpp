@@ -61,6 +61,11 @@ static const unsigned OPLBase = 0x388;
 #       include "chips/java_opl3.h"
 #   endif
 
+// ESFMu emulator
+#   ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
+#       include "chips/esfmu_opl3.h"
+#   endif
+
 // HW OPL Serial
 #   ifdef ADLMIDI_ENABLE_HW_SERIAL
 #       include "chips/opl_serial_port.h"
@@ -79,6 +84,10 @@ static const unsigned adl_emulatorSupport = 0
 
 #   ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
     | (1u << ADLMIDI_EMU_OPAL)
+#   endif
+
+#   ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
+    | (1u << ADLMIDI_EMU_ESFMu)
 #   endif
 
 #   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
@@ -1812,6 +1821,11 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
 #ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
         case ADLMIDI_EMU_JAVA:
             chip = new JavaOPL3;
+            break;
+#endif
+#ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
+        case ADLMIDI_EMU_ESFMu:
+            chip = new ESFMuOPL3;
             break;
 #endif
         }

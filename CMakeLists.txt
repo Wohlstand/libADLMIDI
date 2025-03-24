@@ -189,6 +189,7 @@ option(USE_DOSBOX_EMULATOR  "Use DosBox 0.74 OPL3 emulator (semi-accurate, sugge
 option(USE_NUKED_EMULATOR   "Use Nuked OPL3 emulator (most accurate, powerful)" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_OPAL_EMULATOR    "Use Opal emulator (inaccurate)" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ${DEFAULT_HEAVY_EMULATORS})
+option(USE_ESFMU_EMULATOR   "Use ESFMu emulator (Based on Nuked OPL3, powerful)" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_HW_SERIAL        "Use the hardware OPL3 chip via Serial on modern systems" OFF)
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
@@ -260,9 +261,13 @@ function(handle_options targetLib)
             set(HAS_EMULATOR TRUE)
             target_sources(${targetLib} PRIVATE
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3.cpp       # v 1.8
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.cpp  # v 1.7.4
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3_174.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3_174.h
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_NUKED_EMULATOR)
@@ -272,7 +277,9 @@ function(handle_options targetLib)
             set(HAS_EMULATOR TRUE)
             target_sources(${targetLib} PRIVATE
                 ${libADLMIDI_SOURCE_DIR}/src/chips/opal_opl3.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/opal_opl3.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/opal/opal.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/opal/opal.h
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_OPAL_EMULATOR)
@@ -285,6 +292,19 @@ function(handle_options targetLib)
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_JAVA_EMULATOR)
+        endif()
+
+        if(USE_ESFMU_EMULATOR)
+            set(HAS_EMULATOR TRUE)
+            target_sources(${targetLib} PRIVATE
+                ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu_opl3.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu_opl3.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm_registers.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm.h
+            )
+        else()
+            target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_ESFMU_EMULATOR)
         endif()
 
         if(USE_HW_SERIAL)

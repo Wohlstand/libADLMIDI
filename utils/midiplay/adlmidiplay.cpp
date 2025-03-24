@@ -1286,6 +1286,7 @@ int main(int argc, char **argv)
             " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
             " --emu-opal   Uses Opal OPL3 emulator\n"
             " --emu-java   Uses Java OPL3 emulator\n"
+            " --emu-esfmu  Uses ESFMu OPL3/ESFM emulator\n"
 #endif
 #ifdef HARDWARE_OPL3
             "\n"
@@ -1427,6 +1428,8 @@ int main(int argc, char **argv)
             emulator = ADLMIDI_EMU_OPAL;
         else if(!std::strcmp("--emu-java", argv[2]))
             emulator = ADLMIDI_EMU_JAVA;
+        else if(!std::strcmp("--emu-esfmu", argv[2]))
+            emulator = ADLMIDI_EMU_ESFMu;
 #endif
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
         else if(!std::strcmp("--serial", argv[2]))
