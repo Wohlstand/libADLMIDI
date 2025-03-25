@@ -1762,6 +1762,10 @@ ESFM_process_feedback(esfm_chip *chip)
 		uint3 mod_in_shift;
 		uint32_t phase, phase_acc;
 		uint10 eg_output;
+#if defined(__GNUC__) && defined(__i386__) && !defined(__x86_64__) && !defined(__arm__) && !defined(_ESFMU_DISABLE_ASM_OPTIMIZATIONS)
+		size_t logsinrom_addr;
+		size_t exprom_addr;
+#endif
 
 		if (slot->mod_in_level && (chip->native_mode || (slot->in.mod_input == &slot->in.feedback_buf)))
 		{
@@ -1848,8 +1852,8 @@ ESFM_process_feedback(esfm_chip *chip)
 				: "cc", "ax", "bx", "cx", "dx", "r8", "r9", "r10", "r11"
 			);
 #elif defined(__GNUC__) && defined(__i386__) && !defined(_ESFMU_DISABLE_ASM_OPTIMIZATIONS)
-			size_t logsinrom_addr = (size_t)logsinrom;
-			size_t exprom_addr = (size_t)exprom;
+			logsinrom_addr = (size_t)logsinrom;
+			exprom_addr = (size_t)exprom;
 
 			asm (
 				"movzbl  %b[wave], %%eax             \n\t"

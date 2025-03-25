@@ -286,8 +286,10 @@ public:
 
     int Start()
     {
+        HANDLE renderThread;
         getPosWraps = 0;
         prevPlayPos = 0;
+
         for(UINT i = 0; i < chunks; i++)
         {
             if(waveOutWrite(hWaveOut, &WaveHdr[i], sizeof(WAVEHDR)) != MMSYSERR_NOERROR)
@@ -297,7 +299,8 @@ public:
             }
         }
 
-        _beginthread(RenderingThread, 8192 * sizeSample, this);
+        renderThread = (HANDLE)_beginthread(RenderingThread, 8192 * sizeSample, this);
+        SetThreadPriority(renderThread, THREAD_PRIORITY_HIGHEST);
         return 0;
     }
 
