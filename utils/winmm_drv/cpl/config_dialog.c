@@ -55,6 +55,7 @@ static const char * const emulator_type_descriptions[] =
     "DOSBox",
     "Opal",
     "Java OPL3",
+    "ESFMu",
     NULL
 };
 
