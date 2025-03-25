@@ -1051,6 +1051,8 @@ void OPL3::noteOff(size_t c)
         writeRegI(chip, 0xBD, m_regBD[chip]);
         return;
     }
+    else if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2 && cc >= NUM_OF_OPL2_CHANNELS)
+        return;
 
     writeRegI(chip, 0xB0 + g_channelsMap[cc], m_keyBlockFNumCache[c] & 0xDF);
 }
@@ -1221,6 +1223,8 @@ void OPL3::touchNote(size_t c,
         { true,  true  }  /* 4 op AM-AM ops 3&4 */
     };
 
+    if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2 && m_channelCategory[c] == ChanCat_None)
+        return; // Do nothing
 
     // ------ Mix volumes and compute average ------
 
@@ -1576,14 +1580,15 @@ void OPL3::silenceAll() // Silence all OPL channels.
 
 void OPL3::updateChannelCategories()
 {
-    const uint32_t fours = m_numFourOps;
+    const uint32_t fours = (m_currentChipType != OPLChipBase::CHIPTYPE_OPL2) ? m_numFourOps : 0;
 
     for(uint32_t chip = 0, fours_left = fours; chip < m_numChips; ++chip)
     {
         m_regBD[chip] = (m_deepTremoloMode * 0x80 + m_deepVibratoMode * 0x40 + m_rhythmMode * 0x20);
         writeRegI(chip, 0x0BD, m_regBD[chip]);
         uint32_t fours_this_chip = std::min(fours_left, static_cast<uint32_t>(6u));
-        writeRegI(chip, 0x104, (1 << fours_this_chip) - 1);
+        if(m_currentChipType != OPLChipBase::CHIPTYPE_OPL2)
+            writeRegI(chip, 0x104, (1 << fours_this_chip) - 1);
         fours_left -= fours_this_chip;
     }
 
