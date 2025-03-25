@@ -77,7 +77,12 @@ const char *ESFMuOPL3::emulatorName()
     return "ESFMu";
 }
 
+bool ESFMuOPL3::hasFullPanning()
+{
+    return false;
+}
+
 OPLChipBase::ChipType ESFMuOPL3::chipType()
 {
-    return CHIPTYPE_OPL3;
+    return CHIPTYPE_ESFM;
 }

@@ -94,6 +94,11 @@ bool OPL_SerialPort::connectPort(const std::string& name, unsigned baudRate, uns
     return m_port->open(name, baudRate);
 }
 
+bool OPL_SerialPort::hasFullPanning()
+{
+    return false;
+}
+
 void OPL_SerialPort::writeReg(uint16_t addr, uint8_t data)
 {
     uint8_t sendBuffer[16];

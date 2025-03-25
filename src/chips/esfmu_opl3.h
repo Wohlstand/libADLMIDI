@@ -40,6 +40,7 @@ public:
     void nativeGenerate(int16_t *frame) override;
     const char *emulatorName() override;
     ChipType chipType() override;
+    bool hasFullPanning() override;
 };
 
 #endif // ESFMU_OPL3_H

@@ -40,6 +40,7 @@ public:
     void nativeGenerateN(int16_t *output, size_t frames) override;
     const char *emulatorName() override;
     ChipType chipType() override;
+    bool hasFullPanning() override;
 };
 
 #endif // JAVA_OPL3_H

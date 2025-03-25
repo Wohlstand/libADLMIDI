@@ -84,6 +84,11 @@ const char *DosBoxOPL3::emulatorName()
     return "DOSBox 0.74-r4111 OPL3";
 }
 
+bool DosBoxOPL3::hasFullPanning()
+{
+    return true;
+}
+
 OPLChipBase::ChipType DosBoxOPL3::chipType()
 {
     return CHIPTYPE_OPL3;

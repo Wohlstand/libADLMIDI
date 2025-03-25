@@ -74,6 +74,11 @@ const char *NukedOPL3::emulatorName()
     return "Nuked OPL3 (v 1.8)";
 }
 
+bool NukedOPL3::hasFullPanning()
+{
+    return true;
+}
+
 OPLChipBase::ChipType NukedOPL3::chipType()
 {
     return CHIPTYPE_OPL3;

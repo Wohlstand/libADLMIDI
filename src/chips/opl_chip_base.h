@@ -41,7 +41,9 @@ public:
     enum { nativeRate = 49716 };
     enum ChipType
     {
-        CHIPTYPE_OPL3 = 0, CHIPTYPE_OPL2 = 1
+        CHIPTYPE_OPL3 = 0,
+        CHIPTYPE_OPL2 = 1,
+        CHIPTYPE_ESFM = 2
     };
 protected:
     uint32_t m_id;
@@ -79,6 +81,11 @@ public:
 
     virtual const char* emulatorName() = 0;
     virtual ChipType chipType() = 0;
+    /**
+     * @brief Does emulator has the per-channel full-panning extension?
+     * @return true if emulator has this extension, false if emulator has only original behaviour
+     */
+    virtual bool hasFullPanning() = 0;
 private:
     OPLChipBase(const OPLChipBase &c);
     OPLChipBase &operator=(const OPLChipBase &c);

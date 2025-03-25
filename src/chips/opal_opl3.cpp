@@ -75,6 +75,11 @@ const char *OpalOPL3::emulatorName()
     return "Opal OPL3";
 }
 
+bool OpalOPL3::hasFullPanning()
+{
+    return true;
+}
+
 OPLChipBase::ChipType OpalOPL3::chipType()
 {
     return CHIPTYPE_OPL3;

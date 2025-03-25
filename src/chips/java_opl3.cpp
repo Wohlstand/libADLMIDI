@@ -111,6 +111,11 @@ const char *JavaOPL3::emulatorName()
     return "Java 1.0.6 OPL3";
 }
 
+bool JavaOPL3::hasFullPanning()
+{
+    return true;
+}
+
 OPLChipBase::ChipType JavaOPL3::chipType()
 {
     return CHIPTYPE_OPL3;
