@@ -165,6 +165,7 @@ static const char * const emulator_type_descriptions[] =
     N_("Opal"),
     N_("Java OPL3"),
     N_("ESFMu"),
+    N_("MAME OPL2"),
 #ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
     N_("YMFM OPL2"),
     N_("YMFM OPL3"),

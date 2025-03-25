@@ -66,6 +66,11 @@ static const unsigned OPLBase = 0x388;
 #       include "chips/esfmu_opl3.h"
 #   endif
 
+// MAME OPL2 emulator
+#   ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
+#       include "chips/mame_opl2.h"
+#   endif
+
 // YMFM emulators
 #   ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
 #       include "chips/ymfm_opl2.h"
@@ -98,6 +103,10 @@ static const unsigned adl_emulatorSupport = 0
 
 #   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
     | (1u << ADLMIDI_EMU_JAVA)
+#   endif
+
+#   ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
+    | (1u << ADLMIDI_EMU_MAME_OPL2)
 #   endif
 
 #   ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
@@ -1837,6 +1846,11 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             chip = new ESFMuOPL3;
             break;
 #endif
+#ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
+        case ADLMIDI_EMU_MAME_OPL2:
+            chip = new MameOPL2;
+            break;
+#endif
 #ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
         case ADLMIDI_EMU_YMFM_OPL2:
             chip = new YmFmOPL2;
@@ -1875,12 +1889,14 @@ void OPL3::initChip(size_t chip)
         0x001, 32, 0x105, 1,          // Enable wave, OPL3 extensions
         0x08, 0                       // CSW/Note Sel
     };
+    static const size_t data_opl3_size = sizeof(data_opl3) / sizeof(uint16_t);
 
     static const uint16_t data_opl2[] =
     {
         0x004, 96, 0x004, 128,          // Pulse timer
         0x001, 32                       // Enable wave
     };
+    static const size_t data_opl2_size = sizeof(data_opl2) / sizeof(uint16_t);
 
     // Report does emulator/interface supports full-panning stereo or not
     if(chip == 0)
@@ -1907,12 +1923,12 @@ void OPL3::initChip(size_t chip)
 
     if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
     {
-        for(size_t a = 0; a < sizeof(data_opl2) / sizeof(*data_opl2); a += 2)
+        for(size_t a = 0; a < data_opl2_size; a += 2)
             writeRegI(chip, data_opl2[a], (data_opl2[a + 1]));
     }
     else
     {
-        for(size_t a = 0; a < sizeof(data_opl3) / sizeof(*data_opl3); a += 2)
+        for(size_t a = 0; a < data_opl3_size; a += 2)
             writeRegI(chip, data_opl3[a], (data_opl3[a + 1]));
     }
 }

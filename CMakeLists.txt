@@ -212,6 +212,7 @@ option(USE_NUKED_EMULATOR   "Use Nuked OPL3 emulator (most accurate, powerful)" 
 option(USE_OPAL_EMULATOR    "Use Opal emulator (inaccurate)" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_ESFMU_EMULATOR   "Use ESFMu emulator (Based on Nuked OPL3, powerful)" ${DEFAULT_HEAVY_EMULATORS})
+option(USE_MAME_EMULATOR    "Use MAME OPL2 emulator" ${DEFAULT_HEAVY_EMULATORS})
 if(COMPILER_SUPPORTS_CXX14)
     option(USE_YMFM_EMULATOR    "Use YMFM emulator (requires C++14 support)" ON)
 endif()
@@ -330,6 +331,18 @@ function(handle_options targetLib)
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_ESFMU_EMULATOR)
+        endif()
+
+        if(USE_MAME_EMULATOR)
+            set(HAS_EMULATOR TRUE)
+            target_sources(${targetLib} PRIVATE
+                ${libADLMIDI_SOURCE_DIR}/src/chips/mame_opl2.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/mame_opl2.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/mame/opl.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/mame/mame_fmopl.cpp
+            )
+        else()
+            target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_MAME_OPL2_EMULATOR)
         endif()
 
         if(USE_YMFM_EMULATOR)
@@ -632,6 +645,7 @@ message("USE_NUKED_EMULATOR       = ${USE_NUKED_EMULATOR}")
 message("USE_OPAL_EMULATOR        = ${USE_OPAL_EMULATOR}")
 message("USE_JAVA_EMULATOR        = ${USE_JAVA_EMULATOR}")
 message("USE_ESFMU_EMULATOR       = ${USE_ESFMU_EMULATOR}")
+message("USE_MAME_EMULATOR        = ${USE_MAME_EMULATOR}")
 if(COMPILER_SUPPORTS_CXX14)
     message("USE_YMFM_EMULATOR        = ${USE_YMFM_EMULATOR}")
 endif()

@@ -707,6 +707,8 @@ enum ADL_Emulator
     ADLMIDI_EMU_JAVA,
     /*! ESFMu */
     ADLMIDI_EMU_ESFMu,
+    /*! MAME OPL2 */
+    ADLMIDI_EMU_MAME_OPL2,
     /*! YMFM OPL2 */
     ADLMIDI_EMU_YMFM_OPL2,
     /*! YMFM OPL3 */
