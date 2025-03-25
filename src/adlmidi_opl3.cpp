@@ -1538,6 +1538,9 @@ void OPL3::setPatch(size_t c, const OplTimbre &instrument)
         if(o2 != 0xFFF)
             writeRegI(chip, data[a] + o2, y & 0xFF);
     }
+
+    if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
+        writeRegI(chip, 0xC0 + g_channelsMapPan[cc], instrument.feedconn);
 }
 
 void OPL3::setPan(size_t c, uint8_t value)
@@ -1899,7 +1902,8 @@ void OPL3::initChip(size_t chip)
     static const uint16_t data_opl2[] =
     {
         0x004, 96, 0x004, 128,          // Pulse timer
-        0x001, 32                       // Enable wave
+        0x001, 32,                      // Enable wave
+        0x08, 0                         // CSW/Note Sel
     };
     static const size_t data_opl2_size = sizeof(data_opl2) / sizeof(uint16_t);
 
