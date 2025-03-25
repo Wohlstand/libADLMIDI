@@ -73,6 +73,7 @@ public:
     virtual void nativePreGenerate() = 0;
     virtual void nativePostGenerate() = 0;
     virtual void nativeGenerate(int16_t *frame) = 0;
+    virtual void resampledGenerate(int32_t *frame) = 0;
 
     virtual void generate(int16_t *output, size_t frames) = 0;
     virtual void generateAndMix(int16_t *output, size_t frames) = 0;
