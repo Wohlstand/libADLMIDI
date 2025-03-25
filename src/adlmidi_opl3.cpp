@@ -66,6 +66,12 @@ static const unsigned OPLBase = 0x388;
 #       include "chips/esfmu_opl3.h"
 #   endif
 
+// YMFM emulators
+#   ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+#       include "chips/ymfm_opl2.h"
+#       include "chips/ymfm_opl3.h"
+#   endif
+
 // HW OPL Serial
 #   ifdef ADLMIDI_ENABLE_HW_SERIAL
 #       include "chips/opl_serial_port.h"
@@ -92,6 +98,11 @@ static const unsigned adl_emulatorSupport = 0
 
 #   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
     | (1u << ADLMIDI_EMU_JAVA)
+#   endif
+
+#   ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+    | (1u << ADLMIDI_EMU_YMFM_OPL2)
+    | (1u << ADLMIDI_EMU_YMFM_OPL3)
 #   endif
 #endif
 ;
@@ -879,6 +890,9 @@ OPL3::OPL3() :
     m_serialBaud(0),
     m_serialProtocol(0),
 #endif
+    m_softPanningSup(false),
+    m_currentChipType((int)OPLChipBase::CHIPTYPE_OPL3),
+    m_perChipChannels(OPL3_CHANNELS_RHYTHM_BASE),
     m_numChips(1),
     m_numFourOps(0),
     m_deepTremoloMode(false),
@@ -1516,10 +1530,14 @@ void OPL3::setPatch(size_t c, const OplTimbre &instrument)
 void OPL3::setPan(size_t c, uint8_t value)
 {
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
+
+    if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
+        return; // OPL2 chip doesn't support panning at all
+
     if(g_channelsMapPan[cc] != 0xFFF)
     {
 #ifndef ADLMIDI_HW_OPL
-        if (m_softPanning)
+        if (m_softPanningSup && m_softPanning)
         {
             writePan(chip, g_channelsMapPan[cc], value);
             writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | OPL_PANNING_BOTH);
@@ -1560,27 +1578,28 @@ void OPL3::updateChannelCategories()
         fours_left -= fours_this_chip;
     }
 
-    if(!m_rhythmMode)
+    for(size_t p = 0, a = 0, n = m_numChips; a < n; ++a)
     {
-        for(size_t a = 0, n = m_numChips; a < n; ++a)
+        for(size_t b = 0; b < OPL3_CHANNELS_RHYTHM_BASE; ++b, ++p)
         {
-            for(size_t b = 0; b < NUM_OF_CHANNELS; ++b)
-            {
-                m_channelCategory[a * NUM_OF_CHANNELS + b] =
-                    (b >= OPL3_CHANNELS_RHYTHM_BASE) ? ChanCat_Rhythm_Secondary : ChanCat_Regular;
-            }
+            if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2 && b >= NUM_OF_OPL2_CHANNELS)
+                m_channelCategory[p] = ChanCat_None;
+            else
+                m_channelCategory[p] = ChanCat_Regular;
+
+            if(m_rhythmMode && b >= 6 && b < 9)
+                m_channelCategory[p] = ChanCat_Rhythm_Secondary;
         }
-    }
-    else
-    {
-        for(size_t a = 0, n = m_numChips; a < n; ++a)
+
+        if(!m_rhythmMode)
         {
-            for(size_t b = 0; b < NUM_OF_CHANNELS; ++b)
-            {
-                m_channelCategory[a * NUM_OF_CHANNELS + b] =
-                    (b >= OPL3_CHANNELS_RHYTHM_BASE) ? static_cast<ChanCat>(ChanCat_Rhythm_Bass + (b - OPL3_CHANNELS_RHYTHM_BASE)) :
-                    (b >= 6 && b < 9) ? ChanCat_Rhythm_Secondary : ChanCat_Regular;
-            }
+            for(size_t b = 0; b < NUM_OF_RM_CHANNELS; ++b)
+                m_channelCategory[p++] = ChanCat_Rhythm_Secondary;
+        }
+        else
+        {
+            for(size_t b = 0; b < NUM_OF_RM_CHANNELS; ++b)
+                m_channelCategory[p++] = (ChanCat_Rhythm_Bass + b);
         }
     }
 
@@ -1770,16 +1789,6 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_regBD.resize(m_numChips,    0);
     m_channelCategory.resize(m_numChannels, 0);
 
-    for(size_t p = 0, a = 0; a < m_numChips; ++a)
-    {
-        for(size_t b = 0; b < OPL3_CHANNELS_RHYTHM_BASE; ++b)
-            m_channelCategory[p++] = ChanCat_Regular;
-        for(size_t b = 0; b < NUM_OF_RM_CHANNELS; ++b)
-            m_channelCategory[p++] = ChanCat_Rhythm_Secondary;
-    }
-
-//    size_t fours = m_numFourOps;
-
     for(size_t i = 0; i < m_numChips; ++i)
     {
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
@@ -1828,6 +1837,14 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             chip = new ESFMuOPL3;
             break;
 #endif
+#ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+        case ADLMIDI_EMU_YMFM_OPL2:
+            chip = new YmFmOPL2;
+            break;
+        case ADLMIDI_EMU_YMFM_OPL3:
+            chip = new YmFmOPL3;
+            break;
+#endif
         }
 
         m_chips[i].reset(chip);
@@ -1851,7 +1868,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
 
 void OPL3::initChip(size_t chip)
 {
-    static const uint16_t data[] =
+    static const uint16_t data_opl3[] =
     {
         0x004, 96, 0x004, 128,        // Pulse timer
         0x105, 0, 0x105, 1, 0x105, 0, // Pulse OPL3 enable
@@ -1859,8 +1876,28 @@ void OPL3::initChip(size_t chip)
         0x08, 0                       // CSW/Note Sel
     };
 
+    static const uint16_t data_opl2[] =
+    {
+        0x004, 96, 0x004, 128,          // Pulse timer
+        0x001, 32                       // Enable wave
+    };
+
+    // Report does emulator/interface supports full-panning stereo or not
+    if(chip == 0)
+    {
+        m_softPanningSup = m_chips[chip]->hasFullPanning();
+        m_currentChipType = (int)m_chips[chip]->chipType();
+        m_perChipChannels = OPL3_CHANNELS_RHYTHM_BASE;
+
+        if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
+        {
+            m_perChipChannels = NUM_OF_OPL2_CHANNELS;
+            m_numFourOps = 0; // Can't have 4ops on OPL2 chip
+        }
+    }
+
     /* Clean-up channels from any playing junk sounds */
-    for(size_t a = 0; a < OPL3_CHANNELS_RHYTHM_BASE; ++a)
+    for(size_t a = 0; a < m_perChipChannels; ++a)
     {
         writeRegI(chip, 0x20 + g_operatorsMap[a * 2], 0x00);
         writeRegI(chip, 0x20 + g_operatorsMap[(a * 2) + 1], 0x00);
@@ -1868,8 +1905,16 @@ void OPL3::initChip(size_t chip)
         writeRegI(chip, 0xB0 + g_channelsMap[a], 0x00);
     }
 
-    for(size_t a = 0; a < sizeof(data) / sizeof(*data); a += 2)
-        writeRegI(chip, data[a], (data[a + 1]));
+    if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
+    {
+        for(size_t a = 0; a < sizeof(data_opl2) / sizeof(*data_opl2); a += 2)
+            writeRegI(chip, data_opl2[a], (data_opl2[a + 1]));
+    }
+    else
+    {
+        for(size_t a = 0; a < sizeof(data_opl3) / sizeof(*data_opl3); a += 2)
+            writeRegI(chip, data_opl3[a], (data_opl3[a + 1]));
+    }
 }
 
 #ifdef ADLMIDI_ENABLE_HW_SERIAL

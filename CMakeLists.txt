@@ -3,11 +3,33 @@ project (libADLMIDI VERSION 1.5.1 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
 # Prefer C90 standard
 set(CMAKE_C_STANDARD 90)
 # Prefer C++98 standard
 set(CMAKE_CXX_STANDARD 98)
+
+if(MSVC)
+    check_cxx_compiler_flag("/std:c++14" COMPILER_SUPPORTS_CXX14)
+    if(COMPILER_SUPPORTS_CXX14)
+        set(FLAG_CPP14 "/std:c++14")
+    endif()
+    if(MSVC_VERSION LESS 1910)
+        unset(COMPILER_SUPPORTS_CXX14) # MSVC older than 2017 fails to build YMFM
+    endif()
+else()
+    check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
+    if(COMPILER_SUPPORTS_CXX14)
+        set(FLAG_CPP14 "-std=c++14")
+    endif()
+endif()
+
+if(COMPILER_SUPPORTS_CXX14)
+    message("== Your C++ compiler supports C++14, YMFM emulator will be ENABLED")
+else()
+    message("== Your C++ compiler does NOT supports C++14, YMFM emulator will be DISABLED")
+endif()
 
 if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -190,6 +212,9 @@ option(USE_NUKED_EMULATOR   "Use Nuked OPL3 emulator (most accurate, powerful)" 
 option(USE_OPAL_EMULATOR    "Use Opal emulator (inaccurate)" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_JAVA_EMULATOR    "Use JavaOPL emulator" ${DEFAULT_HEAVY_EMULATORS})
 option(USE_ESFMU_EMULATOR   "Use ESFMu emulator (Based on Nuked OPL3, powerful)" ${DEFAULT_HEAVY_EMULATORS})
+if(COMPILER_SUPPORTS_CXX14)
+    option(USE_YMFM_EMULATOR    "Use YMFM emulator (requires C++14 support)" ON)
+endif()
 option(USE_HW_SERIAL        "Use the hardware OPL3 chip via Serial on modern systems" OFF)
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
@@ -305,6 +330,34 @@ function(handle_options targetLib)
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_ESFMU_EMULATOR)
+        endif()
+
+        if(USE_YMFM_EMULATOR)
+            set(YMFM_SOURCES
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm_opl2.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm_opl2.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm_opl3.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm_opl3.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_adpcm.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_adpcm.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_fm.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_fm.ipp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_misc.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_misc.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_opl.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_opl.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_pcm.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_pcm.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_ssg.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymfm/ymfm_ssg.h
+            )
+            if(DEFINED FLAG_CPP14)
+                set_source_files_properties(${YMFM_SOURCES} COMPILE_FLAGS ${FLAG_CPP14})
+            endif()
+            target_sources(${targetLib} PRIVATE ${YMFM_SOURCES})
+            set(HAS_EMULATOR TRUE)
+        else()
+            target_compile_definitions(${targetLib} PUBLIC -DADLMIDI_DISABLE_YMFM_EMULATOR)
         endif()
 
         if(USE_HW_SERIAL)
@@ -578,6 +631,10 @@ message("USE_DOSBOX_EMULATOR      = ${USE_DOSBOX_EMULATOR}")
 message("USE_NUKED_EMULATOR       = ${USE_NUKED_EMULATOR}")
 message("USE_OPAL_EMULATOR        = ${USE_OPAL_EMULATOR}")
 message("USE_JAVA_EMULATOR        = ${USE_JAVA_EMULATOR}")
+message("USE_ESFMU_EMULATOR       = ${USE_ESFMU_EMULATOR}")
+if(COMPILER_SUPPORTS_CXX14)
+    message("USE_YMFM_EMULATOR        = ${USE_YMFM_EMULATOR}")
+endif()
 message("USE_HW_SERIAL            = ${USE_HW_SERIAL}")
 
 message("===== Utils and extras =====")

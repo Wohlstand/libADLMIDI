@@ -164,6 +164,11 @@ static const char * const emulator_type_descriptions[] =
     N_("DOSBox"),
     N_("Opal"),
     N_("Java OPL3"),
+    N_("ESFMu"),
+#ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+    N_("YMFM OPL2"),
+    N_("YMFM OPL3"),
+#endif
     NULL
 };
 
@@ -299,7 +304,7 @@ static int Open (vlc_object_t *p_this)
     }
 
     adl_setVolumeRangeModel(p_sys->synth, var_InheritInteger(p_this, CONFIG_PREFIX "volume-model"));
-    adl_setChannelAllocMode(p_sys->synth, var_InheritInteger(p_this, CONFIG_PREFIX "channel-allocation"));    
+    adl_setChannelAllocMode(p_sys->synth, var_InheritInteger(p_this, CONFIG_PREFIX "channel-allocation"));
 
     adl_setFullRangeBrightness(p_sys->synth, var_InheritBool(p_this, CONFIG_PREFIX "full-range-brightness"));
 

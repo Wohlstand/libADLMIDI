@@ -707,6 +707,10 @@ enum ADL_Emulator
     ADLMIDI_EMU_JAVA,
     /*! ESFMu */
     ADLMIDI_EMU_ESFMu,
+    /*! YMFM OPL2 */
+    ADLMIDI_EMU_YMFM_OPL2,
+    /*! YMFM OPL3 */
+    ADLMIDI_EMU_YMFM_OPL3,
     /*! Count instrument on the level */
     ADLMIDI_EMU_end
 };

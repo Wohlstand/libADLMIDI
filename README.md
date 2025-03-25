@@ -192,6 +192,8 @@ To build that example you will need to have installed SDL2 library.
  * Added an ability to supply the custom list of embedded banks using `-DGENADLDATA_CUSTOM_BANKLIST=/path/to/ini/file.ini` argument
  * Improved support of the CMF files: added support for previously missing transpose, depth control, and song marker controllers
  * Added ESFMu emulator for the future ESFM support (Currently used as one another OPL3 emulator and without panned stereo support yet).
+ * Added YMFM emulator support (OPL3 and OPL2).
+ * Added support for OPL2 mode when some emulators enabled.
 
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio

@@ -38,6 +38,7 @@
 #define NUM_OF_4OP_CHANNELS             6
 #define NUM_OF_2OP_CHANNELS             18
 #define NUM_OF_2x2_CHANNELS             9
+#define NUM_OF_OPL2_CHANNELS            9
 #define NUM_OF_RM_CHANNELS              5
 
 /**
@@ -80,6 +81,12 @@ private:
     unsigned    m_serialBaud;
     unsigned    m_serialProtocol;
 #endif
+    //! Does loaded emulator supports soft panning?
+    bool m_softPanningSup;
+    //! Current type of chip
+    int  m_currentChipType;
+    //! Number channels per chip
+    size_t m_perChipChannels;
 
 public:
     /**
@@ -197,7 +204,9 @@ public:
         //! Rhythm-mode Hi-Hat
         ChanCat_Rhythm_HiHat    = 7,
         //! Rhythm-mode Secondary channel
-        ChanCat_Rhythm_Secondary    = 8
+        ChanCat_Rhythm_Secondary    = 8,
+        //! Here is no channel used (OPL2 only)
+        ChanCat_None = 9
     };
 
     //! Category of the channel

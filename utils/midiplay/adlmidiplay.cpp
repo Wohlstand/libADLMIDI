@@ -1430,6 +1430,10 @@ int main(int argc, char **argv)
             emulator = ADLMIDI_EMU_JAVA;
         else if(!std::strcmp("--emu-esfmu", argv[2]))
             emulator = ADLMIDI_EMU_ESFMu;
+        else if(!std::strcmp("--emu-ymfm-opl2", argv[2]))
+            emulator = ADLMIDI_EMU_YMFM_OPL2;
+        else if(!std::strcmp("--emu-ymfm-opl3", argv[2]))
+            emulator = ADLMIDI_EMU_YMFM_OPL3;
 #endif
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
         else if(!std::strcmp("--serial", argv[2]))
