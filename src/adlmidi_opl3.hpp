@@ -74,6 +74,8 @@ private:
     std::vector<uint32_t>   m_keyBlockFNumCache;
     //! Cached BD registry value (flags register: DeepTremolo, DeepVibrato, and RhythmMode)
     std::vector<uint32_t>   m_regBD;
+    //! Cached C0 register value (primarily for the panning state)
+    std::vector<uint8_t>    m_regC0;
 
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
     bool        m_serial;

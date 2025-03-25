@@ -1541,6 +1541,8 @@ void OPL3::setPatch(size_t c, const OplTimbre &instrument)
 
     if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
         writeRegI(chip, 0xC0 + g_channelsMapPan[cc], instrument.feedconn);
+    else
+        writeRegI(chip, 0xC0 + g_channelsMapPan[cc], instrument.feedconn | (m_regC0[c] & OPL_PANNING_BOTH));
 }
 
 void OPL3::setPan(size_t c, uint8_t value)
@@ -1548,7 +1550,10 @@ void OPL3::setPan(size_t c, uint8_t value)
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
 
     if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
+    {
+        m_regC0[c] = OPL_PANNING_BOTH;
         return; // OPL2 chip doesn't support panning at all
+    }
 
     if(g_channelsMapPan[cc] != 0xFFF)
     {
@@ -1556,14 +1561,16 @@ void OPL3::setPan(size_t c, uint8_t value)
         if (m_softPanningSup && m_softPanning)
         {
             writePan(chip, g_channelsMapPan[cc], value);
+            m_regC0[c] = OPL_PANNING_BOTH;
             writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | OPL_PANNING_BOTH);
         }
         else
         {
 #endif
-            int panning = 0;
+            uint8_t panning = 0;
             if(value  < 64 + 16) panning |= OPL_PANNING_LEFT;
             if(value >= 64 - 16) panning |= OPL_PANNING_RIGHT;
+            m_regC0[c] = panning;
             writePan(chip, g_channelsMapPan[cc], 64);
             writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | panning);
 #ifndef ADLMIDI_HW_OPL
@@ -1804,6 +1811,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_insCache.resize(m_numChannels, defaultInsCache);
     m_keyBlockFNumCache.resize(m_numChannels,   0);
     m_regBD.resize(m_numChips,    0);
+    m_regC0.resize(m_numChips,    OPL_PANNING_BOTH);
     m_channelCategory.resize(m_numChannels, 0);
 
     for(size_t i = 0; i < m_numChips; ++i)
