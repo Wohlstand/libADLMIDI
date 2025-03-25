@@ -32,7 +32,7 @@ JavaOPL3::JavaOPL3() :
     OPLChipBaseBufferedT(),
     m_chip(new ADL_JavaOPL3::OPL3(true))
 {
-    reset();
+    JavaOPL3::reset();
 }
 
 JavaOPL3::~JavaOPL3()

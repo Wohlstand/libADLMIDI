@@ -28,7 +28,7 @@ DosBoxOPL3::DosBoxOPL3() :
     OPLChipBaseBufferedT(),
     m_chip(new DBOPL::Handler)
 {
-    reset();
+    DosBoxOPL3::reset();
 }
 
 DosBoxOPL3::~DosBoxOPL3()

@@ -26,7 +26,7 @@ MameOPL2::MameOPL2() :
     OPLChipBaseT()
 {
     m_chip = YM3812Create(false);
-    setRate(m_rate);
+    MameOPL2::setRate(m_rate);
 }
 
 MameOPL2::~MameOPL2()

@@ -26,7 +26,7 @@ NukedOPL3::NukedOPL3() :
     OPLChipBaseT()
 {
     m_chip = new opl3_chip;
-    setRate(m_rate);
+    NukedOPL3::setRate(m_rate);
 }
 
 NukedOPL3::~NukedOPL3()

@@ -20,14 +20,13 @@
 
 #include "opal_opl3.h"
 #include "opal/opal.h"
-#include <new>
 #include <cstring>
 
 OpalOPL3::OpalOPL3() :
     OPLChipBaseT()
 {
     m_chip = new Opal;
-    setRate(m_rate);
+    OpalOPL3::setRate(m_rate);
 }
 
 OpalOPL3::~OpalOPL3()

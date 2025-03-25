@@ -26,7 +26,7 @@ NukedOPL3v174::NukedOPL3v174() :
     OPLChipBaseT()
 {
     m_chip = new opl3_chip;
-    setRate(m_rate);
+    NukedOPL3v174::setRate(m_rate);
 }
 
 NukedOPL3v174::~NukedOPL3v174()

@@ -31,7 +31,7 @@ YmFmOPL2::YmFmOPL2() :
     ymfm::ymfm_interface* intf = new ymfm::ymfm_interface;
     m_intf = intf;
     m_chip = new ymfm::ym3812(*intf);
-    setRate(m_rate);
+    YmFmOPL2::setRate(m_rate);
 }
 
 YmFmOPL2::~YmFmOPL2()
