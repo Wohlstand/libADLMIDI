@@ -1811,7 +1811,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_insCache.resize(m_numChannels, defaultInsCache);
     m_keyBlockFNumCache.resize(m_numChannels,   0);
     m_regBD.resize(m_numChips,    0);
-    m_regC0.resize(m_numChips,    OPL_PANNING_BOTH);
+    m_regC0.resize(m_numChips * m_numChannels, OPL_PANNING_BOTH);
     m_channelCategory.resize(m_numChannels, 0);
 
     for(size_t i = 0; i < m_numChips; ++i)
