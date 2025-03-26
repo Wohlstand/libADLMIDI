@@ -236,6 +236,8 @@ if(WIN32)
     option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
 endif()
 
+option(ENABLE_ADDRESS_SANITIZER "Enable the Address Sanitizer GCC feature" OFF)
+
 if(NOT WIN32
    AND NOT VITA
    AND NOT NINTENDO_3DS
@@ -416,6 +418,11 @@ function(handle_options targetLib)
         endif()
         target_compile_definitions(${targetLib} PRIVATE ADLMIDI_ENABLE_HQ_RESAMPLER)
         target_link_libraries(${targetLib} PUBLIC ${ZITA_RESAMPLER_LIBRARY})
+    endif()
+
+    if(ENABLE_ADDRESS_SANITIZER)
+        target_compile_options(${targetLib} PUBLIC -fsanitize=address)
+        target_link_options(${targetLib} PUBLIC -fsanitize=address)
     endif()
 endfunction()
 
