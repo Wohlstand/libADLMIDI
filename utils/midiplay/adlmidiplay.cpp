@@ -90,20 +90,29 @@ static inline void s_sleepU(double s)
 #   endif
 #endif
 
-#ifdef DEBUG_SONG_SWITCHING
-#include <unistd.h>
-#include <sys/select.h>
-#include <termios.h>
+#if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
+#   include <unistd.h>
+#   include <sys/select.h>
+#   ifndef TERMINAL_USE_NCURSES
+#       include <termios.h>
+#   else
+#       include <ncurses.h>
+#endif
 
+#ifndef TERMINAL_USE_NCURSES
 struct termios orig_termios;
+#endif
 
+#ifndef TERMINAL_USE_NCURSES
 void reset_terminal_mode()
 {
     tcsetattr(0, TCSANOW, &orig_termios);
 }
+#endif
 
 void set_conio_terminal_mode()
 {
+#ifndef TERMINAL_USE_NCURSES
     struct termios new_termios;
 
     /* take two copies - one for now, one for later */
@@ -114,17 +123,40 @@ void set_conio_terminal_mode()
     atexit(reset_terminal_mode);
     cfmakeraw(&new_termios);
     tcsetattr(0, TCSANOW, &new_termios);
+#else
+    SDL_setenv("TERMINFO", "/usr/share/terminfo", 1);
+    SDL_setenv("TERM", "linux", 1);
+    initscr();
+
+    cbreak();
+    noecho();
+    nodelay(stdscr, TRUE);
+    keypad(stdscr, TRUE);
+    scrollok(stdscr, TRUE);
+#endif
 }
 
 int kbhit()
 {
+#   ifndef TERMINAL_USE_NCURSES
     struct timeval tv = { 0L, 0L };
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(0, &fds);
     return select(1, &fds, NULL, NULL, &tv) > 0;
+#   else
+    int ch = getch();
+    if(ch != ERR)
+    {
+        ungetch(ch);
+        return 1;
+    }
+    else
+        return 0;
+#   endif
 }
 
+#   ifndef TERMINAL_USE_NCURSES
 int getch()
 {
     int r;
@@ -134,6 +166,7 @@ int getch()
     else
         return c;
 }
+#   endif
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1900
@@ -888,7 +921,7 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
             tick_wait = minDelay - eat_delay;
 
         if(adl_atEnd(myDevice) && tick_delay <= 0)
-            stop = true;
+            stop = 1;
 
         if(tick_wait > 0.0)
             s_sleepU(tick_wait);
@@ -1033,6 +1066,18 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
     flushout(stdout);
 #   endif
 
+#ifdef ADLMIDI_PLAY_ENABLE_NCURSES
+    setenv("TERMINFO", "/usr/share/terminfo", 1);
+    setenv("TERM", "linux", 1);
+    initscr();
+
+    cbreak();
+    noecho();
+    nodelay(stdscr, TRUE);
+    keypad(stdscr, TRUE);
+    scrollok(stdscr, TRUE);
+#endif
+
     size_t got;
     uint8_t buff[16384];
 
@@ -1075,10 +1120,12 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
             audio_delay(1);
         }
 
-#       ifdef DEBUG_SONG_SWITCHING
+#       if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
         if(kbhit())
         {
             int code = getch();
+
+#           if defined(DEBUG_SONG_SWITCHING)
             if(code == '\033' && kbhit())
             {
                 getch();
@@ -1104,7 +1151,9 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     break;
                 }
             }
-            else if(code == 27) // Quit by ESC key
+            else
+#endif
+            if(code == 27) // Quit by ESC key
                 stop = 1;
         }
 #       endif
@@ -1732,10 +1781,12 @@ int main(int argc, char **argv)
     if(songNumLoad >= 0)
         adl_selectSongNum(myDevice, songNumLoad);
 
-#ifdef DEBUG_SONG_SWITCHING
+#if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
     set_conio_terminal_mode();
+#   ifdef DEBUG_SONG_SWITCHING
     if(songNumLoad < 0)
         songNumLoad = 0;
+#   endif
 #endif
 
     std::string musPath = argv[1];

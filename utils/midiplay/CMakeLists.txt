@@ -30,6 +30,8 @@ if(WIN32 AND NOT USE_SDL2_AUDIO)
 endif()
 
 option(DEBUG_SONG_SWITCHING  "Enable song switching by left and right keys (Linux only)" OFF)
+option(ENABLE_TERMINAL_HOTKEYS  "Enable use of ncurses library to handle keyboard actions" OFF)
+option(TERMINAL_USE_NCURSES  "Enable use of ncurses library to handle keyboard actions" OFF)
 
 add_executable(adlmidiplay ${ADLMIDI_PLAY_SRC})
 
@@ -49,6 +51,15 @@ endif()
 if(MIDIPLAY_WAVE_ONLY)
     target_compile_definitions(adlmidiplay PUBLIC OUTPUT_WAVE_ONLY)
     message("Demo tool will only output WAVE file, no playing support.")
+endif()
+
+if(ENABLE_TERMINAL_HOTKEYS)
+    target_compile_definitions(adlmidiplay PUBLIC ENABLE_TERMINAL_HOTKEYS)
+endif()
+
+if(TERMINAL_USE_NCURSES)
+    target_compile_definitions(adlmidiplay PUBLIC TERMINAL_USE_NCURSES)
+    target_link_libraries(adlmidiplay PRIVATE ncurses)
 endif()
 
 if(ADLMIDI_DOS)
