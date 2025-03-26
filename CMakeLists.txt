@@ -130,6 +130,10 @@ if(CMAKE_BUILD_TYPE_LOWER EQUAL "release")
     add_definitions(-DNDEBUG)
 ENDIF()
 
+if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug" AND CMAKE_COMPILER_IS_GNUCXX)
+    add_definitions(-D_GLIBCXX_DEBUG=1 -D_GLIBCXX_ASSERTIONS=1)
+endif()
+
 # Disable bogus MSVC warnings
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
