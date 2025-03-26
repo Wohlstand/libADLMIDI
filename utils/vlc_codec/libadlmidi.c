@@ -158,20 +158,63 @@ static const char * const channel_alloc_descriptions[] =
 
 static const int emulator_type_values[] =
 {
-    0, 1, 2, 3, 4, 5, 6
+#ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
+    (int)ADLMIDI_EMU_NUKED,
+    (int)ADLMIDI_EMU_NUKED_174,
+#endif
+
+#ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
+    (int)ADLMIDI_EMU_DOSBOX,
+#endif
+
+#ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
+    (int)ADLMIDI_EMU_OPAL,
+#endif
+
+#ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
+    (int)ADLMIDI_EMU_JAVA,
+#endif
+
+#ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
+    (int)ADLMIDI_EMU_ESFMu,
+#endif
+
+#ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
+    (int)ADLMIDI_EMU_MAME_OPL2,
+#endif
+
 #ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
-    , 7, 8
+    (int)ADLMIDI_EMU_YMFM_OPL2,
+    (int)ADLMIDI_EMU_YMFM_OPL3,
 #endif
 };
 static const char * const emulator_type_descriptions[] =
 {
+#ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
     N_("Nuked OPL3 1.8"),
     N_("Nuked OPL3 1.7.4 (Optimized)"),
+#endif
+
+#ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
     N_("DOSBox"),
+#endif
+
+#ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
     N_("Opal"),
+#endif
+
+#ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
     N_("Java OPL3"),
+#endif
+
+#ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
     N_("ESFMu"),
+#endif
+
+#ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
     N_("MAME OPL2"),
+#endif
+
 #ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
     N_("YMFM OPL2"),
     N_("YMFM OPL3"),
