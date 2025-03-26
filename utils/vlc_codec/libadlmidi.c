@@ -156,7 +156,13 @@ static const char * const channel_alloc_descriptions[] =
 #define EMULATOR_TYPE_LINGTEXT N_( \
     "OPL3 Emulator that will be used to generate final sound.")
 
-static const int emulator_type_values[] = { 0, 1, 2 };
+static const int emulator_type_values[] =
+{
+    0, 1, 2, 3, 4, 5, 6
+#ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+    , 7, 8
+#endif
+};
 static const char * const emulator_type_descriptions[] =
 {
     N_("Nuked OPL3 1.8"),
