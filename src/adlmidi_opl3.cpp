@@ -182,7 +182,7 @@ static const uint16_t g_operatorsMap[(NUM_OF_CHANNELS + NUM_OF_RM_CHANNELS) * 2]
     0x011, 0xFFF   // operator 13
 };
 
-//! Channel map to regoster offsets
+//! Channel map to register offsets
 static const uint16_t g_channelsMap[NUM_OF_CHANNELS] =
 {
     0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007, 0x008, // 0..8
@@ -190,12 +190,20 @@ static const uint16_t g_channelsMap[NUM_OF_CHANNELS] =
     0x006, 0x007, 0x008, 0x008, 0x008 // <- hw percussions, hihats and cymbals using tom-tom's channel as pitch source
 };
 
-//! Channel map to regoster offsets (separated copy for panning and for CMF)
+//! Channel map to register offsets (separated copy for panning and for CMF)
 static const uint16_t g_channelsMapPan[NUM_OF_CHANNELS] =
 {
     0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007, 0x008, // 0..8
     0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x108, // 9..17 (secondary set)
     0x006, 0x007, 0x008, 0xFFF, 0xFFF // <- hw percussions, 0xFFF = no support for pitch/pan
+};
+
+//! Channel map to register offsets (separated copy for feedback+connection bits)
+static const uint16_t g_channelsMapFBConn[NUM_OF_CHANNELS] =
+{
+    0x000, 0x001, 0x002, 0x003, 0x004, 0x005, 0x006, 0x007, 0x008, // 0..8
+    0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x108, // 9..17 (secondary set)
+    0x006, 0xFFF, 0xFFF, 0xFFF, 0xFFF // <- hw percussions, 0xFFF = no support for pitch/pan
 };
 
 /*
@@ -1530,6 +1538,8 @@ void OPL3::setPatch(size_t c, const OplTimbre &instrument)
     uint16_t o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
     uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
     unsigned x = instrument.modulator_E862, y = instrument.carrier_E862;
+    uint8_t fbconn = 0;
+    uint16_t fbconn_reg = 0x00;
 
     for(size_t a = 0; a < 4; ++a, x >>= 8, y >>= 8)
     {
@@ -1539,10 +1549,21 @@ void OPL3::setPatch(size_t c, const OplTimbre &instrument)
             writeRegI(chip, data[a] + o2, y & 0xFF);
     }
 
-    if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2)
-        writeRegI(chip, 0xC0 + g_channelsMapPan[cc], instrument.feedconn);
-    else
-        writeRegI(chip, 0xC0 + g_channelsMapPan[cc], instrument.feedconn | (m_regC0[c] & OPL_PANNING_BOTH));
+    if(g_channelsMapFBConn[cc] != 0xFFF)
+    {
+        fbconn |= instrument.feedconn;
+        fbconn_reg = 0xC0 + g_channelsMapFBConn[cc];
+    }
+
+    if(m_currentChipType != OPLChipBase::CHIPTYPE_OPL2 && g_channelsMapPan[cc] != 0xFFF)
+    {
+        fbconn |= (m_regC0[c] & OPL_PANNING_BOTH);
+        if(!fbconn_reg)
+            fbconn_reg = 0xC0 + g_channelsMapPan[cc];
+    }
+
+    if(fbconn_reg != 0x00)
+        writeRegI(chip, fbconn_reg, fbconn);
 }
 
 void OPL3::setPan(size_t c, uint8_t value)
