@@ -99,7 +99,7 @@ void YmFmOPL2::nativeGenerate(int16_t *frame)
     }
 
     chip_r->generate(&frames_i);
-    frame[0] = static_cast<int16_t>(ymfm::clamp(frames_i.data[0] / 2, -32768, 32767));
+    frame[0] = static_cast<int16_t>(ymfm::clamp(frames_i.data[0], -32768, 32767));
     frame[1] = frame[0];
 }
 

@@ -1775,7 +1775,7 @@ static bool CalcVoice (FM_WorkTable *wt, FM_OPL *OPL, int voice, short *buffer, 
 		advance_lfo(wt, OPL);
 
 		wt->output = 0;
-		short sample = OPL_CALC_CH_S(wt, CH) / 2;
+		short sample = OPL_CALC_CH_S(wt, CH);
 
 		if (!OPL->IsStereo)
 		{
@@ -1835,14 +1835,14 @@ static bool CalcRhythm (FM_WorkTable *wt, FM_OPL *OPL, short *buffer, int length
 
 		if (!OPL->IsStereo)
 		{
-			buffer[i] += wt->output / 2;
+			buffer[i] += wt->output;
 		}
 		else
 		{
 			// [RH] Always use center panning for rhythm.
 			// The MIDI player doesn't use the rhythm section anyway.
-			buffer[i*2] += (wt->output / 2) * CENTER_PANNING_POWER;
-			buffer[i*2+1] += (wt->output / 2) * CENTER_PANNING_POWER;
+			buffer[i*2] += wt->output * CENTER_PANNING_POWER;
+			buffer[i*2+1] += wt->output * CENTER_PANNING_POWER;
 		}
 
 		advance(wt, OPL, 6, 8);
