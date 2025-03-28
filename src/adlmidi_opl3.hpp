@@ -60,10 +60,8 @@ public:
     uint32_t m_numChannels;
     //! Just a padding. Reserved.
     char _padding[4];
-#ifndef ADLMIDI_HW_OPL
     //! Running chip emulators
     std::vector<AdlMIDI_SPtr<OPLChipBase > > m_chips;
-#endif
 
 private:
     //! Cached patch data, needed by Touch()
@@ -89,6 +87,51 @@ private:
     int  m_currentChipType;
     //! Number channels per chip
     size_t m_perChipChannels;
+
+    /*!
+     * \brief Current state of the synth (if values matched to setup, chips and arrays won't be fully re-created)
+     */
+    struct State
+    {
+        int         emulator;
+        uint32_t    numChips;
+        unsigned long pcm_rate;
+
+        State()
+        {
+            clear();
+        }
+
+        void clear()
+        {
+            emulator = -2;
+            numChips = 0;
+            pcm_rate = 0;
+        }
+
+        bool cmp_rate(unsigned long rate)
+        {
+            bool ret = pcm_rate != rate;
+
+            if(ret)
+                pcm_rate = rate;
+
+            return ret;
+        }
+
+        bool cmp(int emu, uint32_t chips)
+        {
+            bool ret = emu != emulator || chips != numChips;
+
+            if(ret)
+            {
+                emulator = emu;
+                numChips = chips;
+            }
+
+            return ret;
+        }
+    } m_curState;
 
 public:
     /**
@@ -339,12 +382,10 @@ public:
      */
     ADLMIDI_VolumeModels getVolumeScaleModel();
 
-#ifndef ADLMIDI_HW_OPL
     /**
      * @brief Clean up all running emulated chip instances
      */
     void clearChips();
-#endif
 
     /**
      * @brief Reset chip properties and initialize them

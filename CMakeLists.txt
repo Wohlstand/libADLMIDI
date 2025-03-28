@@ -278,7 +278,15 @@ function(handle_options targetLib)
         target_compile_definitions(${targetLib} PUBLIC BWMIDI_DISABLE_XMI_SUPPORT)
     endif()
 
-    if(NOT ADLMIDI_DOS)
+    if(ADLMIDI_DOS)
+        set(HAS_EMULATOR TRUE)
+        target_sources(${targetLib} PRIVATE
+            ${libADLMIDI_SOURCE_DIR}/src/chips/dos_hw_opl.cpp
+            ${libADLMIDI_SOURCE_DIR}/src/chips/dos_hw_opl.h
+        )
+        target_compile_definitions(${targetLib} PRIVATE ENABLE_HW_OPL_DOS)
+        target_compile_definitions(${targetLib} PUBLIC ADLMIDI_ENABLE_HW_DOS)
+    else()
         if(USE_DOSBOX_EMULATOR)
             set(HAS_EMULATOR TRUE)
             target_sources(${targetLib} PRIVATE

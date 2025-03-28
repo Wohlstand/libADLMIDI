@@ -89,7 +89,11 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
 
     m_setup.bankId = 0;
     m_setup.numFourOps = -1;
+#ifdef ADLMIDI_ENABLE_HW_DOS
+    m_setup.numChips = 1;
+#else
     m_setup.numChips = 2;
+#endif
     m_setup.deepTremoloMode = -1;
     m_setup.deepVibratoMode = -1;
     m_setup.rhythmMode = -1;

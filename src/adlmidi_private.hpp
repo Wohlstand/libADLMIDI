@@ -60,9 +60,6 @@ typedef int32_t ssize_t;
 #endif
 
 #if defined(__DJGPP__) || (defined(__WATCOMC__) && (defined(__DOS__) || defined(__DOS4G__) || defined(__DOS4GNZ__)))
-#   ifndef ADLMIDI_HW_OPL
-#       define ADLMIDI_HW_OPL
-#   endif
 #   include <conio.h>
 #   ifdef __DJGPP__
 #       include <pc.h>
@@ -157,7 +154,7 @@ class MIDIplay;
 
 #define ADL_UNUSED(x) (void)x
 
-#ifdef ADLMIDI_HW_OPL
+#ifdef ENABLE_HW_OPL_DOS
 #define ADL_MAX_CHIPS 1
 #define ADL_MAX_CHIPS_STR "1" //Why not just "#MaxCards" ? Watcom fails to pass this with "syntax error" :-P
 #else
@@ -214,6 +211,12 @@ inline int32_t adl_cvtU32(int32_t x)
     return (uint32_t)adl_cvtS32(x) - (uint32_t)INT32_MIN;
 }
 
+template<typename T>
+void adl_fill_vector(std::vector<T > &v, const T &value)
+{
+    for(typename std::vector<T>::iterator it = v.begin(); it != v.end(); ++it)
+        *it = value;
+}
 
 #if defined(ADLMIDI_AUDIO_TICK_HANDLER)
 extern void adl_audioTickHandler(void *instance, uint32_t chipId, uint32_t rate);

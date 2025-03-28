@@ -26,12 +26,9 @@
 #include <stdlib.h>
 #include <cassert>
 
-#ifndef DISABLE_EMBEDDED_BANKS
-#include "wopl/wopl_file.h"
-#endif
 
-#ifdef ADLMIDI_HW_OPL
-static const unsigned OPLBase = 0x388;
+#ifdef ENABLE_HW_OPL_DOS
+#   include "chips/dos_hw_opl.h"
 #else
 #   if defined(ADLMIDI_DISABLE_NUKED_EMULATOR) && \
        defined(ADLMIDI_DISABLE_DOSBOX_EMULATOR) && \
@@ -84,7 +81,7 @@ static const unsigned OPLBase = 0x388;
 #endif
 
 static const unsigned adl_emulatorSupport = 0
-#ifndef ADLMIDI_HW_OPL
+#ifndef ENABLE_HW_OPL_DOS
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
     | (1u << ADLMIDI_EMU_NUKED) | (1u << ADLMIDI_EMU_NUKED_174)
 #   endif
@@ -936,7 +933,9 @@ OPL3::OPL3() :
 
 OPL3::~OPL3()
 {
-#ifdef ADLMIDI_HW_OPL
+    m_curState.clear();
+
+#ifdef ENABLE_HW_OPL_DOS
     silenceAll();
     writeRegI(0, 0x0BD, 0);
     writeRegI(0, 0x104, 0);
@@ -1004,48 +1003,17 @@ void OPL3::setEmbeddedBank(uint32_t bank)
 
 void OPL3::writeReg(size_t chip, uint16_t address, uint8_t value)
 {
-#ifdef ADLMIDI_HW_OPL
-    ADL_UNUSED(chip);
-    unsigned o = address >> 8;
-    unsigned port = OPLBase + o * 2;
-
-#   ifdef __DJGPP__
-    outportb(port, address);
-    for(unsigned c = 0; c < 6; ++c) inportb(port);
-    outportb(port + 1, value);
-    for(unsigned c = 0; c < 35; ++c) inportb(port);
-#   endif
-
-#   ifdef __WATCOMC__
-    outp(port, address);
-    for(uint16_t c = 0; c < 6; ++c)  inp(port);
-    outp(port + 1, value);
-    for(uint16_t c = 0; c < 35; ++c) inp(port);
-#   endif//__WATCOMC__
-
-#else//ADLMIDI_HW_OPL
     m_chips[chip]->writeReg(address, value);
-#endif
 }
 
 void OPL3::writeRegI(size_t chip, uint32_t address, uint32_t value)
 {
-#ifdef ADLMIDI_HW_OPL
-    writeReg(chip, static_cast<uint16_t>(address), static_cast<uint8_t>(value));
-#else//ADLMIDI_HW_OPL
     m_chips[chip]->writeReg(static_cast<uint16_t>(address), static_cast<uint8_t>(value));
-#endif
 }
 
 void OPL3::writePan(size_t chip, uint32_t address, uint32_t value)
 {
-#ifndef ADLMIDI_HW_OPL
     m_chips[chip]->writePan(static_cast<uint16_t>(address), static_cast<uint8_t>(value));
-#else
-    ADL_UNUSED(chip);
-    ADL_UNUSED(address);
-    ADL_UNUSED(value);
-#endif
 }
 
 
@@ -1579,7 +1547,7 @@ void OPL3::setPan(size_t c, uint8_t value)
 
     if(g_channelsMapPan[cc] != 0xFFF)
     {
-#ifndef ADLMIDI_HW_OPL
+#ifndef ENABLE_HW_OPL_DOS
         if (m_softPanningSup && m_softPanning)
         {
             writePan(chip, g_channelsMapPan[cc], value);
@@ -1595,7 +1563,7 @@ void OPL3::setPan(size_t c, uint8_t value)
             m_regC0[c] = panning;
             writePan(chip, g_channelsMapPan[cc], 64);
             writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | panning);
-#ifndef ADLMIDI_HW_OPL
+#ifndef ENABLE_HW_OPL_DOS
         }
 #endif
     }
@@ -1795,48 +1763,72 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
     }
 }
 
-#ifndef ADLMIDI_HW_OPL
 void OPL3::clearChips()
 {
     for(size_t i = 0; i < m_chips.size(); i++)
         m_chips[i].reset(NULL);
     m_chips.clear();
 }
-#endif
 
 void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
 {
-#ifndef ADLMIDI_HW_OPL
-    clearChips();
-#else
-    (void)emulator;
-    (void)PCM_RATE;
-#endif
+    bool rebuild_needed = m_curState.cmp(emulator, m_numChips);
+
+    if(rebuild_needed)
+        clearChips();
+
 #if !defined(ADLMIDI_AUDIO_TICK_HANDLER)
     (void)audioTickHandler;
 #endif
-    m_insCache.clear();
-    m_keyBlockFNumCache.clear();
-    m_regBD.clear();
 
-#ifndef ADLMIDI_HW_OPL
-    m_chips.resize(m_numChips, AdlMIDI_SPtr<OPLChipBase>());
-#endif
+    const struct OplTimbre defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
+
+    if(rebuild_needed)
+    {
+        m_insCache.clear();
+        m_keyBlockFNumCache.clear();
+        m_regBD.clear();
+        m_regC0.clear();
+        m_channelCategory.clear();
+        m_chips.resize(m_numChips, AdlMIDI_SPtr<OPLChipBase>());
+    }
+    else
+    {
+        adl_fill_vector<OplTimbre>(m_insCache, defaultInsCache);
+        adl_fill_vector<uint32_t>(m_channelCategory, 0);
+        adl_fill_vector<uint32_t>(m_keyBlockFNumCache, 0);
+        adl_fill_vector<uint32_t>(m_regBD, 0);
+        adl_fill_vector<uint8_t>(m_regC0, OPL_PANNING_BOTH);
+    }
 
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
     if(emulator >= 0) // If less than zero - it's hardware synth!
         m_serial = false;
 #endif
 
-    const struct OplTimbre defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
-    m_numChannels = m_numChips * NUM_OF_CHANNELS;
-    m_insCache.resize(m_numChannels, defaultInsCache);
-    m_keyBlockFNumCache.resize(m_numChannels,   0);
-    m_regBD.resize(m_numChips,    0);
-    m_regC0.resize(m_numChips * m_numChannels, OPL_PANNING_BOTH);
-    m_channelCategory.resize(m_numChannels, 0);
+    if(rebuild_needed)
+    {
+        m_numChannels = m_numChips * NUM_OF_CHANNELS;
+        m_insCache.resize(m_numChannels, defaultInsCache);
+        m_channelCategory.resize(m_numChannels, 0);
+        m_keyBlockFNumCache.resize(m_numChannels,   0);
+        m_regBD.resize(m_numChips,    0);
+        m_regC0.resize(m_numChips * m_numChannels, OPL_PANNING_BOTH);
+    }
 
-    for(size_t i = 0; i < m_numChips; ++i)
+    if(!rebuild_needed)
+    {
+        bool newRate = m_curState.cmp_rate(PCM_RATE);
+
+        for(size_t i = 0; i < m_numChips; ++i)
+        {
+            if(newRate)
+                m_chips[i]->setRate(PCM_RATE);
+
+            initChip(i);
+        }
+    }
+    else for(size_t i = 0; i < m_numChips; ++i)
     {
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
         if(emulator < 0)
@@ -1849,8 +1841,11 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
         }
 #endif
 
-#ifndef ADLMIDI_HW_OPL
         OPLChipBase *chip;
+#ifdef ENABLE_HW_OPL_DOS
+        chip = new DOS_HW_OPL();
+
+#else // ENABLE_HW_OPL_DOS
         switch(emulator)
         {
         default:
@@ -1898,18 +1893,20 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             break;
 #endif
         }
+#endif // ENABLE_HW_OPL_DOS
 
         m_chips[i].reset(chip);
         chip->setChipId((uint32_t)i);
         chip->setRate((uint32_t)PCM_RATE);
 
+#ifndef ENABLE_HW_OPL_DOS
         if(m_runAtPcmRate)
             chip->setRunningAtPcmRate(true);
+#endif
 
-#   if defined(ADLMIDI_AUDIO_TICK_HANDLER)
+#   if defined(ADLMIDI_AUDIO_TICK_HANDLER) && !defined(ENABLE_HW_OPL_DOS)
         chip->setAudioTickHandlerInstance(audioTickHandler);
 #   endif
-#endif // ADLMIDI_HW_OPL
 
         initChip(i);
     }

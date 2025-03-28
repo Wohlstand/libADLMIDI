@@ -24,11 +24,12 @@
 #include "adlmidi_midiplay.hpp"
 #include "adlmidi_opl3.hpp"
 #include "adlmidi_private.hpp"
-#ifndef ADLMIDI_HW_OPL
 #include "chips/opl_chip_base.h"
-#endif
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
-#include "midi_sequencer.hpp"
+#   include "midi_sequencer.hpp"
+#endif
+#ifdef ENABLE_HW_OPL_DOS
+#   include "chips/dos_hw_opl.h"
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1900
@@ -138,8 +139,7 @@ ADLMIDI_EXPORT int adl_setNumChips(ADL_MIDIPlayer *device, int numChips)
 #endif
 
 #ifdef ADLMIDI_HW_OPL
-    ADL_UNUSED(numChips);
-    play->m_setup.numChips = 1;
+    play->m_setup.numChips = numChips > 2 ? 1 : static_cast<unsigned int>(numChips);
 #else
     play->m_setup.numChips = static_cast<unsigned int>(numChips);
 #endif
@@ -835,15 +835,11 @@ ADLMIDI_EXPORT const char *adl_chipEmulatorName(struct ADL_MIDIPlayer *device)
 {
     if(device)
     {
-#ifndef ADLMIDI_HW_OPL
         MidiPlayer *play = GET_MIDI_PLAYER(device);
         assert(play);
         Synth &synth = *play->m_synth;
         if(!synth.m_chips.empty())
             return synth.m_chips[0]->emulatorName();
-#else
-        return "Hardware OPL3 chip on 0x330";
-#endif
     }
     return "Unknown";
 }
@@ -907,6 +903,31 @@ ADLMIDI_EXPORT int adl_switchSerialHW(struct ADL_MIDIPlayer *device,
 #endif
     }
 
+    return -1;
+}
+
+int adl_switchDOSHW(int chipType, ADL_UInt16 baseAddress)
+{
+#ifdef ENABLE_HW_OPL_DOS
+    if(baseAddress > 0)
+        DOS_HW_OPL::setOplAddress(baseAddress);
+
+    switch(chipType)
+    {
+    case ADLMIDI_DOS_ChipAuto:
+        break;
+
+    case ADLMIDI_DOS_ChipOPL2:
+        DOS_HW_OPL::setChipType(OPLChipBase::CHIPTYPE_OPL2);
+        break;
+    case ADLMIDI_DOS_ChipOPL3:
+        DOS_HW_OPL::setChipType(OPLChipBase::CHIPTYPE_OPL3);
+        break;
+    }
+#else
+    (void)chipType;
+    (void)baseAddress;
+#endif
     return -1;
 }
 
