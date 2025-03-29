@@ -197,6 +197,7 @@ To build that example you will need to have installed SDL2 library.
  * Added ability to change the hardware address at the DOS version of MIDI player.
  * Added an ability to manually specify the chip type (OPL2 or OPL3) at the DOS version of MIDI player.
  * Added an automatical detection of OPL2 or OPL3 chip depending on the BLASTER environment variable's value at the DOS version of MIDI player.
+ * Added Nuked OPL2 and OPL3 Low-Level emulators (Kept disabled by default because they are too heavy for ordinary processors).
 
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio

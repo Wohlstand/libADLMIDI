@@ -1449,12 +1449,35 @@ static struct Args
 #ifndef ADLMIDI_ENABLE_HW_DOS
                 " -fp Enables full-panning stereo support\n"
                 " --gain <value> Set the gaining factor (default 2.0)\n"
+#   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
                 " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
                 " --emu-nuked7 Uses Nuked OPL3 v 1.7.4 emulator\n"
+#   endif
+#   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
                 " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
+#   endif
+#   ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
                 " --emu-opal   Uses Opal OPL3 emulator\n"
+#   endif
+#   ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
                 " --emu-java   Uses Java OPL3 emulator\n"
+#   endif
+#   ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
                 " --emu-esfmu  Uses ESFMu OPL3/ESFM emulator\n"
+#   endif
+#   ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
+                " --emu-mame-opl2  Uses MAME OPL2 emulator\n"
+#   endif
+#   ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+                " --emu-ymfm-opl2  Uses YMFM OPL2 emulator\n"
+                " --emu-ymfm-opl3  Uses YMFM OPL2 emulator\n"
+#   endif
+#   ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+                " --emu-lle-opl2 Uses Nuked OPL2-LLE emulator !!EXTRA HEAVY!!\n"
+#   endif
+#   ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+                " --emu-lle-opl3 Uses Nuked OPL3-LLE emulator !!EXTRA HEAVY!!\n"
+#   endif
 #else
                 "\n"
                 //------------------------------------------------------------------------------|
@@ -1576,6 +1599,10 @@ static struct Args
                 emulator = ADLMIDI_EMU_YMFM_OPL2;
             else if(!std::strcmp("--emu-ymfm-opl3", argv[2]))
                 emulator = ADLMIDI_EMU_YMFM_OPL3;
+            else if(!std::strcmp("--emu-lle-opl2", argv[2]))
+                emulator = ADLMIDI_EMU_NUKED_OPL2_LLE;
+            else if(!std::strcmp("--emu-lle-opl3", argv[2]))
+                emulator = ADLMIDI_EMU_NUKED_OPL3_LLE;
 #endif
 
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)

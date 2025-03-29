@@ -74,6 +74,16 @@
 #       include "chips/ymfm_opl3.h"
 #   endif
 
+// Nuked OPL2 LLE emulator
+#   ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+#       include "chips/ym3812_lle.h"
+#   endif
+
+// Nuked OPL3 LLE emulator
+#   ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+#       include "chips/ymf262_lle.h"
+#   endif
+
 // HW OPL Serial
 #   ifdef ADLMIDI_ENABLE_HW_SERIAL
 #       include "chips/opl_serial_port.h"
@@ -109,6 +119,14 @@ static const unsigned adl_emulatorSupport = 0
 #   ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
     | (1u << ADLMIDI_EMU_YMFM_OPL2)
     | (1u << ADLMIDI_EMU_YMFM_OPL3)
+#   endif
+
+#   ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+    | (1u << ADLMIDI_EMU_NUKED_OPL2_LLE)
+#   endif
+
+#   ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+    | (1u << ADLMIDI_EMU_NUKED_OPL3_LLE)
 #   endif
 #endif
 ;
@@ -1890,6 +1908,16 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             break;
         case ADLMIDI_EMU_YMFM_OPL3:
             chip = new YmFmOPL3;
+            break;
+#endif
+#ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+        case ADLMIDI_EMU_NUKED_OPL2_LLE:
+            chip = new Ym3812LLEOPL2;
+            break;
+#endif
+#ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+        case ADLMIDI_EMU_NUKED_OPL3_LLE:
+            chip = new Ymf262LLEOPL3;
             break;
 #endif
         }

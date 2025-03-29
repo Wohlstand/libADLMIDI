@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "config_dialog.h"
+#include "adlmidi.h" /* For ENUMs only */
 #include "resource.h"
 
 #include "regconfig.h"
@@ -48,6 +49,40 @@ static const char *const channel_allocation_descriptions[] =
     NULL
 };
 
+static const enum ADL_Emulator emulator_type_id[] =
+{
+#ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
+    ADLMIDI_EMU_NUKED,
+    ADLMIDI_EMU_NUKED_174,
+#endif
+#ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
+    ADLMIDI_EMU_DOSBOX,
+#endif
+#ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
+    ADLMIDI_EMU_OPAL,
+#endif
+#ifndef ADLMIDI_DISABLE_JAVA_EMULATOR
+    ADLMIDI_EMU_JAVA,
+#endif
+#ifndef ADLMIDI_DISABLE_ESFMU_EMULATOR
+    ADLMIDI_EMU_ESFMu,
+#endif
+#ifndef ADLMIDI_DISABLE_MAME_OPL2_EMULATOR
+    ADLMIDI_EMU_MAME_OPL2,
+#endif
+#ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
+    ADLMIDI_EMU_YMFM_OPL2,
+    ADLMIDI_EMU_YMFM_OPL3,
+#endif
+#ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+    ADLMIDI_EMU_NUKED_OPL2_LLE,
+#endif
+#ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+    ADLMIDI_EMU_NUKED_OPL3_LLE,
+#endif
+    ADLMIDI_EMU_end
+};
+
 static const char * const emulator_type_descriptions[] =
 {
     "Nuked OPL3 1.8",
@@ -60,6 +95,12 @@ static const char * const emulator_type_descriptions[] =
 #ifndef ADLMIDI_DISABLE_YMFM_EMULATOR
     "YMFM OPL2",
     "YMFM OPL3",
+#endif
+#ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+    "Nuked OPL2-LLE [!EXTRA HEAVY!]",
+#endif
+#ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+    "Nuked OPL3-LLE [!EXTRA HEAVY!]",
 #endif
     NULL
 };
@@ -328,7 +369,7 @@ INT_PTR CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
         case IDC_EMULATOR:
             if(HIWORD(wParam) == CBN_SELCHANGE)
             {
-                g_setup.emulatorId = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+                g_setup.emulatorId = (int)emulator_type_id[SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0)];
             }
             break;
 

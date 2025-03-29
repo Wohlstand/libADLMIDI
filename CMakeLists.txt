@@ -220,6 +220,8 @@ option(USE_MAME_EMULATOR    "Use MAME OPL2 emulator" ${DEFAULT_HEAVY_EMULATORS})
 if(COMPILER_SUPPORTS_CXX14)
     option(USE_YMFM_EMULATOR    "Use YMFM emulator (requires C++14 support)" ON)
 endif()
+option(USE_NUKED_OPL2_LLE_EMULATOR  "Use Nuked OPL2-LLE emulator [!EXTRA HEAVY!]" OFF)
+option(USE_NUKED_OPL3_LLE_EMULATOR  "Use Nuked OPL3-LLE emulator [!EXTRA HEAVY!]" OFF)
 option(USE_HW_SERIAL        "Use the hardware OPL3 chip via Serial on modern systems" OFF)
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
@@ -385,6 +387,35 @@ function(handle_options targetLib)
             set(HAS_EMULATOR TRUE)
         else()
             target_compile_definitions(${targetLib} PUBLIC -DADLMIDI_DISABLE_YMFM_EMULATOR)
+        endif()
+
+        if(USE_NUKED_OPL2_LLE_EMULATOR)
+            set(HAS_EMULATOR TRUE)
+            target_sources(${targetLib} PRIVATE
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ym3812_lle.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ym3812_lle.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ym3812_lle/nopl2.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ym3812_lle/nopl2.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ym3812_lle/nuked_fmopl2.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ym3812_lle/nuked_fmopl2.h
+            )
+            target_compile_definitions(${targetLib} PUBLIC ADLMIDI_ENABLE_OPL2_LLE_EMULATOR)
+        endif()
+
+        if(USE_NUKED_OPL3_LLE_EMULATOR)
+            set(HAS_EMULATOR TRUE)
+            target_sources(${targetLib} PRIVATE
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymf262_lle.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymf262_lle.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymf262_lle/nopl3.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymf262_lle/nopl3.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymf262_lle/nuked_fmopl3.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/ymf262_lle/nuked_fmopl3.h
+            )
+            target_compile_definitions(${targetLib} PUBLIC ADLMIDI_ENABLE_OPL3_LLE_EMULATOR)
+        endif()
+
+        if(USE_NUKED_OPL3_LLE_EMULATOR)
         endif()
 
         if(USE_HW_SERIAL)
@@ -669,6 +700,15 @@ if(COMPILER_SUPPORTS_CXX14)
     message("USE_YMFM_EMULATOR        = ${USE_YMFM_EMULATOR}")
 endif()
 message("USE_HW_SERIAL            = ${USE_HW_SERIAL}")
+if(USE_NUKED_OPL2_LLE_EMULATOR OR USE_NUKED_OPL3_LLE_EMULATOR)
+    message(WARNING "You enabled EXTRA-HEAVY LLE emulators, they do REALLY require \
+VERY POWERFUL processor to work (For example, on Intel Core i7-11700KF (8 cores, 3.60 GHz) \
+they can work in real-time only when they built with Release optimisations, Debug builds \
+are choppy even single chip run). You can't use them on weak devices, don't even think to \
+run theom mobile. I warned. If you want, feel free to optimize them and contribute your \
+updates to @NukeYkt who created them. The only way you can use them on weaker hardware \
+is record WAVs where real-time performance doesn't matter.")
+endif()
 
 message("===== Utils and extras =====")
 message("WITH_GENADLDATA          = ${WITH_GENADLDATA}")

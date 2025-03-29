@@ -187,6 +187,14 @@ static const int emulator_type_values[] =
     (int)ADLMIDI_EMU_YMFM_OPL2,
     (int)ADLMIDI_EMU_YMFM_OPL3,
 #endif
+
+#ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+    (int)ADLMIDI_EMU_NUKED_OPL2_LLE,
+#endif
+
+#ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+    (int)ADLMIDI_EMU_NUKED_OPL3_LLE,
+#endif
 };
 static const char * const emulator_type_descriptions[] =
 {
@@ -219,6 +227,15 @@ static const char * const emulator_type_descriptions[] =
     N_("YMFM OPL2"),
     N_("YMFM OPL3"),
 #endif
+
+#ifdef ADLMIDI_ENABLE_OPL2_LLE_EMULATOR
+    N_("Nuked OPL2-LLE [!EXTRA HEAVY!]"),
+#endif
+
+#ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
+    N_("Nuked OPL3-LLE [!EXTRA HEAVY!]"),
+#endif
+
     NULL
 };
 
