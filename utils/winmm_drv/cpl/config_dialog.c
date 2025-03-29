@@ -310,6 +310,8 @@ static void warnIfOutChanged(HWND hwnd)
 
 INT_PTR CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
+    int ret;
+
     switch(Message)
     {
     case WM_INITDIALOG:
@@ -369,7 +371,9 @@ INT_PTR CALLBACK ToolDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
         case IDC_EMULATOR:
             if(HIWORD(wParam) == CBN_SELCHANGE)
             {
-                g_setup.emulatorId = (int)emulator_type_id[SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0)];
+                ret = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+                if(ret >= 0 && ret < ADLMIDI_EMU_end)
+                    g_setup.emulatorId = (int)emulator_type_id[ret];
             }
             break;
 
