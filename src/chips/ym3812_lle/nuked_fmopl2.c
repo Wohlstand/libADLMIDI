@@ -1061,7 +1061,7 @@ void FMOPL2_Clock(fmopl2_t *chip)
 
         if (!chip->am)
             tremolo = 0;
-        else if (chip->reg_dv)
+        else if (chip->reg_da)
             tremolo = chip->trem_out >> 2;
         else
             tremolo = chip->trem_out >> 4;
@@ -1124,8 +1124,7 @@ void FMOPL2_Clock(fmopl2_t *chip)
         int vib_sel1 = (chip->vib_cnt[1] & 3) == 2;
         int vib_sel2 = (chip->vib_cnt[1] & 1) == 1;
         int vib_sh0 = chip->reg_dv && chip->vib && vib_sel1;
-        int vib_sh1 = (chip->reg_dv && chip->vib && vib_sel2)
-            || (!chip->reg_dv && chip->vib && vib_sel1);
+        int vib_sh1 = (chip->reg_dv && chip->vib && vib_sel2) || (!chip->reg_dv && chip->vib && vib_sel1);
         int vib_sh2 = !chip->reg_dv && chip->vib && vib_sel2;
         int vib_sign = (chip->vib_cnt[1] & 4) != 0 && chip->vib;
         int vib_add = 0;
