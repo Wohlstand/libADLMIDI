@@ -556,8 +556,8 @@ static const int8_t lfo_pm_table[8*8*2] = {
 /* work table */
 struct FM_WorkTable
 {
-	signed int phase_modulation;		/* phase modulation input (SLOT 2) */
-	signed int output;
+	int32_t phase_modulation;		/* phase modulation input (SLOT 2) */
+	int32_t output;
 
 	uint32_t	LFO_AM;
 	int32_t	LFO_PM;
