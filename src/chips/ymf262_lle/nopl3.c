@@ -193,8 +193,8 @@ void nopl3_getsample(void *chip, short *sndptr, int numsamples)
         buf1 = (chip2->oldsample[1] * (chip2->rateratio - chip2->samplecnt)
             + chip2->sample_b * chip2->samplecnt) / chip2->rateratio;
         chip2->samplecnt += 1 << RSM_FRAC;
-        *p++ = buf0;
         *p++ = buf1;
+        *p++ = buf0;
     }
 }
 
@@ -222,8 +222,8 @@ void nopl3_getsample_one_native(void *chip, short *sndptr)
     chip2->samplecnt -= chip2->rateratio;
     chip2->samplecnt += 1 << RSM_FRAC;
 
-    *p++ = chip2->sample_a;
     *p++ = chip2->sample_b;
+    *p++ = chip2->sample_a;
 }
 
 void nopl3_write(void *chip, int port, int val)
