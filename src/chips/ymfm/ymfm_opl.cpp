@@ -2067,7 +2067,7 @@ void opll_base::generate(output_data *output, uint32_t numsamples)
 ym2413::ym2413(ymfm_interface &intf, uint8_t const *instrument_data) :
 	opll_base(intf, (instrument_data != nullptr) ? instrument_data : s_default_instruments)
 {
-};
+}
 
 // table below taken from https://github.com/plgDavid/misc/wiki/Copyright-free-OPLL(x)-ROM-patches
 uint8_t const ym2413::s_default_instruments[] =
@@ -2106,7 +2106,7 @@ uint8_t const ym2413::s_default_instruments[] =
 ym2423::ym2423(ymfm_interface &intf, uint8_t const *instrument_data) :
 	opll_base(intf, (instrument_data != nullptr) ? instrument_data : s_default_instruments)
 {
-};
+}
 
 // table below taken from https://github.com/plgDavid/misc/wiki/Copyright-free-OPLL(x)-ROM-patches
 uint8_t const ym2423::s_default_instruments[] =
@@ -2147,7 +2147,7 @@ uint8_t const ym2423::s_default_instruments[] =
 ymf281::ymf281(ymfm_interface &intf, uint8_t const *instrument_data) :
 	opll_base(intf, (instrument_data != nullptr) ? instrument_data : s_default_instruments)
 {
-};
+}
 
 // table below taken from https://github.com/plgDavid/misc/wiki/Copyright-free-OPLL(x)-ROM-patches
 uint8_t const ymf281::s_default_instruments[] =
@@ -2186,7 +2186,7 @@ uint8_t const ymf281::s_default_instruments[] =
 ds1001::ds1001(ymfm_interface &intf, uint8_t const *instrument_data) :
 	opll_base(intf, (instrument_data != nullptr) ? instrument_data : s_default_instruments)
 {
-};
+}
 
 // table below taken from https://github.com/plgDavid/misc/wiki/Copyright-free-OPLL(x)-ROM-patches
 uint8_t const ds1001::s_default_instruments[] =
