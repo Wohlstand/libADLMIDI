@@ -390,20 +390,20 @@ std::string opl_registers_base<Revision>::log_keyon(uint32_t choffs, uint32_t op
 	char *end = &buffer[0];
 
 	end += sprintf(end, "%2u.%02u freq=%04X fb=%u alg=%X mul=%X tl=%02X ksr=%u ns=%u ksl=%u adr=%X/%X/%X sl=%X sus=%u",
-		chnum, opnum,
-		ch_block_freq(choffs),
-		ch_feedback(choffs),
-		ch_algorithm(choffs),
-		op_multiple(opoffs),
-		op_total_level(opoffs),
-		op_ksr(opoffs),
-		note_select(),
-		op_ksl(opoffs),
-		op_attack_rate(opoffs),
-		op_decay_rate(opoffs),
-		op_release_rate(opoffs),
-		op_sustain_level(opoffs),
-		op_eg_sustain(opoffs));
+		(unsigned)chnum, (unsigned)opnum,
+		(unsigned)ch_block_freq(choffs),
+		(unsigned)ch_feedback(choffs),
+		(unsigned)ch_algorithm(choffs),
+		(unsigned)op_multiple(opoffs),
+		(unsigned)op_total_level(opoffs),
+		(unsigned)op_ksr(opoffs),
+		(unsigned)note_select(),
+		(unsigned)op_ksl(opoffs),
+		(unsigned)op_attack_rate(opoffs),
+		(unsigned)op_decay_rate(opoffs),
+		(unsigned)op_release_rate(opoffs),
+		(unsigned)op_sustain_level(opoffs),
+		(unsigned)op_eg_sustain(opoffs));
 
 	if (OUTPUTS > 1)
 		end += sprintf(end, " out=%c%c%c%c",
@@ -412,11 +412,11 @@ std::string opl_registers_base<Revision>::log_keyon(uint32_t choffs, uint32_t op
 			ch_output_2(choffs) ? '0' : '-',
 			ch_output_3(choffs) ? '1' : '-');
 	if (op_lfo_am_enable(opoffs) != 0)
-		end += sprintf(end, " am=%u", lfo_am_depth());
+		end += sprintf(end, " am=%u", (unsigned)lfo_am_depth());
 	if (op_lfo_pm_enable(opoffs) != 0)
-		end += sprintf(end, " pm=%u", lfo_pm_depth());
+		end += sprintf(end, " pm=%u", (unsigned)lfo_pm_depth());
 	if (waveform_enable() && op_waveform(opoffs) != 0)
-		end += sprintf(end, " wf=%u", op_waveform(opoffs));
+		end += sprintf(end, " wf=%u", (unsigned)op_waveform(opoffs));
 	if (is_rhythm(choffs))
 		end += sprintf(end, " rhy=1");
 	if (DYNAMIC_OPS)
@@ -690,26 +690,27 @@ std::string opll_registers::log_keyon(uint32_t choffs, uint32_t opoffs)
 	char *end = &buffer[0];
 
 	end += sprintf(end, "%u.%02u freq=%04X inst=%X fb=%u mul=%X",
-		chnum, opnum,
-		ch_block_freq(choffs),
-		ch_instrument(choffs),
-		ch_feedback(choffs),
-		op_multiple(opoffs));
+		(unsigned)chnum, (unsigned)opnum,
+		(unsigned)ch_block_freq(choffs),
+		(unsigned)ch_instrument(choffs),
+		(unsigned)ch_feedback(choffs),
+		(unsigned)op_multiple(opoffs)
+	);
 
 	if (bitfield(opoffs, 0) == 1 || (is_rhythm(choffs) && choffs >= 6))
-		end += sprintf(end, " vol=%X", op_volume(opoffs));
+		end += sprintf(end, " vol=%X", (unsigned)op_volume(opoffs));
 	else
-		end += sprintf(end, " tl=%02X", ch_total_level(choffs));
+		end += sprintf(end, " tl=%02X", (unsigned)ch_total_level(choffs));
 
 	end += sprintf(end, " ksr=%u ksl=%u adr=%X/%X/%X sl=%X sus=%u/%u",
-		op_ksr(opoffs),
-		op_ksl(opoffs),
-		op_attack_rate(opoffs),
-		op_decay_rate(opoffs),
-		op_release_rate(opoffs),
-		op_sustain_level(opoffs),
-		op_eg_sustain(opoffs),
-		ch_sustain(choffs));
+		(unsigned)op_ksr(opoffs),
+		(unsigned)op_ksl(opoffs),
+		(unsigned)op_attack_rate(opoffs),
+		(unsigned)op_decay_rate(opoffs),
+		(unsigned)op_release_rate(opoffs),
+		(unsigned)op_sustain_level(opoffs),
+		(unsigned)op_eg_sustain(opoffs),
+		(unsigned)ch_sustain(choffs));
 
 	if (op_lfo_am_enable(opoffs))
 		end += sprintf(end, " am=1");
