@@ -1058,6 +1058,9 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     // Hertz range: 0..131071
     double hertz;
 
+    if(tone < 0.0)
+        tone = 0.0; // Lower than 0 is impossible!
+
     // Use different frequency formulas in depend on a volume model
     switch(m_volumeScale)
     {
