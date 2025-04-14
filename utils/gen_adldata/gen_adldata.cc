@@ -5,15 +5,15 @@
 #include <string>
 #include <cstring>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+// #define __STDC_FORMAT_MACROS
+// #include <inttypes.h>
 
 #include "ini/ini_processing.h"
 
 #include "progs_cache.h"
 #include "measurer.h"
 
-#include "midi_inst_list.h"
+// #include "midi_inst_list.h"
 
 int main(int argc, char**argv)
 {
