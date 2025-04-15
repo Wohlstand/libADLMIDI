@@ -282,7 +282,19 @@ public:
             this->close();
 
         std::string portPath = "\\\\.\\" + portName;
-        m_port =  CreateFileA(portPath.c_str(), GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+        std::wstring wportPath;
+        wportPath.resize(portPath.size());
+        int newSize = MultiByteToWideChar(CP_UTF8,
+                                          0,
+                                          portPath.c_str(),
+                                          (int)portPath.size(),
+                                          (wchar_t *)wportPath.c_str(),
+                                          (int)wportPath.size());
+        m_port = CreateFile2(wportPath.c_str(), GENERIC_WRITE, 0, OPEN_EXISTING, NULL);
+#else
+        m_port = CreateFileA(portPath.c_str(), GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+#endif
 
         if(m_port == INVALID_HANDLE_VALUE)
         {
