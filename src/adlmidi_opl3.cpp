@@ -33,7 +33,13 @@
 #   if defined(ADLMIDI_DISABLE_NUKED_EMULATOR) && \
        defined(ADLMIDI_DISABLE_DOSBOX_EMULATOR) && \
        defined(ADLMIDI_DISABLE_OPAL_EMULATOR) && \
-       defined(ADLMIDI_DISABLE_JAVA_EMULATOR)
+       defined(ADLMIDI_DISABLE_JAVA_EMULATOR) && \
+       defined(ADLMIDI_DISABLE_ESFMU_EMULATOR) && \
+       defined(ADLMIDI_DISABLE_MAME_OPL2_EMULATOR) && \
+       defined(ADLMIDI_DISABLE_YMFM_EMULATOR) && \
+       !defined(ADLMIDI_ENABLE_OPL2_LLE_EMULATOR) && \
+       !defined(ADLMIDI_ENABLE_OPL3_LLE_EMULATOR) && \
+       !defined(ADLMIDI_ENABLE_HW_SERIAL)
 #       error "No emulators enabled. You must enable at least one emulator to use this library!"
 #   endif
 
