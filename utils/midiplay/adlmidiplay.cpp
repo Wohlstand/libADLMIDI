@@ -627,14 +627,14 @@ static struct TimeCounter
 #endif
 
 #ifdef ADLMIDI_ENABLE_HW_DOS
-    unsigned newTimerFreq;
+    volatile unsigned newTimerFreq;
     unsigned timerPeriod;
     int haveYield;
     int haveDosIdle;
-    unsigned int ring;
-    unsigned long BIOStimer_begin;
+    volatile unsigned int ring;
+    volatile unsigned long BIOStimer_begin;
 
-    unsigned long timerNext;
+    volatile unsigned long timerNext;
 
     enum wmethod
     {
@@ -776,7 +776,10 @@ static struct TimeCounter
         default:
         case WM_NONE:
             if(timerNext != 0)
-                while(BIOStimer < timerNext);
+            {
+                while(BIOStimer < timerNext)
+                    delay(1);
+            }
             timerNext = BIOStimer + 1;
             break;
 
