@@ -117,7 +117,7 @@ if(NOT MSVC)
     target_sources(adlmidiconfig PRIVATE cpl/res-cpl.rc)
 endif()
 set_target_properties(adlmidiconfig PROPERTIES PREFIX "" OUTPUT_NAME "libadlconfig" SUFFIX ".cpl")
-target_include_directories(adlmidiconfig PRIVATE config)
+target_include_directories(adlmidiconfig PRIVATE config "${libADLMIDI_SOURCE_DIR}/include")
 target_compile_definitions(adlmidiconfig PRIVATE
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
@@ -135,7 +135,7 @@ if(NOT MSVC)
     target_sources(adlmidiconfigtool PRIVATE cpl/res-tool.rc)
 endif()
 set_target_properties(adlmidiconfigtool PROPERTIES WIN32_EXECUTABLE ON)
-target_include_directories(adlmidiconfigtool PRIVATE config)
+target_include_directories(adlmidiconfigtool PRIVATE config "${libADLMIDI_SOURCE_DIR}/include")
 target_compile_definitions(adlmidiconfigtool PRIVATE
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
     -D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
