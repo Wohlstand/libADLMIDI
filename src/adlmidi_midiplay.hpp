@@ -311,9 +311,24 @@ public:
             return it;
         }
 
+        notes_iterator create_activenote(unsigned note)
+        {
+            NoteInfo ni;
+            ni.note = note;
+            notes_iterator it = activenotes.insert(activenotes.end(), ni);
+            return it;
+        }
+
         notes_iterator ensure_find_or_create_activenote(unsigned note)
         {
             notes_iterator it = find_or_create_activenote(note);
+            assert(!it.is_end());
+            return it;
+        }
+
+        notes_iterator ensure_create_activenote(unsigned note)
+        {
+            notes_iterator it = create_activenote(note);
             assert(!it.is_end());
             return it;
         }
