@@ -199,6 +199,7 @@ To build that example you will need to have installed SDL2 library.
  * Added an automatical detection of OPL2 or OPL3 chip depending on the BLASTER environment variable's value at the DOS version of MIDI player.
  * Added Nuked OPL2 and OPL3 Low-Level emulators (Kept disabled by default because they are too heavy for ordinary processors).
  * Fixed a dead loop that might happen when final tone gets lower than zero.
+ * Added possibility to play the same note multiple times at the same MIDI channel (Resolved playback of some music, like Heretic's E1M6).
 
 ## 1.5.1   2022-10-31
  * Added an ability to disable the automatical arpeggio
