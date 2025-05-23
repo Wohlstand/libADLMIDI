@@ -963,6 +963,13 @@ private:
     int64_t calculateChipChannelGoodness(size_t c, const MIDIchannel::NoteInfo::Phys &ins) const;
 
     /**
+     * @brief If no free chip channels, try to kill at least one second voice of pseudo-4-op instruments and steal the released channel
+     * @param new_chan Value of released chip channel to reuse
+     * @return true if any channel was been stolen, or false when nothing happen
+     */
+    bool killSecondVoicesIfOverflow(int32_t &new_chan);
+
+    /**
      * @brief A new note will be played on this channel using this instrument.
      * @param c Wanted chip channel
      * @param ins Instrument wanted to be used in this channel

@@ -513,6 +513,9 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
     for(uint32_t ccount = 0; ccount < MIDIchannel::NoteInfo::MaxNumPhysChans; ++ccount)
     {
+        int32_t c = -1;
+        int32_t bs = -0x7FFFFFFFl;
+
         if(ccount == 1)
         {
             if(voices[0] == voices[1])
@@ -520,9 +523,18 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
             if(adlchannel[0] == -1)
                 break; // No secondary if primary failed
         }
-
-        int32_t c = -1;
-        int32_t bs = -0x7FFFFFFFl;
+        else if(!m_setup.enableAutoArpeggio &&
+                (is_2op || pseudo_4op) &&
+                (ains->flags & OplInstMeta::Mask_RhythmMode) == 0)
+        {
+            if(killSecondVoicesIfOverflow(c))
+            {
+                adlchannel[0] = c;
+                adlchannel[1] = -1;
+                voices[1] = voices[0];
+                break;
+            }
+        }
 
         for(size_t a = 0; a < (size_t)synth.m_numChannels; ++a)
         {
@@ -1529,6 +1541,42 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
     return s;
 }
 
+bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
+{
+    Synth &synth = *m_synth;
+    bool ret = false;
+
+    int free2op = 0;
+
+    for(size_t a = 0; a < (size_t)synth.m_numChannels; ++a)
+    {
+        if(synth.m_channelCategory[a] != OPL3::ChanCat_Regular)
+            continue;
+
+        AdlChannel &chan = m_chipChannels[a];
+
+        if(chan.users.empty())
+            ++free2op;
+        else if(chan.recent_ins.pseudo4op)
+            new_chan = a;
+    }
+
+    if(!free2op && new_chan >= 0)
+    {
+        AdlChannel::users_iterator j = &m_chipChannels[new_chan].users.front();
+        AdlChannel::LocationData &jd = j->value;
+        MIDIchannel::notes_iterator i(m_midiChannels[jd.loc.MidCh].ensure_find_activenote(jd.loc.note));
+
+        if(i->value.chip_channels_count == 2)
+        {
+            m_chipChannels[new_chan].users.erase(j);
+            i->value.chip_channels_count = 1;
+            ret = true;
+        }
+    }
+
+    return ret;
+}
 
 void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInfo::Phys &ins)
 {
