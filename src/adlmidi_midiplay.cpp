@@ -1565,12 +1565,23 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
     {
         AdlChannel::users_iterator j = &m_chipChannels[new_chan].users.front();
         AdlChannel::LocationData &jd = j->value;
-        MIDIchannel::notes_iterator i(m_midiChannels[jd.loc.MidCh].ensure_find_activenote(jd.loc.note));
+        MIDIchannel::notes_iterator it = m_midiChannels[jd.loc.MidCh].find_activenote(jd.loc.note);
 
-        if(i->value.chip_channels_count == 2)
+        if(it.is_end()) /* Invalid user of channel */
         {
             m_chipChannels[new_chan].users.erase(j);
-            i->value.chip_channels_count = 1;
+            m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
+            ret = true;
+            return ret;
+        }
+
+        MIDIchannel::NoteInfo &info = it->value;
+
+        if(info.chip_channels_count == 2)
+        {
+            m_chipChannels[new_chan].users.erase(j);
+            m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
+            info.phys_erase_at(&info.chip_channels[1]);
             ret = true;
         }
     }
