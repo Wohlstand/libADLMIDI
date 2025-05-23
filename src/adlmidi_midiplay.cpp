@@ -1567,10 +1567,13 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
         AdlChannel::LocationData &jd = j->value;
         MIDIchannel::notes_iterator it = m_midiChannels[jd.loc.MidCh].find_activenote(jd.loc.note);
 
+        assert(m_chipChannels[new_chan].users.size() <= 1);
+
         if(it.is_end()) /* Invalid user of channel */
         {
-            m_chipChannels[new_chan].users.erase(j);
+            m_chipChannels[new_chan].users.clear();
             m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
+            synth.noteOff(new_chan);
             ret = true;
             return ret;
         }
@@ -1579,9 +1582,10 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
 
         if(info.chip_channels_count == 2)
         {
-            m_chipChannels[new_chan].users.erase(j);
+            m_chipChannels[new_chan].users.clear();
             m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
             info.phys_erase_at(&info.chip_channels[1]);
+            synth.noteOff(new_chan);
             ret = true;
         }
     }
@@ -1595,6 +1599,33 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
 
     Synth &synth = *m_synth;
 
+    if(!m_setup.enableAutoArpeggio)
+    {
+        // Kill all notes on this channel with no mercy
+        for(AdlChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
+        {
+            AdlChannel::users_iterator j = jnext;
+            AdlChannel::LocationData &jd = j->value;
+            ++jnext;
+
+            if(jd.sustained == AdlChannel::LocationData::Sustain_None)
+            {
+                MIDIchannel::notes_iterator i = m_midiChannels[jd.loc.MidCh].find_activenote(jd.loc.note);
+                if(i.is_end())
+                    m_chipChannels[c].users.erase(j);
+                else
+                    noteUpdate(j->value.loc.MidCh, i, Upd_Off, static_cast<int32_t>(c));
+            }
+            else
+                m_chipChannels[c].users.erase(j);
+        }
+
+        synth.noteOff(c);
+        m_chipChannels[c].users.clear();
+
+        return;
+    }
+
     //bool doing_arpeggio = false;
     for(AdlChannel::users_iterator jnext = m_chipChannels[c].users.begin(); !jnext.is_end();)
     {
@@ -1607,13 +1638,6 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
             // Collision: Kill old note,
             // UNLESS we're going to do arpeggio
             MIDIchannel::notes_iterator i (m_midiChannels[jd.loc.MidCh].ensure_find_activenote(jd.loc.note));
-
-            if(!m_setup.enableAutoArpeggio)
-            {
-                // Kill the note
-                noteUpdate(j->value.loc.MidCh, i, Upd_Off, static_cast<int32_t>(c));
-                continue;
-            }
 
             // Check if we can do arpeggio.
             if(((jd.vibdelay_us < 70000) || (jd.kon_time_until_neglible_us > 20000000)) && jd.ins == ins)
@@ -1700,6 +1724,10 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
             info.phys_erase(static_cast<uint16_t>(from_channel));
             info.phys_ensure_find_or_create(cs)->assign(jd.ins);
             m_chipChannels[cs].users.push_back(jd);
+#ifndef NDEBUG
+            if(!m_setup.enableAutoArpeggio)
+                assert(m_chipChannels[cs].users.size() <= 1);
+#endif
             m_chipChannels[from_channel].users.erase(j);
             return;
         }
