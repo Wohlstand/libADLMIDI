@@ -673,7 +673,8 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         if(c < 0)
             continue;
         uint16_t chipChan = static_cast<uint16_t>(adlchannel[ccount]);
-        ni.phys_ensure_find_or_create(chipChan)->assign(voices[ccount]);
+        MIDIchannel::NoteInfo::Phys* p = ni.phys_ensure_find_or_create(chipChan);
+        p->assign(voices[ccount]);
     }
 
     noteUpdate(channel, ir, Upd_All | Upd_Patch);
@@ -1565,29 +1566,11 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
     {
         AdlChannel::users_iterator j = &m_chipChannels[new_chan].users.front();
         AdlChannel::LocationData &jd = j->value;
-        MIDIchannel::notes_iterator it = m_midiChannels[jd.loc.MidCh].find_activenote(jd.loc.note);
 
-        assert(m_chipChannels[new_chan].users.size() <= 1);
-
-        if(it.is_end()) /* Invalid user of channel */
-        {
-            m_chipChannels[new_chan].users.clear();
-            m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
-            synth.noteOff(new_chan);
-            ret = true;
-            return ret;
-        }
-
-        MIDIchannel::NoteInfo &info = it->value;
-
-        if(info.chip_channels_count == 2)
-        {
-            m_chipChannels[new_chan].users.clear();
-            m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
-            info.phys_erase_at(&info.chip_channels[1]);
-            synth.noteOff(new_chan);
-            ret = true;
-        }
+        m_midiChannels[jd.loc.MidCh].clear_all_phys_users(new_chan);
+        m_chipChannels[new_chan].users.clear();
+        m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
+        ret = true;
     }
 
     return ret;
@@ -1608,20 +1591,12 @@ void MIDIplay::prepareChipChannelForNewNote(size_t c, const MIDIchannel::NoteInf
             AdlChannel::LocationData &jd = j->value;
             ++jnext;
 
-            if(jd.sustained == AdlChannel::LocationData::Sustain_None)
-            {
-                MIDIchannel::notes_iterator i = m_midiChannels[jd.loc.MidCh].find_activenote(jd.loc.note);
-                if(i.is_end())
-                    m_chipChannels[c].users.erase(j);
-                else
-                    noteUpdate(j->value.loc.MidCh, i, Upd_Off, static_cast<int32_t>(c));
-            }
-            else
-                m_chipChannels[c].users.erase(j);
+            m_midiChannels[jd.loc.MidCh].clear_all_phys_users(c);
+            m_chipChannels[c].users.erase(j);
         }
 
         synth.noteOff(c);
-        m_chipChannels[c].users.clear();
+        assert(m_chipChannels[c].users.empty()); // No users should remain!
 
         return;
     }
