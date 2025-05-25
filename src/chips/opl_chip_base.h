@@ -122,7 +122,7 @@ private:
     void nativeTick(int16_t *frame);
     void setupResampler(uint32_t rate);
     void resetResampler();
-    void resampledGenerate(int32_t *output);
+    void resampledGenerate(int32_t *output) override;
 #if defined(ADLMIDI_ENABLE_HQ_RESAMPLER)
     VResampler *m_resampler;
 #else
