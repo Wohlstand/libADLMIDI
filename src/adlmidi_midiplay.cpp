@@ -1548,6 +1548,7 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
     bool ret = false;
 
     int free2op = 0;
+    int32_t volume = -1;
 
     for(size_t a = 0; a < (size_t)synth.m_numChannels; ++a)
     {
@@ -1557,9 +1558,28 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
         AdlChannel &chan = m_chipChannels[a];
 
         if(chan.users.empty())
+        {
             ++free2op;
+            break; // No reason to loop more
+        }
         else if(chan.recent_ins.pseudo4op)
-            new_chan = a;
+        {
+            AdlChannel::users_iterator j = &chan.users.front();
+            AdlChannel::LocationData &jd = j->value;
+            MIDIchannel &mc = m_midiChannels[jd.loc.MidCh];
+            MIDIchannel::notes_iterator nc = mc.find_activenote(jd.loc.note);
+            int32_t total = mc.volume + mc.expression;
+
+            if(!nc.is_end())
+                total += nc->value.vol;
+
+            // Quitest tones has highest priority to be stolen
+            if(volume < 0 || total < volume)
+            {
+                volume = total;
+                new_chan = a;
+            }
+        }
     }
 
     if(!free2op && new_chan >= 0)
