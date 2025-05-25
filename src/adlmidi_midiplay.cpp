@@ -1568,8 +1568,9 @@ bool MIDIplay::killSecondVoicesIfOverflow(int32_t &new_chan)
         AdlChannel::LocationData &jd = j->value;
 
         m_midiChannels[jd.loc.MidCh].clear_all_phys_users(new_chan);
-        m_chipChannels[new_chan].users.clear();
-        m_chipChannels[new_chan].koff_time_until_neglible_us = 0;
+        m_chipChannels[new_chan].users.erase(j);
+        assert(m_chipChannels[new_chan].users.empty()); // No users should remain!
+        synth.noteOff(new_chan);
         ret = true;
     }
 
