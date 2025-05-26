@@ -2029,9 +2029,9 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
     Synth &synth = *m_synth;
     uint32_t numChannels = synth.m_numChannels;
 
-    uint32_t index = 0;
+    uint32_t index = 0, index_out = 0;
 
-    while(index < numChannels && index < size - 1)
+    while(index < numChannels && index_out < size - 1)
     {
         const AdlChannel &adlChannel = m_chipChannels[index];
 
@@ -2041,23 +2041,29 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
         if(!loc.is_end())
             ++locnext;
 
+        if(synth.m_channelCategory[index] == Synth::ChanCat_None)
+        {
+            ++index; // Skip OPL2-absent channels
+            continue;
+        }
+
         if(loc.is_end())  // off
-            str[index] = '-';
+            str[index_out] = '-';
         else if(!locnext.is_end())  // arpeggio
-            str[index] = '@';
+            str[index_out] = '@';
         else  // on
         {
             switch(synth.m_channelCategory[index])
             {
             case Synth::ChanCat_Regular:
-                str[index] = '+';
+                str[index_out] = '+';
                 break;
             case Synth::ChanCat_4op_First:
             case Synth::ChanCat_4op_Second:
-                str[index] = '#';
+                str[index_out] = '#';
                 break;
             default:  // rhythm-mode percussion
-                str[index] = 'r';
+                str[index_out] = 'r';
                 break;
             }
         }
@@ -2066,10 +2072,11 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
         if(!loc.is_end())  // 4-bit color index of MIDI channel
             attribute |= (uint8_t)(loc->value.loc.MidCh & 0xF);
 
-        attr[index] = (char)attribute;
+        attr[index_out] = (char)attribute;
         ++index;
+        ++index_out;
     }
 
-    str[index] = 0;
-    attr[index] = 0;
+    str[index_out] = 0;
+    attr[index_out] = 0;
 }
