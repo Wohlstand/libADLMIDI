@@ -1113,10 +1113,15 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 #   endif
 
         g_audioBuffer_lock.Lock();
+#if defined(__GNUC__) && (__GNUC__ == 15) // Workaround on faulty std::deque's resize() call when C++11 is set
+        for(size_t p = 0; p < got; ++p)
+            g_audioBuffer.push_back(buff[p]);
+#else
         size_t pos = g_audioBuffer.size();
         g_audioBuffer.resize(pos + got);
         for(size_t p = 0; p < got; ++p)
             g_audioBuffer[pos + p] = buff[p];
+#endif
         g_audioBuffer_lock.Unlock();
 
         const AudioOutputSpec &spec = obtained;
