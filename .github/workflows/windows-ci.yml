@@ -127,8 +127,6 @@ jobs:
           echo "PATH environment: ${PATH}"
         fi
         echo "====================================="
-        qmake --version
-        echo "====================================="
         gcc --version
         echo "====================================="
         git --version
