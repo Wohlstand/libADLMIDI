@@ -52,7 +52,6 @@ jobs:
         if [[ ! -z "${{ matrix.config.deps_cmdline }}" ]]; then
           eval ${{ matrix.config.deps_cmdline }}
         fi
-        g++-8 --version
         cmake --version
 
     - uses: actions/checkout@v3
