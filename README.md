@@ -11,7 +11,7 @@ Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 e
 
 * Semaphore-CI: [![Build Status](https://wohlsoft.semaphoreci.com/badges/libADLMIDI/branches/master.svg?style=shields)](https://wohlsoft.semaphoreci.com/projects/libADLMIDI)
 * AppVeyor CI: [![Build status](https://ci.appveyor.com/api/projects/status/bfhwdsm13s17rn49?svg=true)](https://ci.appveyor.com/project/Wohlstand/libadlmidi)
-* GitHub Actions: ![Windows build status](https://github.com/Wohlstand/libADLMIID/actions/workflows/windows-ci.yml/badge.svg)
+* GitHub Actions: ![Windows build status](https://github.com/Wohlstand/libADLMIDI/actions/workflows/windows-ci.yml/badge.svg)
 
 # Differences with original tool
 * Reverb code has been removed.
