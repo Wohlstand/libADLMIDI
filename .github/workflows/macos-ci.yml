@@ -57,6 +57,14 @@ jobs:
           echo "available=false" >> $GITHUB_OUTPUT;
         fi
 
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.deps_cmdline }}" ]]; then
+          eval ${{ matrix.config.deps_cmdline }}
+        fi
+        cmake --version
+
     - uses: actions/checkout@v3
       with:
         fetch-depth: 3
