@@ -5,3 +5,6 @@ target_include_directories(mus2mid PRIVATE ${PROJECT_SOURCE_DIR}/src)
 install(TARGETS mus2mid
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
+if(WIN32)
+    set_property(TARGET mus2mid PROPERTY WIN32_EXECUTABLE OFF)
+endif()

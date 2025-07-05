@@ -5,3 +5,6 @@ target_include_directories(xmi2mid PRIVATE ${PROJECT_SOURCE_DIR}/src)
 install(TARGETS xmi2mid
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
+if(WIN32)
+    set_property(TARGET xmi2mid PROPERTY WIN32_EXECUTABLE OFF)
+endif()

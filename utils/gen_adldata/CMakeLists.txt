@@ -74,6 +74,10 @@ endif()
 
 set_nopie(gen_adldata)
 
+if(WIN32)
+    set_property(TARGET gen_adldata PROPERTY WIN32_EXECUTABLE OFF)
+endif()
+
 if(WITH_GENADLDATA_DEEPDEBUG)
     add_dependencies(gen_adldata gen_adldata_deepdebug_prepare)
 endif()
