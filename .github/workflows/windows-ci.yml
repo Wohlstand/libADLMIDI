@@ -104,7 +104,7 @@ jobs:
             mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-13.1.0-release-posix-seh-msvcrt-rt_v11-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
             ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw64/bin",
             lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/",
-            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw64/bin/", vlc_dir: "vlc-3.0.21",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw64", vlc_dir: "vlc-3.0.21",
             archive_name: "libADLMIDI-vlc-3.0.21-codec-x64"
           }
         - {
@@ -120,7 +120,7 @@ jobs:
             mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-12.2.0-release-posix-dwarf-rt_v10-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
             ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw32/bin",
             lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/",
-            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win32/vlc-3.0.21-win32.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw32/bin/", vlc_dir: "vlc-3.0.21",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win32/vlc-3.0.21-win32.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw32", vlc_dir: "vlc-3.0.21",
             archive_name: "libADLMIDI-vlc-3.0.21-codec-Win32"
           }
         - {
@@ -136,7 +136,7 @@ jobs:
             mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-13.1.0-release-posix-seh-msvcrt-rt_v11-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
             ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw64/bin",
             lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/",
-            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw64/bin/", vlc_dir: "vlc-3.0.21",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw64", vlc_dir: "vlc-3.0.21",
             archive_name: "libADLMIDI-LLE-vlc-3.0.21-codec-x64"
           }
         - {
@@ -152,7 +152,7 @@ jobs:
             mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-12.2.0-release-posix-dwarf-rt_v10-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
             ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw32/bin",
             lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/",
-            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win32/vlc-3.0.21-win32.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw32/bin/", vlc_dir: "vlc-3.0.21",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win32/vlc-3.0.21-win32.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw32", vlc_dir: "vlc-3.0.21",
             archive_name: "libADLMIDI-LLE-vlc-3.0.21-codec-Win32"
           }
 
@@ -232,14 +232,15 @@ jobs:
       uses: carlosperate/download-file-action@v2
       with:
         file-url: "${{ matrix.config.vlc_sdk_download }}"
-        file-name: lftp.7z
+        file-name: vlc_sdk.7z
 
     - name: Extract VLC SDK
       if: matrix.config.vlc_sdk_install_dir
       shell: bash
       run: |
-        7z x lftp.7z "${{ matrix.config.vlc_dir }}" -o"${{ matrix.config.vlc_sdk_install_dir }}"
-
+        7z x vlc_sdk.7z "${{ matrix.config.vlc_dir }}/sdk/include" "${{ matrix.config.vlc_dir }}/sdk/lib" -o"${{ matrix.config.vlc_sdk_install_dir }}"
+        mv -v "${{ matrix.config.vlc_sdk_install_dir }}/${{ matrix.config.vlc_dir }}/sdk/include" "${{ matrix.config.vlc_sdk_install_dir }}/include"
+        mv -v "${{ matrix.config.vlc_sdk_install_dir }}/${{ matrix.config.vlc_dir }}/sdk/lib" "${{ matrix.config.vlc_sdk_install_dir }}/lib"
 
     - name: Configure
       shell: bash
@@ -306,7 +307,7 @@ jobs:
             export PATH=${{ matrix.config.extra_path }}:${PATH}
         fi
         UPLOAD_LIST="set ssl:verify-certificate no;"
-        for q in ./_packed/*.zip; do
+        for q in ./_packed/*.7z; do
             UPLOAD_LIST="${UPLOAD_LIST} put -O ${{ matrix.config.upload_directory }} $q;"
         done
         lftp -e "${UPLOAD_LIST} exit" -u ${{ secrets.builds_login }},${{ secrets.builds_password }} ${{ secrets.builds_host }}
