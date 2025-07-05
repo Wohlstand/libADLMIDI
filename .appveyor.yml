@@ -22,30 +22,33 @@ environment:
       COMPILER_FAMILY: MinGW
       GENERATOR: "Ninja"
       PLATFORM: WinAll
-    - BUILD_TYPE: Release
-      COMPILER: MinGW-w32
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "MinGW Makefiles"
-      PLATFORM: Win32
-      CMAKEPREFIXPATH: "C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw32"
-      TOOLCHAIN_BIN: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32\\bin"
-      VLC_PLUGIN: ON
-      PACKAGE_TYPE: VLCPLUGIN
-      BUILD_SHARED: OFF
-      BUILD_MIDIPLAY: OFF
-      VLC_TARBALL: ${VLC_TARBALL_x32}
-    - BUILD_TYPE: Release
-      COMPILER: MinGW-w64
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "MinGW Makefiles"
-      PLATFORM: x64
-      CMAKEPREFIXPATH: "C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64"
-      TOOLCHAIN_BIN: "C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
-      VLC_PLUGIN: ON
-      PACKAGE_TYPE: VLCPLUGIN
-      BUILD_SHARED: OFF
-      BUILD_MIDIPLAY: OFF
-      VLC_TARBALL: ${VLC_TARBALL_x64}
+
+#    - BUILD_TYPE: Release
+#      COMPILER: MinGW-w32
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "MinGW Makefiles"
+#      PLATFORM: Win32
+#      CMAKEPREFIXPATH: "C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw32"
+#      TOOLCHAIN_BIN: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32\\bin"
+#      VLC_PLUGIN: ON
+#      PACKAGE_TYPE: VLCPLUGIN
+#      BUILD_SHARED: OFF
+#      BUILD_MIDIPLAY: OFF
+#      VLC_TARBALL: ${VLC_TARBALL_x32}
+
+#    - BUILD_TYPE: Release
+#      COMPILER: MinGW-w64
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "MinGW Makefiles"
+#      PLATFORM: x64
+#      CMAKEPREFIXPATH: "C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64"
+#      TOOLCHAIN_BIN: "C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
+#      VLC_PLUGIN: ON
+#      PACKAGE_TYPE: VLCPLUGIN
+#      BUILD_SHARED: OFF
+#      BUILD_MIDIPLAY: OFF
+#      VLC_TARBALL: ${VLC_TARBALL_x64}
+
     - BUILD_TYPE: Debug
       COMPILER: MinGW
       COMPILER_FAMILY: MinGW
@@ -53,6 +56,7 @@ environment:
       PLATFORM: Win32
       CMAKEPREFIXPATH: "C:/MinGW"
       TOOLCHAIN_BIN: "C:\\MinGW\\bin"
+
     - BUILD_TYPE: Release
       COMPILER: MinGW
       COMPILER_FAMILY: MinGW
@@ -60,34 +64,39 @@ environment:
       PLATFORM: Win32
       CMAKEPREFIXPATH: "C:/MinGW"
       TOOLCHAIN_BIN: "C:\\MinGW\\bin"
-    - BUILD_TYPE: Debug
-      COMPILER: MinGW-w32
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "MinGW Makefiles"
-      PLATFORM: Win32
-      CMAKEPREFIXPATH: "C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw32"
-      TOOLCHAIN_BIN: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32\\bin"
-    - BUILD_TYPE: Release
-      COMPILER: MinGW-w32
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "MinGW Makefiles"
-      PLATFORM: Win32
-      CMAKEPREFIXPATH: "C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw32"
-      TOOLCHAIN_BIN: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32\\bin"
-    - BUILD_TYPE: Debug
-      COMPILER: MinGW-w64
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "MinGW Makefiles"
-      PLATFORM: x64
-      CMAKEPREFIXPATH: "C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64"
-      TOOLCHAIN_BIN: "C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
-    - BUILD_TYPE: Release
-      COMPILER: MinGW-w64
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "MinGW Makefiles"
-      PLATFORM: x64
-      CMAKEPREFIXPATH: "C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64"
-      TOOLCHAIN_BIN: "C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
+
+#    - BUILD_TYPE: Debug
+#      COMPILER: MinGW-w32
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "MinGW Makefiles"
+#      PLATFORM: Win32
+#      CMAKEPREFIXPATH: "C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw32"
+#      TOOLCHAIN_BIN: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32\\bin"
+
+#    - BUILD_TYPE: Release
+#      COMPILER: MinGW-w32
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "MinGW Makefiles"
+#      PLATFORM: Win32
+#      CMAKEPREFIXPATH: "C:/mingw-w64/i686-6.3.0-posix-dwarf-rt_v5-rev1/mingw32"
+#      TOOLCHAIN_BIN: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32\\bin"
+
+#    - BUILD_TYPE: Debug
+#      COMPILER: MinGW-w64
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "MinGW Makefiles"
+#      PLATFORM: x64
+#      CMAKEPREFIXPATH: "C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64"
+#      TOOLCHAIN_BIN: "C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
+
+#    - BUILD_TYPE: Release
+#      COMPILER: MinGW-w64
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "MinGW Makefiles"
+#      PLATFORM: x64
+#      CMAKEPREFIXPATH: "C:/mingw-w64/x86_64-6.3.0-posix-seh-rt_v5-rev1/mingw64"
+#      TOOLCHAIN_BIN: "C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
+
     - BUILD_TYPE: Debug
       COMPILER: MSVC15
       COMPILER_FAMILY: MSVC
@@ -95,6 +104,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2015"
       PLATFORM: x64
       PLATFORMTOOLSET: "v140_xp"
+
     - BUILD_TYPE: Release
       COMPILER: MSVC15
       COMPILER_FAMILY: MSVC
@@ -102,6 +112,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2015"
       PLATFORM: x64
       PLATFORMTOOLSET: "v140_xp"
+
     - BUILD_TYPE: Debug
       COMPILER: MSVC15
       COMPILER_FAMILY: MSVC
@@ -109,6 +120,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2015"
       PLATFORM: Win32
       PLATFORMTOOLSET: "v140_xp"
+
     - BUILD_TYPE: Release
       COMPILER: MSVC15
       COMPILER_FAMILY: MSVC
@@ -116,6 +128,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2015"
       PLATFORM: Win32
       PLATFORMTOOLSET: "v140_xp"
+
     - BUILD_TYPE: Debug
       COMPILER: MSVC17
       COMPILER_FAMILY: MSVC
@@ -123,6 +136,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2017"
       PLATFORM: x64
       PLATFORMTOOLSET: "v141_xp"
+
     - BUILD_TYPE: Release
       COMPILER: MSVC17
       COMPILER_FAMILY: MSVC
@@ -130,6 +144,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2017"
       PLATFORM: x64
       PLATFORMTOOLSET: "v141_xp"
+
     - BUILD_TYPE: Debug
       COMPILER: MSVC17
       COMPILER_FAMILY: MSVC
@@ -137,6 +152,7 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2017"
       PLATFORM: Win32
       PLATFORMTOOLSET: "v141_xp"
+
     - BUILD_TYPE: Release
       COMPILER: MSVC17
       COMPILER_FAMILY: MSVC
@@ -177,4 +193,3 @@ deploy:
 
 #on_finish:
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-

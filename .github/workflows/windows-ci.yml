@@ -22,30 +22,138 @@ jobs:
       matrix:
         config:
         - {
-            name: "64-bit",
+            name: "MinGW-w64 64b Debug",
             os: windows-latest,
             PLATFORM: x64,
             WINXX_ARCH: win64,
             extra_path: "/c/Qt/5.15.10-x64/bin:/c/MinGW-w64/mingw64/bin",
-            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x64.cmake",
-            build_type: "Release",
-            upload_directory: "www/win32/moondust-win64/",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x64.cmake -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=ON -DWITH_MIDIPLAY=ON",
+            build_type: "Debug",
+            pack_dlls: "libgcc_s_sec-1.dll libstdc++-6.dll libwinpthread-1.dll",
+            pack_dlls_from: "C:/MinGW-w64/mingw64/bin",
+            package_type: "library",
+            upload_directory: "www/win32/",
             mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-13.1.0-release-posix-seh-msvcrt-rt_v11-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
             ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw64/bin",
-            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/"
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/",
+            vlc_sdk_download: "",
+            archive_name: "libADLMIDI-MinGW-w64-Debug-x64"
           }
         - {
-            name: "32-bit",
+            name: "MinGW-w64 64b Rel",
+            os: windows-latest,
+            PLATFORM: x64,
+            WINXX_ARCH: win64,
+            extra_path: "/c/Qt/5.15.10-x64/bin:/c/MinGW-w64/mingw64/bin",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x64.cmake -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=ON -DWITH_MIDIPLAY=ON",
+            build_type: "Release",
+            pack_dlls: "libgcc_s_sec-1.dll libstdc++-6.dll libwinpthread-1.dll",
+            pack_dlls_from: "C:/MinGW-w64/mingw64/bin",
+            package_type: "library",
+            upload_directory: "www/win32/",
+            mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-13.1.0-release-posix-seh-msvcrt-rt_v11-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw64/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/",
+            vlc_sdk_download: "",
+            archive_name: "libADLMIDI-MinGW-w64-Release-x64"
+          }
+        - {
+            name: "MinGW-w64 32b Debug",
             os: windows-latest,
             PLATFORM: Win32,
             WINXX_ARCH: win32,
             extra_path: "/c/Qt/5.6.3-i686/bin:/c/MinGW-w64/mingw32/bin",
-            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x32.cmake",
-            build_type: "Release",
-            upload_directory: "www/win32/moondust-win32/",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x32.cmake -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=ON -DWITH_MIDIPLAY=ON",
+            build_type: "Debug",
+            pack_dlls: "libgcc_s_dw2-1.dll libstdc++-6.dll libwinpthread-1.dll",
+            pack_dlls_from: "C:/MinGW-w64/mingw32/bin",
+            package_type: "library",
+            upload_directory: "www/win32/",
             mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-12.2.0-release-posix-dwarf-rt_v10-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
             ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw32/bin",
-            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/"
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/",
+            archive_name: "libADLMIDI-MinGW-w32-Debug-Win32"
+          }
+        - {
+            name: "MinGW-w64 32b Rel",
+            os: windows-latest,
+            PLATFORM: Win32,
+            WINXX_ARCH: win32,
+            extra_path: "/c/Qt/5.6.3-i686/bin:/c/MinGW-w64/mingw32/bin",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x32.cmake -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=ON -DWITH_MIDIPLAY=ON",
+            build_type: "Release",
+            pack_dlls: "libgcc_s_dw2-1.dll libstdc++-6.dll libwinpthread-1.dll",
+            pack_dlls_from: "C:/MinGW-w64/mingw32/bin",
+            package_type: "library",
+            upload_directory: "www/win32/",
+            mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-12.2.0-release-posix-dwarf-rt_v10-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw32/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/",
+            archive_name: "libADLMIDI-MinGW-w32-Release-Win32"
+          }
+        - {
+            name: "VLC Plugin 64b Rel",
+            os: windows-latest,
+            PLATFORM: x64,
+            WINXX_ARCH: win64,
+            extra_path: "/c/Qt/5.15.10-x64/bin:/c/MinGW-w64/mingw64/bin",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x64.cmake -DWITH_OLD_UTILS=OFF -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=OFF -DWITH_MIDIPLAY=OFF -DWITH_VLC_PLUGIN=ON -DVLC_PLUGIN_NOINSTALL=ON",
+            build_type: "Release",
+            package_type: "vlcplugin",
+            upload_directory: "www/win32/",
+            mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-13.1.0-release-posix-seh-msvcrt-rt_v11-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw64/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw64/bin/", vlc_dir: "vlc-3.0.21",
+            archive_name: "libADLMIDI-vlc-3.0.21-codec-x64"
+          }
+        - {
+            name: "VLC Plugin 32b Rel",
+            os: windows-latest,
+            PLATFORM: Win32,
+            WINXX_ARCH: win32,
+            extra_path: "/c/Qt/5.6.3-i686/bin:/c/MinGW-w64/mingw32/bin",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x32.cmake -DWITH_OLD_UTILS=OFF -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=OFF -DWITH_MIDIPLAY=OFF -DWITH_VLC_PLUGIN=ON -DVLC_PLUGIN_NOINSTALL=ON",
+            build_type: "Release",
+            package_type: "vlcplugin",
+            upload_directory: "www/win32/",
+            mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-12.2.0-release-posix-dwarf-rt_v10-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw32/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win32/vlc-3.0.21-win32.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw32/bin/", vlc_dir: "vlc-3.0.21",
+            archive_name: "libADLMIDI-vlc-3.0.21-codec-Win32"
+          }
+        - {
+            name: "VLC Plugin with LLE 64b Rel",
+            os: windows-latest,
+            PLATFORM: x64,
+            WINXX_ARCH: win64,
+            extra_path: "/c/Qt/5.15.10-x64/bin:/c/MinGW-w64/mingw64/bin",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x64.cmake -DWITH_OLD_UTILS=OFF -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=OFF -DWITH_MIDIPLAY=OFF -DWITH_VLC_PLUGIN=ON -DVLC_PLUGIN_NOINSTALL=ON -DUSE_NUKED_OPL2_LLE_EMULATOR=ON -DUSE_NUKED_OPL3_LLE_EMULATOR=ON",
+            build_type: "Release",
+            package_type: "vlcplugin",
+            upload_directory: "www/win32/",
+            mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-13.1.0-release-posix-seh-msvcrt-rt_v11-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw64/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw64/",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw64/bin/", vlc_dir: "vlc-3.0.21",
+            archive_name: "libADLMIDI-LLE-vlc-3.0.21-codec-x64"
+          }
+        - {
+            name: "VLC Plugin with LLE 32b Rel",
+            os: windows-latest,
+            PLATFORM: Win32,
+            WINXX_ARCH: win32,
+            extra_path: "/c/Qt/5.6.3-i686/bin:/c/MinGW-w64/mingw32/bin",
+            extra_options: "-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_mingw_toolchain_x32.cmake -DWITH_OLD_UTILS=OFF -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=OFF -DWITH_MIDIPLAY=OFF -DWITH_VLC_PLUGIN=ON -DVLC_PLUGIN_NOINSTALL=ON -DUSE_NUKED_OPL2_LLE_EMULATOR=ON -DUSE_NUKED_OPL3_LLE_EMULATOR=ON",
+            build_type: "Release",
+            package_type: "vlcplugin",
+            upload_directory: "www/win32/",
+            mingw_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-12.2.0-release-posix-dwarf-rt_v10-rev1.7z", mingw_install_dir: "C:/MinGW-w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-w64/mingw32/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-w64/mingw32/",
+            vlc_sdk_download: "https://mirror.yandex.ru/mirrors/ftp.videolan.org/vlc/3.0.21/win32/vlc-3.0.21-win32.7z", vlc_sdk_install_dir: "C:/MinGW-w64/mingw32/bin/", vlc_dir: "vlc-3.0.21",
+            archive_name: "libADLMIDI-LLE-vlc-3.0.21-codec-Win32"
           }
 
     steps:
@@ -119,6 +227,20 @@ jobs:
       run: |
         7z x lftp.7z bin etc -o"${{ matrix.config.lftp_install_dir }}"
 
+    - name: Download VLC SDK
+      if: matrix.config.vlc_sdk_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.vlc_sdk_download }}"
+        file-name: lftp.7z
+
+    - name: Extract VLC SDK
+      if: matrix.config.vlc_sdk_install_dir
+      shell: bash
+      run: |
+        7z x lftp.7z "${{ matrix.config.vlc_dir }}" -o"${{ matrix.config.vlc_sdk_install_dir }}"
+
+
     - name: Configure
       shell: bash
       run: |
@@ -157,36 +279,37 @@ jobs:
         export MAKEFLAGS=--keep-going
         cmake --build build --target install --config ${{ matrix.config.build_type }}
 
-#    - name: Deploy
-#      shell: bash
-#      run: |
-#        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
-#          export PATH=${{ matrix.config.extra_path }}:${PATH}
-#          export QT_DIR="${{ matrix.config.qt_dir }}"
-#          export QtDir="${{ matrix.config.qt_dir }}"
-#        fi
-#        export MAKEFLAGS=--keep-going
-#        cmake --build build --target windeploy --config ${{ matrix.config.build_type }}
-#        cmake --build build --target enable_portable
-#        cmake --build build --target put_online_help
-#        cmake --build build --target create_zip
-#        cmake --build build --target create_zip_tools
-#        cmake --build build --target create_zip_install
-#        mkdir _packed
-#        mv bin-cmake-release/_packed/*.zip _packed
+    - name: Pack Library Kit
+      if: success() && matrix.config.extra_path == 'library'
+      shell: bash
+      run: |
+        mkdir _packed
+        if [[ ! -z "${{ matrix.config.pack_dlls }}" ]]; then
+          for q in ${{ matrix.config.pack_dlls }}; do
+            cp -v "${{ matrix.config.pack_dlls_from }}/$q" libADLMIDI/bin
+          done
+        fi
+        7z a -t7z -mx9 "_packed/${{ matrix.config.archive_name}}.7z" "libADLMIDI"
 
-#    - name: Deploy to builds.wohlsoft.ru
-#      if: success() && github.event_name != 'pull_request' && steps.event-check.outputs.is_pull_request == 'false' && steps.upload-check.outputs.available == 'true'
-#      shell: bash
-#      run: |
-#        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
-#            export PATH=${{ matrix.config.extra_path }}:${PATH}
-#        fi
-#        UPLOAD_LIST="set ssl:verify-certificate no;"
-#        for q in ./_packed/*.zip; do
-#            UPLOAD_LIST="${UPLOAD_LIST} put -O ${{ matrix.config.upload_directory }} $q;"
-#        done
-#        lftp -e "${UPLOAD_LIST} exit" -u ${{ secrets.builds_login }},${{ secrets.builds_password }} ${{ secrets.builds_host }}
+    - name: Pack VLC plugin
+      if: success() && matrix.config.extra_path == 'vlcplugin'
+      shell: bash
+      run: |
+        mkdir _packed
+        7z a -t7z -mx9 "_packed/${{ matrix.config.archive_name}}.7z" "build/libadlmidi_plugin.dll"
+
+    - name: Deploy to builds.wohlsoft.ru
+      if: success() && github.event_name != 'pull_request' && steps.event-check.outputs.is_pull_request == 'false' && steps.upload-check.outputs.available == 'true'
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
+            export PATH=${{ matrix.config.extra_path }}:${PATH}
+        fi
+        UPLOAD_LIST="set ssl:verify-certificate no;"
+        for q in ./_packed/*.zip; do
+            UPLOAD_LIST="${UPLOAD_LIST} put -O ${{ matrix.config.upload_directory }} $q;"
+        done
+        lftp -e "${UPLOAD_LIST} exit" -u ${{ secrets.builds_login }},${{ secrets.builds_password }} ${{ secrets.builds_host }}
 
     - name: List Build Directory
       if: always()
