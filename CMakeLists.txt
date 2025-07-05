@@ -415,9 +415,6 @@ function(handle_options targetLib)
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_ENABLE_OPL3_LLE_EMULATOR)
         endif()
 
-        if(USE_NUKED_OPL3_LLE_EMULATOR)
-        endif()
-
         if(USE_HW_SERIAL)
             set(HAS_EMULATOR TRUE)
             target_sources(${targetLib} PRIVATE
