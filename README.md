@@ -184,7 +184,7 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
-## dev
+## 1.6.0   2025-07-05
  * Fixed the work on big endian processors
  * Fixed ARM64 build on some platforms
  * Improved support of the EA-MUS files (Thanks to [dashodanger](https://github.com/dashodanger))

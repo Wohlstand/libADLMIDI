@@ -29,8 +29,8 @@ extern "C" {
 #endif
 
 #define ADLMIDI_VERSION_MAJOR       1
-#define ADLMIDI_VERSION_MINOR       5
-#define ADLMIDI_VERSION_PATCHLEVEL  1
+#define ADLMIDI_VERSION_MINOR       6
+#define ADLMIDI_VERSION_PATCHLEVEL  0
 
 #define ADLMIDI_TOSTR_I(s) #s
 #define ADLMIDI_TOSTR(s) ADLMIDI_TOSTR_I(s)
