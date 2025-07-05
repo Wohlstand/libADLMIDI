@@ -297,7 +297,7 @@ jobs:
       shell: bash
       run: |
         mkdir _packed
-        7z a -t7z -mx9 "_packed/${{ matrix.config.archive_name}}.7z" "build/libadlmidi_plugin.dll"
+        7z a -t7z -mx9 "_packed/${{ matrix.config.archive_name}}.7z" "./build/libadlmidi_plugin.dll"
 
     - name: Deploy to builds.wohlsoft.ru
       if: success() && github.event_name != 'pull_request' && steps.event-check.outputs.is_pull_request == 'false' && steps.upload-check.outputs.available == 'true'
