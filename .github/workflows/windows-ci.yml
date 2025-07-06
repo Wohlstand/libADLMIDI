@@ -275,7 +275,7 @@ jobs:
       run: |
         7z x vlc_sdk.7z "${{ matrix.config.vlc_dir }}/sdk/include" "${{ matrix.config.vlc_dir }}/sdk/lib" -o"${{ matrix.config.vlc_sdk_install_dir }}"
         mv -v "${{ matrix.config.vlc_sdk_install_dir }}/${{ matrix.config.vlc_dir }}/sdk/include/vlc" "${{ matrix.config.vlc_sdk_install_dir }}/include/"
-        mv -v "${{ matrix.config.vlc_sdk_install_dir }}/${{ matrix.config.vlc_dir }}/sdk/lib/*.lib" "${{ matrix.config.vlc_sdk_install_dir }}/lib/"
+        mv -v "${{ matrix.config.vlc_sdk_install_dir }}/${{ matrix.config.vlc_dir }}/sdk/lib/*" "${{ matrix.config.vlc_sdk_install_dir }}/lib/"
         mv -v "${{ matrix.config.vlc_sdk_install_dir }}/${{ matrix.config.vlc_dir }}/sdk/lib/pkgconfig" "${{ matrix.config.vlc_sdk_install_dir }}/lib/"
 
     - name: Configure
