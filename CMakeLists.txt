@@ -702,7 +702,7 @@ if(USE_NUKED_OPL2_LLE_EMULATOR OR USE_NUKED_OPL3_LLE_EMULATOR)
 VERY POWERFUL processor to work (For example, on Intel Core i7-11700KF (8 cores, 3.60 GHz) \
 they can work in real-time only when they built with Release optimisations, Debug builds \
 are choppy even single chip run). You can't use them on weak devices, don't even think to \
-run theom mobile. I warned. If you want, feel free to optimize them and contribute your \
+run them on mobile. I warned. If you want, feel free to optimize them and contribute your \
 updates to @NukeYkt who created them. The only way you can use them on weaker hardware \
 is record WAVs where real-time performance doesn't matter.")
 endif()
