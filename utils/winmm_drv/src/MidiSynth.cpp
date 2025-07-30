@@ -172,13 +172,14 @@ public:
             callbackType = CALLBACK_EVENT;
         }
 
-        PCMWAVEFORMAT wFormat =
+        WAVEFORMATEX wFormat =
         {
             formatType, s_audioChannels,
             sampleRate,
             (DWORD)(sampleRate * sizeSample * s_audioChannels),
             (WORD)(s_audioChannels * sizeSample),
-            (WORD)(8 * sizeSample)
+            (WORD)(8 * sizeSample),
+            0
         };
 
         // Open waveout device

@@ -184,6 +184,9 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
+## dev
+ * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage
+
 ## 1.6.0   2025-07-05
  * Fixed the work on big endian processors
  * Fixed ARM64 build on some platforms
