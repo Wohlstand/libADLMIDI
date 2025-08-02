@@ -25,8 +25,23 @@ else()
     endif()
 endif()
 
+function(CheckCPP14Build OUTVAR)
+    set(CMAKE_CXX_STANDARD 14)
+    try_compile(${OUTVAR}
+        ${CMAKE_CURRENT_BINARY_DIR}/cmake-checks
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/checks/cpp14.cpp
+        CMAKE_FLAGS -DCMAKE_CXX_FLAGS=${FLAG_CPP14}
+    )
+endfunction()
+
 if(COMPILER_SUPPORTS_CXX14)
-    message("== Your C++ compiler supports C++14, YMFM emulator will be ENABLED")
+    CheckCPP14Build(COMPILER_BUILDS_CXX14)
+    if(COMPILER_BUILDS_CXX14)
+        message("== Your C++ compiler supports C++14, YMFM emulator will be ENABLED")
+    else()
+        message("== Your C++ compiler can't build C++14, YMFM emulator will be DISABLED")
+        set(COMPILER_SUPPORTS_CXX14 FALSE)
+    endif()
 else()
     message("== Your C++ compiler does NOT supports C++14, YMFM emulator will be DISABLED")
 endif()
