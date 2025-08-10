@@ -1607,6 +1607,9 @@ void OPL3::silenceAll() // Silence all OPL channels.
 
 void OPL3::updateChannelCategories()
 {
+    if(m_numFourOps > m_numChips * 6)
+        m_numFourOps = m_numChips * 6; // Can't set more than chips can offer!
+
     const uint32_t fours = (m_currentChipType != OPLChipBase::CHIPTYPE_OPL2) ? m_numFourOps : 0;
 
     for(uint32_t chip = 0, fours_left = fours; chip < m_numChips; ++chip)
