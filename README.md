@@ -185,7 +185,8 @@ To build that example you will need to have installed SDL2 library.
 
 # Changelog
 ## dev
- * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage
+ * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
+ * Fixed an unexpected loud noise sounding after switching bank from the 4-op only to 2-op on the fly.
 
 ## 1.6.0   2025-07-05
  * Fixed the work on big endian processors

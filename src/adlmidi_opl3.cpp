@@ -165,6 +165,8 @@ int adl_getLowestEmulator()
     return emu;
 }
 
+static const struct OplTimbre c_defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
+
 //! Per-channel and per-operator registers map
 static const uint16_t g_operatorsMap[(NUM_OF_CHANNELS + NUM_OF_RM_CHANNELS) * 2] =
 {
@@ -1047,8 +1049,12 @@ void OPL3::noteOff(size_t c)
 
     if(cc >= OPL3_CHANNELS_RHYTHM_BASE)
     {
-        m_regBD[chip] &= ~(0x10 >> (cc - OPL3_CHANNELS_RHYTHM_BASE));
-        writeRegI(chip, 0xBD, m_regBD[chip]);
+        if(m_rhythmMode)
+        {
+            m_regBD[chip] &= ~(0x10 >> (cc - OPL3_CHANNELS_RHYTHM_BASE));
+            writeRegI(chip, 0xBD, m_regBD[chip]);
+        }
+
         return;
     }
     else if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2 && cc >= NUM_OF_OPL2_CHANNELS)
@@ -1167,7 +1173,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
         m_keyBlockFNumCache[c1] = (ftone >> 8);
     }
 
-    if(cc1 >= OPL3_CHANNELS_RHYTHM_BASE)
+    if(m_rhythmMode && cc1 >= OPL3_CHANNELS_RHYTHM_BASE)
     {
         m_regBD[chip ] |= (0x10 >> (cc1 - OPL3_CHANNELS_RHYTHM_BASE));
         writeRegI(chip , 0x0BD, m_regBD[chip ]);
@@ -1598,10 +1604,14 @@ void OPL3::setPan(size_t c, uint8_t value)
 
 void OPL3::silenceAll() // Silence all OPL channels.
 {
+    if(m_chips.empty())
+        return; // Can't since no chips initialized
+
     for(size_t c = 0; c < m_numChannels; ++c)
     {
         noteOff(c);
         touchNote(c, 0, 0, 0);
+        setPatch(c, c_defaultInsCache);
     }
 }
 
@@ -1811,7 +1821,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     (void)audioTickHandler;
 #endif
 
-    const struct OplTimbre defaultInsCache = { 0x1557403,0x005B381, 0x49,0x80, 0x4, +0 };
+
 
     if(rebuild_needed)
     {
@@ -1824,7 +1834,10 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     }
     else
     {
-        adl_fill_vector<OplTimbre>(m_insCache, defaultInsCache);
+        if(!m_chips.empty())
+            silenceAll(); // Ensure no junk will be played after bank change
+
+        adl_fill_vector<OplTimbre>(m_insCache, c_defaultInsCache);
         adl_fill_vector<uint32_t>(m_channelCategory, 0);
         adl_fill_vector<uint32_t>(m_keyBlockFNumCache, 0);
         adl_fill_vector<uint32_t>(m_regBD, 0);
@@ -1839,7 +1852,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     if(rebuild_needed)
     {
         m_numChannels = m_numChips * NUM_OF_CHANNELS;
-        m_insCache.resize(m_numChannels, defaultInsCache);
+        m_insCache.resize(m_numChannels, c_defaultInsCache);
         m_channelCategory.resize(m_numChannels, 0);
         m_keyBlockFNumCache.resize(m_numChannels,   0);
         m_regBD.resize(m_numChips,    0);
