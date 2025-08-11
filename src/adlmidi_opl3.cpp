@@ -1607,11 +1607,28 @@ void OPL3::silenceAll() // Silence all OPL channels.
     if(m_chips.empty())
         return; // Can't since no chips initialized
 
+    commitDeepFlags(); // If rhythm-mode is active, this will off all the rhythm keys
+
     for(size_t c = 0; c < m_numChannels; ++c)
     {
+        size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
+        size_t cmf_offset = ((m_musicMode == MODE_CMF) && cc >= OPL3_CHANNELS_RHYTHM_BASE) ? 10 : 0;
+        uint16_t o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
+        uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
+
         noteOff(c);
-        touchNote(c, 0, 0, 0);
-        setPatch(c, c_defaultInsCache);
+
+        if(o1 != 0xFFF)
+        {
+            writeRegI(chip, 0x40 + o1, 0x3F);
+            writeRegI(chip, 0x80 + o1, 0xFF);
+        }
+
+        if(o2 != 0xFFF)
+        {
+            writeRegI(chip, 0x40 + o2, 0x3F);
+            writeRegI(chip, 0x80 + o1, 0xFF);
+        }
     }
 }
 

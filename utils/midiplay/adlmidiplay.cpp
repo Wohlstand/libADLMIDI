@@ -126,8 +126,8 @@ void set_conio_terminal_mode()
     cfmakeraw(&new_termios);
     tcsetattr(0, TCSANOW, &new_termios);
 #else
-    SDL_setenv("TERMINFO", "/usr/share/terminfo", 1);
-    SDL_setenv("TERM", "linux", 1);
+    setenv("TERMINFO", "/usr/share/terminfo", 1);
+    setenv("TERM", "linux", 1);
     initscr();
 
     cbreak();
@@ -372,7 +372,7 @@ static void SDL_AudioCallbackX(void *, uint8_t *stream, int len)
 
     audio_lock();
     //short *target = (short *) stream;
-    g_audioBuffer_lock.Lock();    
+    g_audioBuffer_lock.Lock();
 
     if(ate > g_audioBuffer.size())
         ate = (unsigned)g_audioBuffer.size();
@@ -1058,6 +1058,10 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         break;
     }
 
+#if defined(ENABLE_TERMINAL_HOTKEYS)
+    int bankId = 59;
+#endif
+
 
 #   ifdef DEBUG_SONG_CHANGE
     int delayBeforeSongChange = 50;
@@ -1137,12 +1141,12 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         {
             int code = getch();
 
-#           if defined(DEBUG_SONG_SWITCHING)
             if(code == '\033' && kbhit())
             {
                 getch();
                 switch(getch())
                 {
+#           if defined(DEBUG_SONG_SWITCHING)
                 case 'C':
                     // code for arrow right
                     songNumLoad++;
@@ -1161,12 +1165,36 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     std::fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
                     flushout(stdout);
                     break;
+#endif
                 }
             }
             else
-#endif
-            if(code == 27) // Quit by ESC key
-                stop = 1;
+            {
+                switch(code)
+                {
+                case 'F':
+                case 'f':
+                    bankId++;
+                    if(bankId >= adl_getBanksCount())
+                        bankId = 0;
+                    adl_setBank(myDevice, bankId);
+                    std::fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
+                    flushout(stdout);
+                    break;
+                case 'V':
+                case 'v':
+                    bankId--;
+                    if(bankId < 0)
+                        bankId = adl_getBanksCount() - 1;
+                    adl_setBank(myDevice, bankId);
+                    std::fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
+                    flushout(stdout);
+                    break;
+                case 27: // Quit by ESC key
+                    stop = 1;
+                    break;
+                }
+            }
         }
 #       endif
 
@@ -2042,8 +2070,8 @@ int main(int argc, char **argv)
 #if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
     set_conio_terminal_mode();
 #   ifdef DEBUG_SONG_SWITCHING
-    if(songNumLoad < 0)
-        songNumLoad = 0;
+    if(s_devSetup.songNumLoad < 0)
+        s_devSetup.songNumLoad = 0;
 #   endif
 #endif
 
