@@ -53,9 +53,10 @@ static BOOL readStringFromRegistry(HKEY hKeyParent, const PWCHAR subkey, const P
     HKEY hKey;
     DWORD len = TOTAL_BYTES_READ;
     DWORD readDataLen = len;
-    PWCHAR readBuffer = (PWCHAR )malloc(sizeof(PWCHAR)* len);
+    PWCHAR readBufferNew = NULL;
+    PWCHAR readBuffer = (PWCHAR)malloc(sizeof(WCHAR) * len);
 
-    if (readBuffer == NULL)
+    if(readBuffer == NULL)
         return FALSE;
 
     //Check if the registry exists
@@ -69,13 +70,23 @@ static BOOL readStringFromRegistry(HKEY hKeyParent, const PWCHAR subkey, const P
         {
             // Get a buffer that is big enough.
             len += OFFSET_BYTES;
-            readBuffer = (PWCHAR)realloc(readBuffer, len);
+            readBufferNew = (PWCHAR)realloc(readBuffer, len);
+
+            if(readBufferNew == NULL)
+            {
+                free(readBuffer);
+                return FALSE;
+            }
+
+            readBuffer = readBufferNew;
             readDataLen = len;
             ret = RegQueryValueExW(hKey, valueName, NULL, NULL, (BYTE*)readBuffer, &readDataLen);
         }
-        if (ret != ERROR_SUCCESS)
+
+        if(ret != ERROR_SUCCESS)
         {
             RegCloseKey(hKey);
+            free(readBuffer);
             return FALSE;
         }
 
@@ -85,6 +96,7 @@ static BOOL readStringFromRegistry(HKEY hKeyParent, const PWCHAR subkey, const P
     }
     else
     {
+        free(readBuffer);
         return FALSE;
     }
 }
