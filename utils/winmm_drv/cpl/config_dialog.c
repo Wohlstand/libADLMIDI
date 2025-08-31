@@ -20,6 +20,7 @@
 #define CB_SETMINVISIBLE (CBM_FIRST+1)
 #endif
 
+typedef const char*(*LinkedLibraryVersion)(void);
 typedef int (*BankNamesCount)(void);
 typedef const char *const *(*BankNamesList)(void);
 
@@ -191,12 +192,24 @@ static void buildLists(HWND hwnd)
     const char *const* list;
     BankNamesCount adl_getBanksCount;
     BankNamesList adl_getBankNames;
+    char version_string[32];
+    LinkedLibraryVersion adl_linkedLibraryVersion;
+
+    ZeroMemory(version_string, sizeof(version_string));
 
     lib = LoadLibraryW(L"adlmididrv.dll");
     if(lib)
     {
+        adl_linkedLibraryVersion = (LinkedLibraryVersion)GetProcAddress(lib, "adl_linkedLibraryVersion");
         adl_getBanksCount = (BankNamesCount)GetProcAddress(lib, "adl_getBanksCount");
         adl_getBankNames = (BankNamesList)GetProcAddress(lib, "adl_getBankNames");
+
+        if(adl_linkedLibraryVersion)
+        {
+            snprintf(version_string, sizeof(version_string), "Ver. %s", adl_linkedLibraryVersion());
+            SendDlgItemMessageA(hwnd, IDC_VERSION_LABEL, WM_SETTEXT, (LPARAM)0, (LPARAM)version_string);
+        }
+
         if(adl_getBanksCount && adl_getBankNames)
         {
             bMax = adl_getBanksCount();

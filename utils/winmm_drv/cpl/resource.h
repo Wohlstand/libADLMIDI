@@ -36,3 +36,4 @@
 #define IDC_GAIN_LABEL                          1033
 #define IDC_DRIVERNAME                          40000
 #define IDC_DRIVERDESC                          40001
+#define IDC_VERSION_LABEL                       40002
