@@ -753,14 +753,28 @@ void MidiSynth::loadGain()
 
 void MidiSynth::LoadSynthSetup()
 {
+    bool needPanic = m_setupInit;
+
     if(!m_setupInit || m_setupCurrent.emulatorId != m_setup.emulatorId)
     {
+        if(needPanic)
+        {
+            adl_panic(synth);
+            needPanic = false;
+        }
+
         adl_switchEmulator(synth, m_setup.emulatorId);
         m_setupCurrent.emulatorId = m_setup.emulatorId;
     }
 
     if(!m_setupInit || m_setupCurrent.numChips != m_setup.numChips)
     {
+        if(needPanic)
+        {
+            adl_panic(synth);
+            needPanic = false;
+        }
+
         adl_setNumChips(synth, m_setup.numChips);
         m_setupCurrent.numChips = m_setup.numChips;
     }
@@ -830,14 +844,14 @@ void MidiSynth::LoadSynthSetup()
         m_setupCurrent.chanAlloc = m_setup.chanAlloc;
     }
 
-    if(!m_setupInit || m_setupCurrent.numChips != m_setup.numChips)
-    {
-        adl_setNumChips(synth, m_setup.numChips);
-        m_setupCurrent.numChips = m_setup.numChips;
-    }
-
     if(!m_setupInit || m_setupCurrent.num4ops != m_setup.num4ops)
     {
+        if(needPanic)
+        {
+            adl_panic(synth);
+            needPanic = false;
+        }
+
         adl_setNumFourOpsChn(synth, m_setup.num4ops);
         m_setupCurrent.num4ops = m_setup.num4ops;
     }
@@ -848,6 +862,9 @@ void MidiSynth::LoadSynthSetup()
        wcscmp(m_setupCurrent.bankPath, m_setup.bankPath) != 0
     )
     {
+        if(needPanic)
+            adl_panic(synth);
+
         if(m_setup.useExternalBank)
         {
             char pathUtf8[MAX_PATH * 4];
