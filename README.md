@@ -188,6 +188,7 @@ To build that example you will need to have installed SDL2 library.
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
  * Fixed crash when playing too many notes at the same channel.
  * Fixed an unexpected loud noise sounding after switching bank from the 4-op only to 2-op on the fly.
+ * WinMM: Fixed sound damange when switching between banks while playing some music streams.
 
 ## 1.6.0   2025-07-05
  * Fixed the work on big endian processors
