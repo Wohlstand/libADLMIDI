@@ -1724,7 +1724,12 @@ void MIDIplay::killOrEvacuate(size_t from_channel,
             }
 
             info.phys_erase(static_cast<uint16_t>(from_channel));
-            info.phys_ensure_find_or_create(cs)->assign(jd.ins);
+
+            MIDIchannel::NoteInfo::Phys* ps = info.phys_find_or_create(cs);
+            if(!ps) // Overflow
+                continue;
+
+            ps->assign(jd.ins);
             m_chipChannels[cs].users.push_back(jd);
 #ifndef NDEBUG
             if(!m_setup.enableAutoArpeggio)
