@@ -238,7 +238,7 @@ bool MIDIplay::LoadMIDI_post()
         synth.m_numChips = 1;
         synth.m_numFourOps = 0;
     }
-    else if(format == MidiSequencer::Format_IMF)
+    else if(format == MidiSequencer::Format_IMF || format == MidiSequencer::Format_KLM)
     {
         //std::fprintf(stderr, "Done reading IMF file\n");
         synth.m_numFourOps  = 0; //Don't use 4-operator channels for IMF playing!

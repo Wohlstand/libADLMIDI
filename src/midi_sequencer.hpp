@@ -322,7 +322,9 @@ public:
         //! EA-MUS format
         Format_RSXX,
         //! AIL's XMIDI format (act same as MIDI, but with exceptions)
-        Format_XMIDI
+        Format_XMIDI,
+        //! KLM format
+        Format_KLM
     };
 
     /**
@@ -808,6 +810,13 @@ private:
      * @return true on successful load
      */
     bool parseIMF(FileAndMemReader &fr);
+
+    /**
+     * @brief Load file as Wacky Wheels KLM file
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseKLM(FileAndMemReader &fr);
 
     /**
      * @brief Load file as EA MUS
