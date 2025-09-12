@@ -27,7 +27,8 @@
 #include "adlmidi_cvt.hpp"
 #include "file_reader.hpp"
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
-#include "midi_sequencer.hpp"
+#   define BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
+#   include "midi_sequencer.hpp"
 #endif
 #include "wopl/wopl_file.h"
 

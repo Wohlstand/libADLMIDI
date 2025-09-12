@@ -804,6 +804,7 @@ public:
     void   setTempo(double tempo);
 
 private:
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
     /**
      * @brief Load file as Id-software-Music-File (Wolfenstein)
      * @param fr Context with opened file
@@ -831,6 +832,7 @@ private:
      * @return true on successful load
      */
     bool parseCMF(FileAndMemReader &fr);
+#endif
 
     /**
      * @brief Load file as GMD/MUS files (ScummVM)

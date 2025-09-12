@@ -2295,6 +2295,7 @@ static bool detectRSXX(const char *head, FileAndMemReader &fr)
     return ret;
 }
 
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 /**
  * @brief Detect the Id-software Music File format
  * @param head Header part
@@ -2345,6 +2346,7 @@ static bool detectKLM(const char *head, FileAndMemReader &fr)
 
     return true;
 }
+#endif
 
 bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
 {
@@ -2418,6 +2420,7 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
     }
 #endif
 
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
     if(std::memcmp(headerBuf, "CTMF", 4) == 0)
     {
         fr.seek(0, FileAndMemReader::SET);
@@ -2436,6 +2439,7 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
         fr.seek(0, FileAndMemReader::SET);
         return parseIMF(fr);
     }
+#endif
 
     if(detectRSXX(headerBuf, fr))
     {
@@ -2447,7 +2451,7 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
     return false;
 }
 
-
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
 {
     const size_t    deltaTicks = 1;
@@ -3292,6 +3296,7 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
 
     return true;
 }
+#endif // BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 
 bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
 {
