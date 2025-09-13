@@ -2550,7 +2550,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
     MidiTrackRow    evtPos;
     MidiEvent       event;
-    std::vector<MidiEvent> temposList;
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -2575,8 +2574,8 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
     buildSmfSetupReset(1);
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * 1);
-    m_tempo         = fraction<uint64_t>(1, 1);
+    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(tempo));
+    m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(tempo) * 2);
 
     uint64_t ins_count = 0;
 
@@ -2604,20 +2603,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
         m_errorString = "Invalid KLM file: instrument data goes after the song offset!";
         return false;
     }
-
-    tempo *= 7;
-
-    // Define the playing tempo
-    event.type = MidiEvent::T_SPECIAL;
-    event.subtype = MidiEvent::ST_TEMPOCHANGE;
-    event.absPosition = 0;
-    event.data.resize(4);
-    event.data[0] = static_cast<uint8_t>((tempo >> 24) & 0xFF);
-    event.data[1] = static_cast<uint8_t>((tempo >> 16) & 0xFF);
-    event.data[2] = static_cast<uint8_t>((tempo >> 8) & 0xFF);
-    event.data[3] = static_cast<uint8_t>((tempo & 0xFF));
-    evtPos.events.push_back(event);
-    temposList.push_back(event);
 
     // Define the draft for IMF events
     event.type = MidiEvent::T_SPECIAL;
@@ -2671,6 +2656,22 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     event.isValid = 1;
     evtPos.events.push_back(event);
     evtPos.delay = 0;
+
+    // Set snare frequency
+    const int rhythm_a0[] = {0x02, 0x02};
+    const int rhythm_b0[] = {0x0D, 0x0C};
+
+    for(int c = 7; c <= 8; ++c)
+    {
+        event.data[0] = 0xA0 + rm_map[(c - 6) * 2];
+        event.data[1] = rhythm_a0[c - 7];
+        evtPos.events.push_back(event);
+
+        reg_b0_state[c] = rhythm_b0[c - 7] & 0xDF;
+        event.data[0] = 0xB0 + c;
+        event.data[1] = rhythm_b0[c - 7] & 0xDF;
+        evtPos.events.push_back(event);
+    }
 
 #ifdef KLM_DEBUG
     err_off = fr.tell();
@@ -2750,7 +2751,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             }
 
             break;
-        case 0x10: // Note ON with frequency (only channels 0 - 5, other channels cmd gets replaced with 0x40)
+        case 0x10: // Note ON with frequency (only channels 0 - 5, and bass drum at 6, other channels cmd gets replaced with 0x40)
             if(chan > 6)
             {
                 switch(chan)
@@ -2795,29 +2796,21 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             event.absPosition = abs_position;
             event.isValid = 1;
 
+            event.data[0] = 0xA0 + chan;
+            event.data[1] = data[0];
+            evtPos.events.push_back(event);
+
             if(chan < 6)
             {
-                event.data[0] = 0xA0 + chan;
-                event.data[1] = data[0];
-                evtPos.events.push_back(event);
-
                 reg_b0_state[chan] = data[1] & 0xDF;
                 reg_b0_state[chan] |= 0x20;
-                event.data[0] = 0xB0 + chan;
-                event.data[1] = reg_b0_state[chan];
-                evtPos.events.push_back(event);
             }
             else if(chan <= 8)
-            {
-                event.data[0] = 0xA0 + chan;
-                event.data[1] = data[0];
-                evtPos.events.push_back(event);
-
                 reg_b0_state[chan] = data[1] & 0xDF;
-                event.data[0] = 0xB0 + chan;
-                event.data[1] = reg_b0_state[chan];
-                evtPos.events.push_back(event);
-            }
+
+            event.data[0] = 0xB0 + chan;
+            event.data[1] = reg_b0_state[chan];
+            evtPos.events.push_back(event);
 
             break;
 
@@ -2984,11 +2977,19 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             }
             break;
 
-        case 0x50: // Unknown command
-            break;
+//         case 0x50: // Unknown command
+// #ifdef KLM_DEBUG
+//             printf(" -- Unknown command %02X)\n", cmd);
+//             fflush(stdout);
+// #endif
+//             break;
 
-        case 0xE0: // Unknown command
-            break;
+//         case 0xE0: // Unknown command
+// #ifdef KLM_DEBUG
+//             printf(" -- Unknown command %02X)\n", cmd);
+//             fflush(stdout);
+// #endif
+//             break;
 
         case 0xF0: // Special event
             switch(cmd)
@@ -3085,7 +3086,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     if(!m_trackData[0].empty())
         m_currentPosition.track[0].pos = m_trackData[0].begin();
 
-    buildTimeLine(temposList);
+    buildTimeLine(std::vector<MidiEvent>());
 
     return true;
 }

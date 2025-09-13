@@ -178,6 +178,8 @@ bool MIDIplay::LoadMIDI_post()
     Synth &synth = *m_synth;
     MidiSequencer &seq = *m_sequencer;
     MidiSequencer::FileFormat format = seq.getFormat();
+    bool setToOPL2 = false;
+
     if(format == MidiSequencer::Format_CMF)
     {
         const std::vector<MidiSequencer::CmfInstrument> &instruments = seq.getRawCmfInstruments();
@@ -226,6 +228,7 @@ bool MIDIplay::LoadMIDI_post()
         synth.m_rhythmMode = true;
         synth.m_musicMode = Synth::MODE_CMF;
         synth.m_volumeScale = Synth::VOLUME_NATIVE;
+        setToOPL2 = true;
 
         synth.m_numChips = 1;
         synth.m_numFourOps = 0;
@@ -245,6 +248,7 @@ bool MIDIplay::LoadMIDI_post()
         synth.m_numFourOps  = 0; //Don't use 4-operator channels for IMF playing!
         synth.m_rhythmMode = false;//Don't enforce rhythm-mode when it's unneeded
         synth.m_musicMode = Synth::MODE_IMF;
+        setToOPL2 = true;
 
         synth.m_numChips = 1;
         synth.m_numFourOps = 0;
@@ -266,6 +270,9 @@ bool MIDIplay::LoadMIDI_post()
     //opl.Reset(); // ...twice (just in case someone misprogrammed OPL3 previously)
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
+
+    if(setToOPL2)
+        synth.toggleOPL3(false);
 
     return true;
 }
