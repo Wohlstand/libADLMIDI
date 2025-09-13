@@ -2657,19 +2657,19 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     evtPos.events.push_back(event);
     evtPos.delay = 0;
 
-    // Set snare frequency
-    const int rhythm_a0[] = {0x02, 0x02};
-    const int rhythm_b0[] = {0x0D, 0x0C};
+    // Initial rhythm frequencies
+    const int rhythm_a0[] = {0x03, 0x03, 0x87};
+    const int rhythm_b0[] = {0x10, 0x10, 0x09};
 
-    for(int c = 7; c <= 8; ++c)
+    for(int c = 6; c <= 8; ++c)
     {
         event.data[0] = 0xA0 + rm_map[(c - 6) * 2];
-        event.data[1] = rhythm_a0[c - 7];
+        event.data[1] = rhythm_a0[c - 6];
         evtPos.events.push_back(event);
 
-        reg_b0_state[c] = rhythm_b0[c - 7] & 0xDF;
+        reg_b0_state[c] = rhythm_b0[c - 6] & 0xDF;
         event.data[0] = 0xB0 + c;
-        event.data[1] = rhythm_b0[c - 7] & 0xDF;
+        event.data[1] = rhythm_b0[c - 6] & 0xDF;
         evtPos.events.push_back(event);
     }
 
@@ -2976,20 +2976,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 evtPos.events.push_back(event);
             }
             break;
-
-//         case 0x50: // Unknown command
-// #ifdef KLM_DEBUG
-//             printf(" -- Unknown command %02X)\n", cmd);
-//             fflush(stdout);
-// #endif
-//             break;
-
-//         case 0xE0: // Unknown command
-// #ifdef KLM_DEBUG
-//             printf(" -- Unknown command %02X)\n", cmd);
-//             fflush(stdout);
-// #endif
-//             break;
 
         case 0xF0: // Special event
             switch(cmd)
