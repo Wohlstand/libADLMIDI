@@ -281,16 +281,20 @@ bool MIDIplay::LoadMIDI(const std::string &filename)
 {
     FileAndMemReader file;
     file.openFile(filename.c_str());
+
     if(!LoadMIDI_pre())
         return false;
+
     MidiSequencer &seq = *m_sequencer;
     if(!seq.loadMIDI(file))
     {
         errorStringOut = seq.getErrorString();
         return false;
     }
+
     if(!LoadMIDI_post())
         return false;
+
     return true;
 }
 
@@ -298,16 +302,20 @@ bool MIDIplay::LoadMIDI(const void *data, size_t size)
 {
     FileAndMemReader file;
     file.openData(data, size);
+
     if(!LoadMIDI_pre())
         return false;
+
     MidiSequencer &seq = *m_sequencer;
     if(!seq.loadMIDI(file))
     {
         errorStringOut = seq.getErrorString();
         return false;
     }
+
     if(!LoadMIDI_post())
         return false;
+
     return true;
 }
 
