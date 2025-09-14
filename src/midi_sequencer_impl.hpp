@@ -2271,6 +2271,7 @@ public:
     }
 };
 
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 /**
  * @brief Detect the EA-MUS file format
  * @param head Header part
@@ -2295,7 +2296,6 @@ static bool detectRSXX(const char *head, FileAndMemReader &fr)
     return ret;
 }
 
-#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 /**
  * @brief Detect the Id-software Music File format
  * @param head Header part
@@ -2427,25 +2427,25 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
         return parseCMF(fr);
     }
 
-    // This file type should be parsed last!
+    if(detectRSXX(headerBuf, fr))
+    {
+        fr.seek(0, FileAndMemReader::SET);
+        return parseRSXX(fr);
+    }
+
     if(detectKLM(headerBuf, fr))
     {
         fr.seek(0, FileAndMemReader::SET);
         return parseKLM(fr);
     }
 
+    // This file type should be parsed last!
     if(detectIMF(headerBuf, fr))
     {
         fr.seek(0, FileAndMemReader::SET);
         return parseIMF(fr);
     }
 #endif
-
-    if(detectRSXX(headerBuf, fr))
-    {
-        fr.seek(0, FileAndMemReader::SET);
-        return parseRSXX(fr);
-    }
 
     m_errorString = "Unknown or unsupported file format";
     return false;
