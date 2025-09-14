@@ -322,7 +322,9 @@ public:
         //! EA-MUS format
         Format_RSXX,
         //! AIL's XMIDI format (act same as MIDI, but with exceptions)
-        Format_XMIDI
+        Format_XMIDI,
+        //! KLM format
+        Format_KLM
     };
 
     /**
@@ -802,12 +804,20 @@ public:
     void   setTempo(double tempo);
 
 private:
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
     /**
      * @brief Load file as Id-software-Music-File (Wolfenstein)
      * @param fr Context with opened file
      * @return true on successful load
      */
     bool parseIMF(FileAndMemReader &fr);
+
+    /**
+     * @brief Load file as Wacky Wheels KLM file
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseKLM(FileAndMemReader &fr);
 
     /**
      * @brief Load file as EA MUS
@@ -822,6 +832,7 @@ private:
      * @return true on successful load
      */
     bool parseCMF(FileAndMemReader &fr);
+#endif
 
     /**
      * @brief Load file as GMD/MUS files (ScummVM)
