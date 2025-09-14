@@ -2658,12 +2658,12 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     evtPos.delay = 0;
 
     // Initial rhythm frequencies
-    const int rhythm_a0[] = {0x03, 0x03, 0x87};
-    const int rhythm_b0[] = {0x10, 0x10, 0x09};
+    const int rhythm_a0[] = {0x57, 0x03, 0x57};
+    const int rhythm_b0[] = {0x0A, 0x0A, 0x09};
 
     for(int c = 6; c <= 8; ++c)
     {
-        event.data[0] = 0xA0 + rm_map[(c - 6) * 2];
+        event.data[0] = 0xA0 + c;
         event.data[1] = rhythm_a0[c - 6];
         evtPos.events.push_back(event);
 
