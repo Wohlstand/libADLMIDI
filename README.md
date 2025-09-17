@@ -191,6 +191,7 @@ To build that example you will need to have installed SDL2 library.
  * WinMM: Fixed sound damange when switching between banks while playing some music streams.
  * Fixed the crash when playing some files with Auto-Arpeggio enabled.
  * Added support for KLM music files from the Wacky Wheels game.
+ * Fixed buffered data corruption that leads a noisy output at some emulators (primarily at the LLE-OPL3).
 
 ## 1.6.0   2025-07-05
  * Fixed the work on big endian processors
