@@ -7,4 +7,7 @@ install(TARGETS mus2mid
 
 if(WIN32)
     set_property(TARGET mus2mid PROPERTY WIN32_EXECUTABLE OFF)
+    if(MSVC)
+        target_compile_definitions(mus2mid PRIVATE -DWIN32_CONSOLE)
+    endif()
 endif()

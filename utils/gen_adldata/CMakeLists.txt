@@ -76,6 +76,9 @@ set_nopie(gen_adldata)
 
 if(WIN32)
     set_property(TARGET gen_adldata PROPERTY WIN32_EXECUTABLE OFF)
+    if(MSVC)
+        target_compile_definitions(gen_adldata PRIVATE -DWIN32_CONSOLE)
+    endif()
 endif()
 
 if(WITH_GENADLDATA_DEEPDEBUG)

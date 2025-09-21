@@ -7,4 +7,7 @@ install(TARGETS xmi2mid
 
 if(WIN32)
     set_property(TARGET xmi2mid PROPERTY WIN32_EXECUTABLE OFF)
+    if(MSVC)
+        target_compile_definitions(xmi2mid PRIVATE -DWIN32_CONSOLE)
+    endif()
 endif()
