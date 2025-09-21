@@ -1,0 +1,271 @@
+name: WinMM Drv CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "${{ matrix.config.name }} | ${{ matrix.config.build_type }}"
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "WinMM drivers set",
+            os: windows-latest,
+            PLATFORM: x64,
+            WINXX_ARCH: win64,
+            extra_path: "/c/MinGW-Kit/bin",
+            extra_path_vanilla: "/c/MinGW-Kit/bin:/c/MinGW-Kit/Vanilla/bin",
+            extra_path_w32: "/c/MinGW-Kit/bin:/c/MinGW-Kit/w32/mingw32/bin",
+            extra_path_w64: "/c/MinGW-Kit/bin:/c/MinGW-Kit/w64/mingw64/bin",
+            extra_options: "-DWITH_OLD_UTILS=OFF -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=OFF -DWITH_MIDIPLAY=OFF -DWITH_VLC_PLUGIN=OFF -DWITH_WINMMDRV=ON",
+            build_type: "Debug",
+            package_type: "library",
+            upload_directory: "www/win32/",
+            mingw_vanilla_download: "https://wohlsoft.ru/docs/Software/MinGW/MinGW-6-3-x86-dw2.zip", mingw_vanilla_install_dir: "C:/MinGW-Kit/Vanilla/",
+            mingw_32_download: "https://wohlsoft.ru/docs/Software/MinGW/i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z", mingw_32_install_dir: "C:/MinGW-Kit/w32/",
+            mingw_64_download: "https://wohlsoft.ru/docs/Software/MinGW/x86_64-8.1.0-release-posix-seh-rt_v6-rev0.7z", mingw_64_install_dir: "C:/MinGW-Kit/w64/",
+            ninja_download: "https://wohlsoft.ru/docs/Software/Ninja-Build/ninja-win.zip", ninja_install_dir: "C:/MinGW-Kit/bin",
+            lftp_download: "https://wohlsoft.ru/docs/Software/lftp-4.4.15.win64-openssl-1.0.1g.7z", lftp_install_dir: "C:/MinGW-Kit"
+          }
+
+    steps:
+    - name: Check for the upload support
+      id: upload-check
+      shell: bash
+      run: |
+        if [[ "${{ secrets.builds_login }}" != '' && \
+              "${{ secrets.builds_password }}" != '' && \
+              "${{ secrets.builds_host }}" != '' ]]; then
+          echo "available=true" >> $GITHUB_OUTPUT;
+        else
+          echo "available=false" >> $GITHUB_OUTPUT;
+        fi
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 3
+        submodules: recursive
+
+    - uses: Wohlstand/branch-name@v1.0.1-wohl
+
+    - name: Check if a pull request
+      id: event-check
+      shell: bash
+      run: |
+        if [[ "${BRANCH_NAME}" == *"merge"* ]]; then
+          echo "--- This build is a pull-request ---"
+          echo "is_pull_request=true" >> $GITHUB_OUTPUT;
+        else
+          echo "--- This build is a normal branch build ---"
+          echo "is_pull_request=false" >> $GITHUB_OUTPUT;
+        fi
+
+    - name: Download Vanilla MinGW
+      if: matrix.config.mingw_vanilla_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.mingw_vanilla_download }}"
+        file-name: mingw.7z
+
+    - name: Extract Vanilla MinGW
+      if: matrix.config.mingw_vanilla_install_dir
+      shell: bash
+      run: |
+        7z x mingw.7z -o"${{ matrix.config.mingw_vanilla_install_dir }}"
+
+    - name: Download 32-bit MinGW-w64
+      if: matrix.config.mingw_32_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.mingw_32_download }}"
+        file-name: mingw.7z
+
+    - name: Extract 32-bit MinGW-w64
+      if: matrix.config.mingw_32_install_dir
+      shell: bash
+      run: |
+        7z x mingw.7z -o"${{ matrix.config.mingw_32_install_dir }}"
+
+    - name: Download 64-bit MinGW-w64
+      if: matrix.config.mingw_64_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.mingw_64_download }}"
+        file-name: mingw.7z
+
+    - name: Extract 64-bit MinGW-w64
+      if: matrix.config.mingw_64_install_dir
+      shell: bash
+      run: |
+        7z x mingw.7z -o"${{ matrix.config.mingw_64_install_dir }}"
+
+    - name: Download Ninja
+      if: matrix.config.ninja_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.ninja_download }}"
+        file-name: ninja.zip
+
+    - name: Extract Ninja
+      if: matrix.config.ninja_install_dir
+      shell: bash
+      run: |
+        7z x ninja.zip -o"${{ matrix.config.ninja_install_dir }}"
+
+    - name: Download LFTP
+      if: matrix.config.lftp_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.lftp_download }}"
+        file-name: lftp.7z
+
+    - name: Extract LFTP
+      if: matrix.config.lftp_install_dir
+      shell: bash
+      run: |
+        7z x lftp.7z bin etc -o"${{ matrix.config.lftp_install_dir }}"
+
+    - name: Configure (preXP)
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path_vanilla }}" ]]; then
+          export PATH=${{ matrix.config.extra_path_vanilla }}:${PATH}
+          echo "PATH environment: ${PATH}"
+        fi
+        echo "====================================="
+        gcc --version
+        echo "====================================="
+        git --version
+        echo "====================================="
+        cmake --version
+        echo "====================================="
+        cmake -B build-drv-prexp -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_WINMMDRV_PTHREADS=ON -DWITH_WINMMDRV_MINGWEX=ON -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_vanilla.cmake ${{ matrix.config.extra_options }} .
+
+    - name: Build (preXP)
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path_vanilla }}" ]]; then
+          export PATH=${{ matrix.config.extra_path_vanilla }}:${PATH}
+        fi
+        export MAKEFLAGS=--keep-going
+        cmake --build build-drv-prexp --target all --config ${{ matrix.config.build_type }} --parallel 3
+
+
+    - name: Configure (Win32)
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path_w32 }}" ]]; then
+          export PATH=${{ matrix.config.extra_path_w32 }}:${PATH}
+          echo "PATH environment: ${PATH}"
+        fi
+        echo "====================================="
+        gcc --version
+        echo "====================================="
+        git --version
+        echo "====================================="
+        cmake --version
+        echo "====================================="
+        cmake -B build-drv-32 -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_WINMMDRV_PTHREADS=ON -DWITH_WINMMDRV_MINGWEX=OFF -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_x32.cmake ${{ matrix.config.extra_options }} .
+
+    - name: Build (Win32)
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path_w32 }}" ]]; then
+          export PATH=${{ matrix.config.extra_path_w32 }}:${PATH}
+        fi
+        export MAKEFLAGS=--keep-going
+        cmake --build build-drv-32 --target all --config ${{ matrix.config.build_type }} --parallel 3
+
+
+    - name: Configure (Win64)
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path_w32 }}" ]]; then
+          export PATH=${{ matrix.config.extra_path_w32 }}:${PATH}
+          echo "PATH environment: ${PATH}"
+        fi
+        echo "====================================="
+        gcc --version
+        echo "====================================="
+        git --version
+        echo "====================================="
+        cmake --version
+        echo "====================================="
+        cmake -B build-drv-64 -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_WINMMDRV_PTHREADS=ON -DWITH_WINMMDRV_MINGWEX=OFF -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_x64.cmake ${{ matrix.config.extra_options }} .
+
+    - name: Build (Win64)
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path_w32 }}" ]]; then
+          export PATH=${{ matrix.config.extra_path_w32 }}:${PATH}
+        fi
+        export MAKEFLAGS=--keep-going
+        cmake --build build-drv-64 --target all --config ${{ matrix.config.build_type }} --parallel 3
+
+
+
+
+    - name: Pack Library Kit
+      if: success() && matrix.config.package_type == 'library'
+      shell: bash
+      run: |
+        mkdir _packed
+        mkdir x86
+        mkdir x64
+        files_list="adlmidiconfigtool.exe adlmididrv.dll libadlconfig.cpl drvsetup.exe drvtest.exe install.bat uninstall.bat"
+
+        cd build-drv-prexp
+        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-prexp.7z" "$files_list"
+        cd ..
+
+        cd build-drv-32
+        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-x86.7z" "$files_list"
+        for f in $files_list; do
+            cp $f ../x86
+        done
+        cd ..
+
+        cd build-drv-64
+        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-x64.7z" "$files_list"
+        for f in $files_list; do
+            cp $f ../x64
+        done
+        cd ..
+
+        cp cmake/win-ci/winmm/*.bat .
+        7z a -t7z -mx9 "_packed/libADLMIDI-winmm-driver-all.7z" *install*.bat x86 x64
+
+
+    - name: Deploy to builds.wohlsoft.ru
+      if: success() && github.event_name != 'pull_request' && steps.event-check.outputs.is_pull_request == 'false' && steps.upload-check.outputs.available == 'true'
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
+            export PATH=${{ matrix.config.extra_path }}:${PATH}
+        fi
+        UPLOAD_LIST="set ssl:verify-certificate no;"
+        for q in ./_packed/*.7z; do
+            UPLOAD_LIST="${UPLOAD_LIST} put -O ${{ matrix.config.upload_directory }} $q;"
+        done
+        lftp -e "${UPLOAD_LIST} exit" -u ${{ secrets.builds_login }},${{ secrets.builds_password }} ${{ secrets.builds_host }}
+
+
+    - name: List Build Directory
+      if: always()
+      shell: bash
+      run: |
+        git status
+        ls -lR build

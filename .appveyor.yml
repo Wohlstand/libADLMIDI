@@ -16,12 +16,12 @@ environment:
     WGET_BIN: "C:\\msys64\\usr\\bin\\wget.exe"
     VLC_DIR: "vlc-3.0.4"
   matrix:
-    - BUILD_TYPE: MinSizeRel
-      COMPILER: MinGW
-      PACKAGE_TYPE: WINMMDRIVERS
-      COMPILER_FAMILY: MinGW
-      GENERATOR: "Ninja"
-      PLATFORM: WinAll
+#    - BUILD_TYPE: MinSizeRel
+#      COMPILER: MinGW
+#      PACKAGE_TYPE: WINMMDRIVERS
+#      COMPILER_FAMILY: MinGW
+#      GENERATOR: "Ninja"
+#      PLATFORM: WinAll
 
 #    - BUILD_TYPE: Release
 #      COMPILER: MinGW-w32
