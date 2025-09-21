@@ -31,7 +31,7 @@ jobs:
             extra_path_w32: "/c/MinGW-Kit/bin:/c/MinGW-Kit/w32/mingw32/bin",
             extra_path_w64: "/c/MinGW-Kit/bin:/c/MinGW-Kit/w64/mingw64/bin",
             extra_options: "-DWITH_OLD_UTILS=OFF -DWITH_GENADLDATA=OFF -DlibADLMIDI_STATIC=ON -DlibADLMIDI_SHARED=OFF -DWITH_MIDIPLAY=OFF -DWITH_VLC_PLUGIN=OFF -DWITH_WINMMDRV=ON",
-            build_type: "Debug",
+            build_type: "Release",
             package_type: "library",
             upload_directory: "www/win32/",
             mingw_vanilla_download: "https://wohlsoft.ru/docs/Software/MinGW/MinGW-6-3-x86-dw2.zip", mingw_vanilla_install_dir: "C:/MinGW-Kit/Vanilla/",
