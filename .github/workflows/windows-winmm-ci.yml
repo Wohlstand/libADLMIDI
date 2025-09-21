@@ -152,7 +152,14 @@ jobs:
         echo "====================================="
         cmake --version
         echo "====================================="
-        cmake -B build-drv-prexp -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_WINMMDRV_PTHREADS=ON -DWITH_WINMMDRV_MINGWEX=ON -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_vanilla.cmake ${{ matrix.config.extra_options }} .
+        cmake -B build-drv-prexp -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+            -DWITH_WINMMDRV_PTHREADS=ON \
+            -DWITH_WINMMDRV_MINGWEX=ON \
+            -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" \
+            -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_vanilla.cmake \
+            ${{ matrix.config.extra_options }} \
+            .
 
     - name: Build (preXP)
       shell: bash
@@ -178,7 +185,14 @@ jobs:
         echo "====================================="
         cmake --version
         echo "====================================="
-        cmake -B build-drv-32 -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_WINMMDRV_PTHREADS=ON -DWITH_WINMMDRV_MINGWEX=OFF -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_x32.cmake ${{ matrix.config.extra_options }} .
+        cmake -B build-drv-32 -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+            -DWITH_WINMMDRV_PTHREADS=ON \
+            -DWITH_WINMMDRV_MINGWEX=OFF \
+            -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" \
+            -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_x32.cmake \
+            ${{ matrix.config.extra_options }} \
+            .
 
     - name: Build (Win32)
       shell: bash
@@ -204,7 +218,14 @@ jobs:
         echo "====================================="
         cmake --version
         echo "====================================="
-        cmake -B build-drv-64 -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_WINMMDRV_PTHREADS=ON -DWITH_WINMMDRV_MINGWEX=OFF -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_x64.cmake ${{ matrix.config.extra_options }} .
+        cmake -B build-drv-64 -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+            -DWITH_WINMMDRV_PTHREADS=ON \
+            -DWITH_WINMMDRV_MINGWEX=OFF \
+            -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" \
+            -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_windows_winmm_mingw_toolchain_x64.cmake \
+            ${{ matrix.config.extra_options }} \
+            .
 
     - name: Build (Win64)
       shell: bash
@@ -228,18 +249,18 @@ jobs:
         files_list="adlmidiconfigtool.exe adlmididrv.dll libadlconfig.cpl drvsetup.exe drvtest.exe install.bat uninstall.bat"
 
         cd build-drv-prexp
-        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-prexp.7z" "$files_list"
+        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-prexp.7z" $files_list
         cd ..
 
         cd build-drv-32
-        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-x86.7z" "$files_list"
+        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-x86.7z" $files_list
         for f in $files_list; do
             cp $f ../x86
         done
         cd ..
 
         cd build-drv-64
-        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-x64.7z" "$files_list"
+        7z a -t7z -mx9 "../_packed/libADLMIDI-winmm-driver-x64.7z" $files_list
         for f in $files_list; do
             cp $f ../x64
         done
@@ -268,4 +289,9 @@ jobs:
       shell: bash
       run: |
         git status
-        ls -lR build
+        ls -lR build-drv-prexp
+        ls -lR build-drv-32
+        ls -lR build-drv-64
+        ls -lR _packed
+        ls -lR x86
+        ls -lR x64
