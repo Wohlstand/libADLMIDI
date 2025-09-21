@@ -184,7 +184,7 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
-## 1.6.1   dev
+## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
  * Fixed crash when playing too many notes at the same channel.
  * Fixed an unexpected loud noise sounding after switching bank from the 4-op only to 2-op on the fly.
