@@ -59,11 +59,8 @@ void ESFMuOPL3::writeReg(uint16_t addr, uint8_t data)
 
 void ESFMuOPL3::writePan(uint16_t addr, uint8_t data)
 {
-    // FIXME: Implement panning support
-    // esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
-    // ESFM_write?pan(chip_r, addr, data);
-    (void)(addr);
-    (void)(data);
+    esfm_chip *chip_r = reinterpret_cast<esfm_chip*>(m_chip);
+    ESFM_write_pan(chip_r, addr, data);
 }
 
 void ESFMuOPL3::nativeGenerate(int16_t *frame)
@@ -79,7 +76,7 @@ const char *ESFMuOPL3::emulatorName()
 
 bool ESFMuOPL3::hasFullPanning()
 {
-    return false;
+    return true;
 }
 
 OPLChipBase::ChipType ESFMuOPL3::chipType()
