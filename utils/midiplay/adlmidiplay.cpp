@@ -627,8 +627,8 @@ static struct TimeCounter
 #endif
 
 #ifdef ADLMIDI_ENABLE_HW_DOS
-    volatile unsigned newTimerFreq;
-    unsigned timerPeriod;
+    volatile unsigned long newTimerFreq;
+    volatile unsigned long timerPeriod;
     int haveYield;
     int haveDosIdle;
     volatile unsigned int ring;
@@ -743,7 +743,7 @@ static struct TimeCounter
 
         BIOStimer_begin = BIOStimer;
 
-        std::fprintf(stdout, " - [DOS] Running clock with %d hz\n", newTimerFreq);
+        std::fprintf(stdout, " - [DOS] Running clock with %ld hz\n", newTimerFreq);
     }
 
     void restoreDosTimer()
@@ -780,6 +780,7 @@ static struct TimeCounter
                 while(BIOStimer < timerNext)
                     delay(1);
             }
+
             timerNext = BIOStimer + 1;
             break;
 
