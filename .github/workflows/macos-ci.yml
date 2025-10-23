@@ -24,11 +24,11 @@ jobs:
         - {
             name: "Intel x64",
             arch: "x86_64",
-            os: macos-13,
+            os: macos-15-intel,
             osx_target: "10.12",
             generator: "Ninja",
             build_type: "Release",
-            upload_directory: "www/ubuntu-24-04/",
+            upload_directory: "www/macosx/",
 
             deps_cmdline: "brew install sdl2 ninja"
           }
@@ -39,7 +39,7 @@ jobs:
             osx_target: "10.13",
             generator: "Ninja",
             build_type: "Release",
-            upload_directory: "www/ubuntu-24-04/",
+            upload_directory: "www/macosx/",
 
             deps_cmdline: "brew install sdl2 ninja"
           }
