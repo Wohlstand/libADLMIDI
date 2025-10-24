@@ -42,7 +42,7 @@ blocks:
             - cd build-dos-ne
             - 'wget https://wohlsoft.ru/docs/Software/DJGPP/djgpp-linux-x-dos-12.1.0.tar.gz -O djgpp.tar.gz'
             - sudo tar -xf djgpp.tar.gz -C /usr/local/
-            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_EMBEDDED_BANKS=OFF -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
+            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_EMBEDDED_BANKS=OFF -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
             - ../cmake/djgpp/djgpp-cmake-core.sh --build . --config Release --target all -- -j 3
             - cd ..
         - name: DJGPP DOS With Embedded banks
@@ -53,7 +53,7 @@ blocks:
             - 'wget https://wohlsoft.ru/docs/Software/DJGPP/v2misc/csdpmi7b.zip'
             - sudo tar -xf djgpp.tar.gz -C /usr/local/
             - unzip csdpmi7b.zip
-            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
+            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
             - ../cmake/djgpp/djgpp-cmake-core.sh --build . --config Release --target all -- -j 3
             - zip -j -9 adlmidi-dos32.zip adlmidi.exe adlmidi2.exe bin/CWSDPMI.EXE
             - 'lftp -e "set ssl:verify-certificate no; put -O ./dos/ adlmidi-dos32.zip; exit" ${FTP_SERVER}'
