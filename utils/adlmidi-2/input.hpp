@@ -20,8 +20,8 @@
 #include <sys/exceptn.h>
 #include <dos.h>
 #include <stdlib.h>
+#include "dos_tman.h"
 #define BIOStimer _farpeekl(_dos_ds, 0x46C)
-static const unsigned NewTimerFreq = 209;
 #elif !defined(_WIN32) || defined(__CYGWIN__)
 # include <termios.h>
 # include <fcntl.h>

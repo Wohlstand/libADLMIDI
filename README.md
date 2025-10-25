@@ -184,6 +184,9 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
+## 1.5.2   dev
+ * Fixed the random stuck problem in the DOS version of the ADLMIDI player.
+
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
  * Fixed crash when playing too many notes at the same channel.

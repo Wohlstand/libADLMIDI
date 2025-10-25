@@ -25,6 +25,15 @@
 
 #include "input.hpp"
 
+#if defined(__DJGPP__)
+static unsigned NewTimerFreq = 209;
+static void waitDosTimerTick()
+{
+    volatile unsigned long timer = BIOStimer;
+    while(timer == BIOStimer);
+}
+#endif
+
 //#ifndef _WIN32
 //#define SUPPORT_VIDEO_OUTPUT// MOVED TO CMake build script
 //#define SUPPORT_PUZZLE_GAME// MOVED TO CMake build script
@@ -1670,18 +1679,170 @@ static bool is_number(const std::string &s)
     return !s.empty() && it == s.end();
 }
 
-int main(int argc, char **argv)
+#ifdef __DJGPP__
+static double s_midi_tick_delay = 0.00000001;
+
+static void s_midiLoop(DosTaskman::DosTask *task)
 {
-#if !defined(HARDWARE_OPL3) && !defined(_WIN32)
-    // How long is SDL buffer, in seconds?
-    // The smaller the value, the more often AdlAudioCallBack()
-    // is called.
-    const double AudioBufferLength = 0.045;
+    if(QuitFlag)
+        return;
+    ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
+    const double mindelay = 1.0 / task->getFreq();
+
+    s_midi_tick_delay = adl_tickEvents(player, s_midi_tick_delay < mindelay ? s_midi_tick_delay : mindelay, mindelay);
+
+    if(!DoingInstrumentTesting)
+    {
+        if(adl_atEnd(player) && s_midi_tick_delay <= 0)
+            QuitFlag = true;
+    }
+}
+#endif
+
+static void runPlaybackLoop(ADL_MIDIPlayer *myDevice,
+                            AdlInstrumentTester &InstrumentTester
+#ifndef __DJGPP__
+                            ,
+                            const SDL_AudioSpec &spec,
+                            const SDL_AudioSpec &obtained
+#endif
+                            )
+{
+#ifndef __DJGPP__
+    short buff[1024];
     // How much do WE buffer, in seconds? The smaller the value,
     // the more prone to sound chopping we are.
     const double OurHeadRoomLength = 0.1;
     // The lag between visual content and audio content equals
     // the sum of these two buffers.
+#else
+    (void)myDevice;
+#endif
+
+    while(!QuitFlag)
+    {
+#ifndef __DJGPP__
+        //const double eat_delay = delay < maxdelay ? delay : maxdelay;
+        //delay -= eat_delay;
+        size_t got = 0;
+
+        if(!DoingInstrumentTesting)
+            got = (size_t)adl_play(myDevice, 1024, buff);
+        else
+            got = (size_t)adl_generate(myDevice, 1024, buff);
+        if(got <= 0)
+            break;
+        /* Process it */
+        SendStereoAudio(static_cast<unsigned long>(got / 2), buff);
+
+        //static double carry = 0.0;
+        //carry += PCM_RATE * eat_delay;
+        //const unsigned long n_samples = (unsigned) carry;
+        //carry -= n_samples;
+
+        //if(SkipForward > 0)
+        //    SkipForward -= 1;
+        //else
+        //{
+        //    if(NumCards == 1)
+        //    {
+        //        player.opl.cards[0].Generate(0, SendStereoAudio, n_samples);
+        //    }
+        //    else if(n_samples > 0)
+        //    {
+        //        /* Mix together the audio from different cards */
+        //        static std::vector<int> sample_buf;
+        //        sample_buf.clear();
+        //        sample_buf.resize(n_samples*2);
+        //        struct Mix
+        //        {
+        //            static void AddStereoAudio(unsigned long count, int* samples)
+        //            {
+        //                for(unsigned long a=0; a<count*2; ++a)
+        //                    sample_buf[a] += samples[a];
+        //            }
+        //        };
+        //        for(unsigned card = 0; card < NumCards; ++card)
+        //        {
+        //            player.opl.cards[card].Generate(
+        //                0,
+        //                Mix::AddStereoAudio,
+        //                n_samples);
+        //        }
+        //        /* Process it */
+        //        SendStereoAudio(n_samples, &sample_buf[0]);
+        //    }
+
+        //fprintf(stderr, "Enter: %u (%.2f ms)\n", (unsigned)AudioBuffer.size(),
+        //    AudioBuffer.size() * .5e3 / obtained.freq);
+        #ifndef _WIN32
+        const SDL_AudioSpec &spec_ = (WritePCMfile ? spec : obtained);
+        for(unsigned grant = 0; AudioBuffer.size() > spec_.samples + (spec_.freq * 2) * OurHeadRoomLength; ++grant)
+        {
+            if(!WritePCMfile)
+            {
+                if(UI.CheckTetris() || grant % 4 == 0)
+                {
+                    SDL_Delay(1); // std::min(10.0, 1e3 * eat_delay) );
+                }
+            }
+            else
+            {
+                for(unsigned n = 0; n < 128; ++n) UI.CheckTetris();
+                AudioBuffer_lock.Lock();
+                AudioBuffer.clear();
+                AudioBuffer_lock.Unlock();
+            }
+        }
+        #else
+        //Sleep(1e3 * eat_delay);
+        #endif
+        //fprintf(stderr, "Exit: %u\n", (unsigned)AudioBuffer.size());
+        //}
+#else /* DJGPP */
+        UI.IllustrateVolumes(0, 0);
+
+        waitDosTimerTick();
+
+        if(kbhit())
+        {   // Quit on ESC key!
+            int c = getch();
+            if(c == 27)
+                QuitFlag = true;
+        }
+#endif
+
+        //double nextdelay =
+        if(DoingInstrumentTesting)
+        {
+            if(!InstrumentTester.HandleInputChar(Input.PeekInput()))
+                QuitFlag = true;
+        }
+
+        //: player.Tick(eat_delay, mindelay);
+
+        UI.GotoXY(0, 0);
+        UI.ShowCursor();
+
+        /*
+         * TODO: Implement the public "tick()" function for the Hardware OPL3 chip support on DJGPP
+         */
+
+        //tick_delay = nextdelay;
+    }
+}
+
+int main(int argc, char **argv)
+{
+#ifdef __DJGPP__
+    DosTaskman taskMan;
+#endif
+
+#if !defined(HARDWARE_OPL3) && !defined(_WIN32)
+    // How long is SDL buffer, in seconds?
+    // The smaller the value, the more often AdlAudioCallBack()
+    // is called.
+    const double AudioBufferLength = 0.045;
 #endif
 
 #ifndef _WIN32
@@ -1823,7 +1984,26 @@ int main(int argc, char **argv)
             ParseReverb(argv[3]);
             had_option = true;
         }
+#else
+        else if(!std::strcmp("--time-freq", argv[2]))
+        {
+            if(argc <= 3)
+            {
+                fprintf(stderr, "The option --time-freq requires an argument!\n");
+                return 1;
+            }
+
+            NewTimerFreq = std::strtoul(argv[3], NULL, 0);
+            if(NewTimerFreq == 0)
+            {
+                fprintf(stderr, "The option --time-freq requires a non-zero integer argument!\n");
+                return 1;
+            }
+
+            had_option = true;
+        }
 #endif
+        // NewTimerFreq
         else if(!std::strcmp("-w", argv[2]))
         {
             loopEnabled = 0;
@@ -1914,6 +2094,7 @@ int main(int argc, char **argv)
                     UI.ShowCursor();
                     UI.ColorReset();
                     std::printf("\n");
+                    adl_close(myDevice);
                     return 1;
                 }
             }
@@ -1928,6 +2109,7 @@ int main(int argc, char **argv)
                 UI.ShowCursor();
                 UI.ColorReset();
                 std::printf("\n");
+                adl_close(myDevice);
                 return 1;
             }
 
@@ -1962,6 +2144,7 @@ int main(int argc, char **argv)
             UI.ShowCursor();
             UI.ColorReset();
             std::printf("\n");
+            adl_close(myDevice);
             return 0;
         }
     }
@@ -1975,6 +2158,7 @@ int main(int argc, char **argv)
             UI.ShowCursor();
             UI.ColorReset();
             std::printf("\n");
+            adl_close(myDevice);
             return 0;
         }
     }
@@ -2009,6 +2193,7 @@ int main(int argc, char **argv)
         UI.ShowCursor();
         UI.ColorReset();
         std::printf("\n");
+        adl_close(myDevice);
         return 2;
     }
 
@@ -2041,146 +2226,24 @@ int main(int argc, char **argv)
         InstrumentTester.start();
 
     //static std::vector<int> sample_buf;
-#ifdef __DJGPP__
-    double tick_delay = 0.0;
-#endif
+// #ifdef __DJGPP__
+//     double tick_delay = 0.0;
+// #endif
 
-#ifndef __DJGPP__
-    //sample_buf.resize(1024);
-    short buff[1024];
-#endif
+// #ifndef __DJGPP__
+//     //sample_buf.resize(1024);
+//     short buff[1024];
+// #endif
 
     UI.TetrisLaunched = true;
-    while(!QuitFlag)
-    {
-#ifndef __DJGPP__
-        //const double eat_delay = delay < maxdelay ? delay : maxdelay;
-        //delay -= eat_delay;
-        size_t got = 0;
-
-        if(!DoingInstrumentTesting)
-            got = (size_t)adl_play(myDevice, 1024, buff);
-        else
-            got = (size_t)adl_generate(myDevice, 1024, buff);
-        if(got <= 0)
-            break;
-        /* Process it */
-        SendStereoAudio(static_cast<unsigned long>(got / 2), buff);
-
-        //static double carry = 0.0;
-        //carry += PCM_RATE * eat_delay;
-        //const unsigned long n_samples = (unsigned) carry;
-        //carry -= n_samples;
-
-        //if(SkipForward > 0)
-        //    SkipForward -= 1;
-        //else
-        //{
-        //    if(NumCards == 1)
-        //    {
-        //        player.opl.cards[0].Generate(0, SendStereoAudio, n_samples);
-        //    }
-        //    else if(n_samples > 0)
-        //    {
-        //        /* Mix together the audio from different cards */
-        //        static std::vector<int> sample_buf;
-        //        sample_buf.clear();
-        //        sample_buf.resize(n_samples*2);
-        //        struct Mix
-        //        {
-        //            static void AddStereoAudio(unsigned long count, int* samples)
-        //            {
-        //                for(unsigned long a=0; a<count*2; ++a)
-        //                    sample_buf[a] += samples[a];
-        //            }
-        //        };
-        //        for(unsigned card = 0; card < NumCards; ++card)
-        //        {
-        //            player.opl.cards[card].Generate(
-        //                0,
-        //                Mix::AddStereoAudio,
-        //                n_samples);
-        //        }
-        //        /* Process it */
-        //        SendStereoAudio(n_samples, &sample_buf[0]);
-        //    }
-
-        //fprintf(stderr, "Enter: %u (%.2f ms)\n", (unsigned)AudioBuffer.size(),
-        //    AudioBuffer.size() * .5e3 / obtained.freq);
-        #ifndef _WIN32
-        const SDL_AudioSpec &spec_ = (WritePCMfile ? spec : obtained);
-        for(unsigned grant = 0; AudioBuffer.size() > spec_.samples + (spec_.freq * 2) * OurHeadRoomLength; ++grant)
-        {
-            if(!WritePCMfile)
-            {
-                if(UI.CheckTetris() || grant % 4 == 0)
-                {
-                    SDL_Delay(1); // std::min(10.0, 1e3 * eat_delay) );
-                }
-            }
-            else
-            {
-                for(unsigned n = 0; n < 128; ++n) UI.CheckTetris();
-                AudioBuffer_lock.Lock();
-                AudioBuffer.clear();
-                AudioBuffer_lock.Unlock();
-            }
-        }
-        #else
-        //Sleep(1e3 * eat_delay);
-        #endif
-        //fprintf(stderr, "Exit: %u\n", (unsigned)AudioBuffer.size());
-        //}
-#else /* DJGPP */
-        UI.IllustrateVolumes(0, 0);
-        const double mindelay = 1.0 / NewTimerFreq;
-
-        //__asm__ volatile("sti\nhlt");
-        //usleep(10000);
-        __dpmi_yield();
-
-        static unsigned long PrevTimer = BIOStimer;
-        const unsigned long CurTimer = BIOStimer;
-        const double eat_delay = (CurTimer - PrevTimer) / (double)NewTimerFreq;
-        PrevTimer = CurTimer;
-
-        if(kbhit())
-        {   // Quit on ESC key!
-            int c = getch();
-            if(c == 27)
-                QuitFlag = true;
-        }
+#ifdef __DJGPP__
+    DosTaskman::DosTask *midiTask = taskMan.addTask(s_midiLoop, NewTimerFreq, 1, myDevice);
+    taskMan.dispatch();
+    runPlaybackLoop(myDevice, InstrumentTester);
+    taskMan.terminate(midiTask);
+#else
+    runPlaybackLoop(myDevice, InstrumentTester, spec, obtained);
 #endif
-
-        //double nextdelay =
-        if(DoingInstrumentTesting)
-        {
-            if(!InstrumentTester.HandleInputChar(Input.PeekInput()))
-                QuitFlag = true;
-            #ifdef __DJGPP__
-            else
-                tick_delay = adl_tickEvents(myDevice, eat_delay, mindelay);
-            #endif
-        }
-        #ifdef __DJGPP__
-        else
-        {
-            tick_delay = adl_tickEvents(myDevice, eat_delay, mindelay);
-            if(adl_atEnd(myDevice) && tick_delay <= 0)
-                QuitFlag = true;
-        }
-        #endif
-        //: player.Tick(eat_delay, mindelay);
-
-        UI.GotoXY(0, 0);
-        UI.ShowCursor();
-
-        /*
-         * TODO: Implement the public "tick()" function for the Hardware OPL3 chip support on DJGPP
-         */
-
-        //tick_delay = nextdelay;
-    }
 
     //Shut up all sustaining notes
     adl_panic(myDevice);

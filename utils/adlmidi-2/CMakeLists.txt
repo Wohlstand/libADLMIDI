@@ -29,6 +29,13 @@ list(APPEND adlmidi2_src
     ${UTF8MAIN_SRCS}
 )
 
+if(ADLMIDI_DOS)
+    list(APPEND adlmidi2_src
+        ../midiplay/dos_tman.h
+        ../midiplay/dos_tman.cpp
+    )
+endif()
+
 if(ADLMIDI2_HAS_PUZZLE_GAME)
     list(APPEND adlmidi2_src puzzlegame.cc puzzlegame.hpp)
 endif()

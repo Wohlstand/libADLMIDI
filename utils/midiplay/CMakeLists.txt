@@ -29,6 +29,13 @@ if(WIN32 AND NOT USE_SDL2_AUDIO)
     )
 endif()
 
+if(ADLMIDI_DOS)
+    list(APPEND ADLMIDI_PLAY_SRC
+        dos_tman.h
+        dos_tman.cpp
+    )
+endif()
+
 option(DEBUG_SONG_SWITCHING  "Enable song switching by left and right keys (Linux only)" OFF)
 option(ENABLE_TERMINAL_HOTKEYS  "Enable use of ncurses library to handle keyboard actions" OFF)
 option(TERMINAL_USE_NCURSES  "Enable use of ncurses library to handle keyboard actions" OFF)
