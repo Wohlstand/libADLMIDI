@@ -1126,9 +1126,24 @@ static void s_midiLoop(DosTaskman::DosTask *task)
         stop = false;
 }
 
+static void setCursorVisibility(bool visible)
+{
+    union REGS regs;
+
+    regs.w.ax = 0x0100;
+    regs.w.cx = visible ? 0x0708 : 0x2000;
+#if defined(__FLAT__) || defined(__DJGPP__)
+    int386(0x10, &regs, &regs);
+#else
+    int86(0x10, &regs, &regs);
+#endif
+}
+
 static void runDOSLoop(ADL_MIDIPlayer *myDevice)
 {
     s_timeCounter.clearLineR();
+
+    setCursorVisibility(false);
 
     while(!stop)
     {
@@ -1145,6 +1160,8 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
 
         s_timeCounter.waitDosTimerTick();
     }
+
+    setCursorVisibility(true);
 
     s_timeCounter.clearLine();
 
