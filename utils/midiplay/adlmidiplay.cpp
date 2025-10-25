@@ -1111,7 +1111,8 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
 
 #else // ADLMIDI_ENABLE_HW_DOS
 
-static double s_midi_tick_delay = 0.00000001;
+static double s_extra_delay = 0.0;
+static DosTaskman *s_taskman = NULL;
 
 static void s_midiLoop(DosTaskman::DosTask *task)
 {
@@ -1120,9 +1121,23 @@ static void s_midiLoop(DosTaskman::DosTask *task)
 
     ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
     const double mindelay = 1.0 / task->getFreq();
+    volatile unsigned long begin = BIOStimer;
+    volatile unsigned long end;
+    double tickDelay;
 
-    s_midi_tick_delay = adl_tickEvents(player, mindelay, (s_midi_tick_delay < mindelay ? s_midi_tick_delay : mindelay));
-    if(adl_atEnd(player) && s_midi_tick_delay <= 0)
+    tickDelay = adl_tickEvents(player, mindelay + s_extra_delay, mindelay / 10.0);
+
+    end = BIOStimer;
+    s_extra_delay = 0.0;
+
+    if(s_taskman && end > begin)
+    {
+        double delay = (end - begin) / (double)s_taskman->getCurClockRate();
+        if(delay > mindelay)
+            s_extra_delay = (mindelay - delay);
+    }
+
+    if(adl_atEnd(player) && tickDelay <= 0)
         stop = false;
 }
 
@@ -2037,6 +2052,7 @@ int main(int argc, char **argv)
         }
 #   else
         DosTaskman::DosTask *midiTask = taskMan.addTask(s_midiLoop, s_devSetup.clock_freq, 1, myDevice);
+        s_taskman = &taskMan;
         taskMan.dispatch();
         runDOSLoop(myDevice);
         taskMan.terminate(midiTask);
