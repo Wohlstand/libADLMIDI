@@ -994,7 +994,7 @@ ESFM_init (esfm_chip *chip)
 
 		channel->chip = chip;
 		channel->channel_idx = channel_idx;
-		channel->pan[0] = 46340; // center pan from pan law table
+		channel->pan[0] = 46340; /* center pan from pan law table */
 		channel->pan[1] = 46340;
 
 		for (slot_idx = 0; slot_idx < 4; slot_idx++)
