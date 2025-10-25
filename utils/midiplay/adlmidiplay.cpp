@@ -204,6 +204,14 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 #if defined(__WATCOMC__)
 #include <stdio.h> // snprintf is here!
 #define flushout(stream)
+#elif defined(__DJGPP__)
+static bool s_flushing = false;
+#define flushout(stream) \
+    {\
+        s_flushing = true;\
+        std::fflush(stream);\
+        s_flushing = false;\
+    }
 #else
 #define flushout(stream) std::fflush(stream)
 #endif
@@ -1113,29 +1121,31 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
 
 static double s_extra_delay = 0.0;
 static DosTaskman *s_taskman = NULL;
+static volatile unsigned long s_timerPrev = 0;
 
 static void s_midiLoop(DosTaskman::DosTask *task)
 {
-    if(stop)
+    if(stop || s_flushing)
         return;
 
     ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
     const double mindelay = 1.0 / task->getFreq();
-    volatile unsigned long begin = BIOStimer;
-    volatile unsigned long end;
+    volatile unsigned long timerCur;
     double tickDelay;
 
     tickDelay = adl_tickEvents(player, mindelay + s_extra_delay, mindelay / 10.0);
 
-    end = BIOStimer;
+    timerCur = BIOStimer;
     s_extra_delay = 0.0;
 
-    if(s_taskman && end > begin)
+    if(s_taskman && timerCur > s_timerPrev)
     {
-        double delay = (end - begin) / (double)s_taskman->getCurClockRate();
+        double delay = (timerCur - s_timerPrev) / (double)s_taskman->getCurClockRate();
         if(delay > mindelay)
             s_extra_delay = (mindelay - delay);
     }
+
+    s_timerPrev = timerCur;
 
     if(adl_atEnd(player) && tickDelay <= 0)
         stop = false;
@@ -1159,6 +1169,8 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
     s_timeCounter.clearLineR();
 
     setCursorVisibility(false);
+
+    s_timerPrev = BIOStimer;
 
     while(!stop)
     {
@@ -2080,7 +2092,7 @@ int main(int argc, char **argv)
     adl_close(myDevice);
 
     printf("\n");
-    fflush(stdout);
+    flushout(stdout);
 
     return 0;
 }
