@@ -25,9 +25,12 @@
 #include <dpmi.h>
 #include <pc.h>
 #include <go32.h>
+#include <sys/farptr.h>
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+
 #include "dos_tman.h"
 
 #define TIMER_IRQ 8
@@ -147,6 +150,16 @@ void DosTaskman::setTimer(long tickBase)
 
     if(speed < m_timerRate)
         setClockRate(speed);
+}
+
+unsigned long DosTaskman::getCurTicks()
+{
+    return _farpeekl(_dos_ds, 0x46C);
+}
+
+unsigned long DosTaskman::getCurClockRate() const
+{
+    return m_timerRate;
 }
 
 DosTaskman::DosTask *DosTaskman::addTask(void (*callback)(DosTaskman::DosTask *), int freq, int priority, void *userData)

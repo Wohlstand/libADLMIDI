@@ -78,6 +78,9 @@ public:
     void setClockRate(long frequency);
     void setTimer(long tickBase);
 
+    static unsigned long getCurTicks();
+    unsigned long getCurClockRate() const;
+
     /*!
      * \brief Add a callback function as a task
      * \param freq How many times callback function should be called

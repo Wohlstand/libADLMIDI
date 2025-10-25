@@ -214,10 +214,8 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 #include <dos.h>
 
 #ifdef __DJGPP__
-#include <go32.h>
-#include <sys/farptr.h>
-#define BIOStimer _farpeekl(_dos_ds, 0x46C)
 #include "dos_tman.h"
+#define BIOStimer DosTaskman::getCurTicks()
 #endif//__DJGPP__
 
 #ifdef __WATCOMC__
@@ -1123,7 +1121,7 @@ static void s_midiLoop(DosTaskman::DosTask *task)
     ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
     const double mindelay = 1.0 / task->getFreq();
 
-    s_midi_tick_delay = adl_tickEvents(player, s_midi_tick_delay < mindelay ? s_midi_tick_delay : mindelay, mindelay);
+    s_midi_tick_delay = adl_tickEvents(player, mindelay, (s_midi_tick_delay < mindelay ? s_midi_tick_delay : mindelay));
     if(adl_atEnd(player) && s_midi_tick_delay <= 0)
         stop = false;
 }
