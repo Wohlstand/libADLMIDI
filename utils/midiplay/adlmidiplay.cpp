@@ -525,9 +525,9 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
 #ifdef ADLMIDI_ENABLE_HW_DOS
 static inline void keyWait()
 {
-    std::printf("\n<press any key to continue...>");
+    std::printf("<press any key to continue...>");
     getch();
-    std::printf("\r                              \n");
+    std::printf("\r                              \r");
 }
 #endif
 
@@ -546,7 +546,7 @@ static void printBanks()
         {
             std::printf("%10s%2u = %s\n", a ? "" : "Banks:", a, banknames[a]);
 #ifdef ADLMIDI_ENABLE_HW_DOS
-            if(((a - 15) % 23 == 0 && a != 0))
+            if(((a - 16) % 24 == 0 && a != 0))
                 keyWait();
 #endif
         }
@@ -1423,7 +1423,7 @@ static struct Args
                 if(c == '\n')
                     lines++;
 
-                if(lines >= 23)
+                if(lines >= 24)
                 {
                     keyWait();
                     lines = 0;
