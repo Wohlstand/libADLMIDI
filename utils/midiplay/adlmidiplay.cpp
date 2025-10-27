@@ -523,6 +523,7 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
     va_end(args);
     if(rc > 0)
     {
+        std::fprintf(stdout, "                                                                              \r");
         std::fprintf(stdout, " - Debug: %s\n", buffer);
         flushout(stdout);
     }
@@ -680,7 +681,7 @@ static struct TimeCounter
 
     void clearLineR()
     {
-        std::fprintf(stdout, "                                               \r");
+        std::fprintf(stdout, "                                                                              \r");
         flushout(stdout);
     }
 
@@ -723,7 +724,7 @@ static struct TimeCounter
 
         if(complete_prev != complete)
         {
-            std::fprintf(stdout, "                                               \r");
+            std::fprintf(stdout, "                                                                              \r");
             std::fprintf(stdout, "Recording WAV... [%d%% completed]\r", complete);
             flushout(stdout);
             complete_prev = complete;
@@ -732,7 +733,7 @@ static struct TimeCounter
 
     void clearLine()
     {
-        std::fprintf(stdout, "                                               \n\n");
+        std::fprintf(stdout, "                                                                              \n\n");
         flushout(stdout);
     }
 
