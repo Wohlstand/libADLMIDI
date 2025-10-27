@@ -645,9 +645,19 @@ public:
 
 private:
     //! Per-track MIDI devices map
-    std::map<std::string, size_t> m_midiDevices;
+    struct MidiDeviceEntry
+    {
+        char name[100];
+        size_t track;
+    } m_midiDevices[127];
+    static const size_t m_midiDevicesSize = 127;
+
+    //! Number of used MIDI devices (up to 100)
+    size_t m_midiDevicesUsed;
+
     //! Current MIDI device per track
-    std::map<size_t /*track*/, size_t /*channel begin index*/> m_currentMidiDevice;
+    size_t m_currentMidiDevice[127];
+    static const size_t m_currentMidiDeviceMax = 127;
 
     //! Padding to fix CLanc code model's warning
     char _padding[7];
@@ -1078,10 +1088,11 @@ private:
 public:
     /**
      * @brief Checks was device name used or not
-     * @param name Name of MIDI device
+     * @param name Non-null-terminated name of MIDI device
+     * @param len Length of string
      * @return Offset of the MIDI Channels, multiple to 16
      */
-    size_t chooseDevice(const std::string &name);
+    size_t chooseDevice(const char *name, size_t len);
 
     /**
      * @brief Gets a textual description of the state of chip channels
