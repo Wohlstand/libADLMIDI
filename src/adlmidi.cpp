@@ -1092,7 +1092,7 @@ ADLMIDI_EXPORT const char *adl_metaMusicTitle(struct ADL_MIDIPlayer *device)
         return "";
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    return play->m_sequencer->getMusicTitle().c_str();
+    return play->m_sequencer->getMusicTitle();
 #else
     ADL_UNUSED(device);
     return "";
@@ -1107,7 +1107,7 @@ ADLMIDI_EXPORT const char *adl_metaMusicCopyright(struct ADL_MIDIPlayer *device)
         return "";
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    return play->m_sequencer->getMusicCopyright().c_str();
+    return play->m_sequencer->getMusicCopyright();
 #else
     ADL_UNUSED(device);
     return "";
@@ -1135,10 +1135,10 @@ ADLMIDI_EXPORT const char *adl_metaTrackTitle(struct ADL_MIDIPlayer *device, siz
         return "";
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    const std::vector<std::string> &titles = play->m_sequencer->getTrackTitles();
+    const std::vector<BW_MidiSequencer::DataBlock> &titles = play->m_sequencer->getTrackTitles();
     if(index >= titles.size())
         return "INVALID";
-    return titles[index].c_str();
+    return reinterpret_cast<const char*>(play->m_sequencer->getData(titles[index]));
 #else
     ADL_UNUSED(device);
     ADL_UNUSED(index);
@@ -1187,7 +1187,7 @@ ADLMIDI_EXPORT Adl_MarkerEntry adl_metaMarker(struct ADL_MIDIPlayer *device, siz
     }
 
     const MidiSequencer::MIDI_MarkerEntry &mk = markers[index];
-    marker.label = mk.label.c_str();
+    marker.label = reinterpret_cast<const char*>(play->m_sequencer->getData(mk.label));
     marker.pos_time = mk.pos_time;
     marker.pos_ticks = (unsigned long)mk.pos_ticks;
 #else

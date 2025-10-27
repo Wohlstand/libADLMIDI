@@ -38,13 +38,32 @@
 
 class BW_MidiSequencer
 {
+public:
+    /*!
+     * \brief Reference to the data bank entry
+     */
+    struct DataBlock
+    {
+        size_t offset;
+        size_t size;
+    };
+
+    /*!
+     * \brief Get the data pointer from the data bank
+     * \param b Data block reference
+     * \return Pointer to the destination data
+     */
+    inline const uint8_t *getData(const DataBlock &b) const
+    {
+        return m_dataBank.data() + b.offset;
+    };
+
+private:
     /**
      * @brief MIDI Event utility container
      */
-    class MidiEvent
+    struct MidiEvent
     {
-    public:
-        MidiEvent();
         /**
          * @brief Main MIDI event types
          */
@@ -86,21 +105,21 @@ class BW_MidiSequencer
             //! Sequension number
             ST_SEQNUMBER    = 0x00,//size == 2
             //! Text label
-            ST_TEXT         = 0x01,//size == len
+            ST_TEXT         = 0x01,//size == len, dataBank
             //! Copyright notice
-            ST_COPYRIGHT    = 0x02,//size == len
+            ST_COPYRIGHT    = 0x02,//size == len, dataBank
             //! Sequence track title
-            ST_SQTRKTITLE   = 0x03,//size == len
+            ST_SQTRKTITLE   = 0x03,//size == len, dataBank
             //! Instrument title
-            ST_INSTRTITLE   = 0x04,//size == len
+            ST_INSTRTITLE   = 0x04,//size == len, dataBank
             //! Lyrics text fragment
-            ST_LYRICS       = 0x05,//size == len
+            ST_LYRICS       = 0x05,//size == len, dataBank
             //! MIDI Marker
-            ST_MARKER       = 0x06,//size == len
+            ST_MARKER       = 0x06,//size == len, dataBank
             //! Cue Point
-            ST_CUEPOINT     = 0x07,//size == len
+            ST_CUEPOINT     = 0x07,//size == len, dataBank
             //! [Non-Standard] Device Switch
-            ST_DEVICESWITCH = 0x09,//size == len <CUSTOM>
+            ST_DEVICESWITCH = 0x09,//size == len <CUSTOM>, dataBank
             //! MIDI Channel prefix
             ST_MIDICHPREFIX = 0x20,//size == 1
 
@@ -115,7 +134,7 @@ class BW_MidiSequencer
             //! Key signature
             ST_KEYSIGNATURE = 0x59,//size == 2
             //! Sequencer specs
-            ST_SEQUENCERSPEC = 0x7F, //size == len
+            ST_SEQUENCERSPEC = 0x7F, //size == len, dataBank
 
             /* Non-standard, internal ADLMIDI usage only */
             //! [Non-Standard] Loop Start point
@@ -137,6 +156,7 @@ class BW_MidiSequencer
             // Built-in hooks
             ST_SONG_BEGIN_HOOK    = 0x101
         };
+
         //! Main type of event
         uint_fast16_t type;
         //! Sub-type of the event
@@ -145,12 +165,13 @@ class BW_MidiSequencer
         uint_fast16_t channel;
         //! Is valid event
         uint_fast16_t isValid;
-        //! Reserved 5 bytes padding
-        uint_fast16_t __padding[4];
+        //! 4 bytes of locally placed data bytes
+        uint8_t data_loc[5];
+        uint8_t data_loc_size;
         //! Absolute tick position (Used for the tempo calculation only)
         uint64_t absPosition;
-        //! Raw data of this event
-        std::vector<uint8_t> data;
+        //! Larger data blocks such as SysEx queries
+        DataBlock data_block;
     };
 
     /**
@@ -173,8 +194,12 @@ class BW_MidiSequencer
         uint64_t absPos;
         //! Delay to next event in seconds
         double timeDelay;
+        size_t events_begin;
+        size_t events_end;
         //! List of MIDI events in the current row
         std::vector<MidiEvent> events;
+
+        static int typePriority(const MidiEvent &evt);
         /**
          * @brief Sort events in this position
          * @param noteStates Buffer of currently pressed/released note keys in the track
@@ -261,6 +286,10 @@ class BW_MidiSequencer
                        uint64_t loopStartTicks = 0,
                        uint64_t loopEndTicks = 0);
 
+    static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+    static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length);
+    static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+
     /**
      * @brief Parse one event from raw MIDI track stream
      * @param [_inout] ptr pointer to pointer to current position on the raw data track
@@ -292,7 +321,7 @@ public:
     struct MIDI_MarkerEntry
     {
         //! Label
-        std::string     label;
+        DataBlock       label;
         //! Position time in seconds
         double          pos_time;
         //! Position time in MIDI ticks
@@ -368,6 +397,9 @@ private:
     //! Global loop end time
     double m_loopEndTime;
 
+    //! Storage of data block refered in tracks
+    std::vector<uint8_t> m_dataBank;
+
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue > m_trackData;
 
@@ -375,11 +407,11 @@ private:
     std::vector<CmfInstrument> m_cmfInstruments;
 
     //! Title of music
-    std::string m_musTitle;
+    DataBlock m_musTitle;
     //! Copyright notice of music
-    std::string m_musCopyright;
+    DataBlock m_musCopyright;
     //! List of track titles
-    std::vector<std::string> m_musTrackTitles;
+    std::vector<DataBlock> m_musTrackTitles;
     //! List of MIDI markers
     std::vector<MIDI_MarkerEntry> m_musMarkers;
 
@@ -548,10 +580,56 @@ private:
     //! User data of callback trigger events
     void *m_triggerUserData;
 
+    struct ErrString
+    {
+        char err[1001];
+        size_t size;
+
+        ErrString() :
+            size(0)
+        {
+            err[0] = 0;
+        }
+
+        void clear()
+        {
+            err[0] = 0;
+            size = 0;
+        }
+
+        void set(const char*str)
+        {
+            size = 0;
+            append(str);
+        }
+
+        void append(const char*str)
+        {
+            while(size < 1000 && *str)
+                err[size++] = *(str++);
+
+            err[size] = 0;
+        }
+
+        void append(const char*str, size_t len)
+        {
+            while(size < 1000 && len-- > 0)
+                err[size++] = *(str++);
+
+            err[size] = 0;
+        }
+
+
+        inline const char *c_str() const
+        {
+            return err;
+        }
+    };
+
     //! File parsing errors string (adding into m_errorString on aborting of the process)
-    std::string m_parsingErrorsString;
+    ErrString m_parsingErrorsString;
     //! Common error string
-    std::string m_errorString;
+    ErrString m_errorString;
 
     struct SequencerTime
     {
@@ -662,7 +740,7 @@ public:
      * @brief Get string that describes reason of error
      * @return Error string
      */
-    const std::string &getErrorString();
+    const char *getErrorString() const;
 
     /**
      * @brief Check is loop enabled
@@ -698,19 +776,19 @@ public:
      * @brief Get music title
      * @return music title string
      */
-    const std::string &getMusicTitle();
+    const char *getMusicTitle() const;
 
     /**
      * @brief Get music copyright notice
      * @return music copyright notice string
      */
-    const std::string &getMusicCopyright();
+    const char *getMusicCopyright() const;
 
     /**
      * @brief Get list of track titles
      * @return array of track title strings
      */
-    const std::vector<std::string> &getTrackTitles();
+    const std::vector<DataBlock> &getTrackTitles();
 
     /**
      * @brief Get list of MIDI markers
