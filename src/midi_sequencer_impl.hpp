@@ -154,7 +154,9 @@ BW_MidiSequencer::MidiTrackRow::MidiTrackRow() :
     time(0.0),
     delay(0),
     absPos(0),
-    timeDelay(0.0)
+    timeDelay(0.0),
+    events_begin(0),
+    events_end(0)
 {}
 
 void BW_MidiSequencer::MidiTrackRow::clear()
@@ -165,7 +167,6 @@ void BW_MidiSequencer::MidiTrackRow::clear()
     timeDelay = 0.0;
     events_begin = 0;
     events_end = 0;
-    events.clear();
 }
 
 int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEvent &evt)
@@ -207,9 +208,13 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
     }
 }
 
-void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
+void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBank, bool *noteStates)
 {
-    if(events.size() > 0)
+    //if(events.size() > 0)
+    size_t arr_size = 0;
+    MidiEvent *arr = NULL;
+
+    if(events_begin != events_end)
     {
         class local_stack : public std::stack<long>
         {
@@ -223,8 +228,11 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
         long i = 0, L, R, swapv;
         int priority;
 
+        arr = eventsBank.data() + events_begin;
+        arr_size = events_end - events_begin;
+
         beg.push(0);
-        end.push(events.size());
+        end.push(arr_size);
 
         while(i >= 0)
         {
@@ -232,25 +240,25 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
             R = end.c[i] - 1;
             if(L < R)
             {
-                piv = events[L];
+                piv = arr[L];
                 priority = typePriority(piv);
 
                 while(L < R)
                 {
-                    while(typePriority(events[R]) > priority && L < R)
+                    while(typePriority(arr[R]) > priority && L < R)
                         --R;
 
                     if(L < R)
-                        events[L++] = events[R];
+                        arr[L++] = arr[R];
 
-                    while(typePriority(events[L]) < priority && L < R)
+                    while(typePriority(arr[L]) < priority && L < R)
                         ++L;
 
                     if(L < R)
-                        events[R--] = events[L];
+                        arr[R--] = arr[L];
                 }
 
-                events[L] = piv;
+                arr[L] = piv;
                 beg.push(L + 1);
                 end.push(end.c[i]);
                 end.c[i++] = L;
@@ -279,13 +287,13 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
     /*
      * If Note-Off and it's Note-On is on the same row - move this damned note off down!
      */
-    if(noteStates)
+    if(noteStates && arr && arr_size > 0)
     {
-        size_t max_size = events.size();
+        size_t max_size = arr_size;
 
         for(size_t i = 0; i < max_size; i++)
         {
-            const MidiEvent &e = events[i];
+            const MidiEvent &e = arr[i];
             if(e.type != MidiEvent::T_NOTEON)
                 continue;
 
@@ -300,7 +308,7 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
 
             for(size_t j = 0; j < max_size; )
             {
-                const MidiEvent &o = events[j];
+                const MidiEvent &o = arr[j];
                 if(o.type != MidiEvent::T_NOTEOFF)
                 {
                     ++j;
@@ -319,15 +327,15 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
                     if(!wasOn || (noteOffsOnSameNote != 0))
                     {
                         MidiEvent tmp;
-                        MidiEvent *dst = events.data() + j;
+                        MidiEvent *dst = arr + j;
                         MidiEvent *src = dst + 1;
 
                         // Move this event to end of the list
                         memcpy(&tmp, &o, sizeof(MidiEvent));
 
-                        if(j < events.size() - 1)
+                        if(j < arr_size - 1)
                         {
-                            for(size_t k = j + 1; k < events.size(); ++k)
+                            for(size_t k = j + 1; k < arr_size; ++k)
                                 memcpy(dst++, src++, sizeof(MidiEvent));
 
                             --max_size;
@@ -335,7 +343,7 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(bool *noteStates)
                             if(j < i) // Caused offset of i
                                 --i;
 
-                            memcpy(&events[events.size() - 1], &tmp, sizeof(MidiEvent));
+                            memcpy(&arr[arr_size - 1], &tmp, sizeof(MidiEvent));
                         }
 
                         noteStates[note_i] = false;
@@ -728,7 +736,7 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
                 MidiEvent resetEvent;
                 resetEvent.type = MidiEvent::T_SPECIAL;
                 resetEvent.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
-                evtPos.events.push_back(resetEvent);
+                addEventToBank(evtPos, resetEvent);
             }
 
             evtPos.absPos = abs_position;
@@ -748,7 +756,8 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
                 return false;
             }
 
-            evtPos.events.push_back(event);
+            addEventToBank(evtPos, event);
+
             if(event.type == MidiEvent::T_SPECIAL)
             {
                 if(event.subtype == MidiEvent::ST_TEMPOCHANGE)
@@ -861,7 +870,7 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
 
 #ifdef ENABLE_END_SILENCE_SKIPPING
             //Have track end on its own row? Clear any delay on the row before
-            if(event.subtype == MidiEvent::ST_ENDTRACK && evtPos.events.size() == 1)
+            if(event.subtype == MidiEvent::ST_ENDTRACK && (evtPos.events_end - evtPos.events_begin) == 1)
             {
                 if (!m_trackData[tk].empty())
                 {
@@ -876,7 +885,7 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
             {
                 evtPos.absPos = abs_position;
                 abs_position += evtPos.delay;
-                evtPos.sortEvents(noteStates);
+                evtPos.sortEvents(m_eventBank, noteStates);
                 m_trackData[tk].push_back(evtPos);
                 evtPos.clear();
                 gotLoopEventInThisRow = false;
@@ -1011,9 +1020,9 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
             time += pos.timeDelay;
 
             // Capture markers after time value calculation
-            for(size_t i = 0; i < pos.events.size(); i++)
+            for(size_t i = pos.events_begin; i < pos.events_end; ++i)
             {
-                MidiEvent &e = pos.events[i];
+                MidiEvent &e = m_eventBank[i];
                 if((e.type == MidiEvent::T_SPECIAL) && (e.subtype == MidiEvent::ST_MARKER))
                 {
                     MIDI_MarkerEntry marker;
@@ -1067,7 +1076,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
         unsigned caughLoopStart = 0;
         bool scanDone = false;
         const size_t  trackCount = m_currentPosition.track.size();
-        Position      rowPosition(m_currentPosition);
+        Position rowPosition(m_currentPosition);
 
         while(!scanDone)
         {
@@ -1085,9 +1094,9 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
                         continue;
                     }
 
-                    for(size_t i = 0; i < track.pos->events.size(); i++)
+                    for(size_t i = track.pos->events_begin; i < track.pos->events_end; ++i)
                     {
-                        const MidiEvent &evt = track.pos->events[i];
+                        const MidiEvent &evt = m_eventBank[i];
                         if(evt.type == MidiEvent::T_SPECIAL && evt.subtype == MidiEvent::ST_LOOPSTART)
                         {
                             caughLoopStart++;
@@ -1138,6 +1147,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
     // Resolve "hell of all times" of too short drum notes:
     // move too short percussion note-offs far far away as possible
     /********************************************************************************/
+// OLD DEAD CODE NO LONGER NEEDED
 #if 0 // Use this to record WAVEs for comparison before/after implementing of this
     if(m_format == Format_MIDI) // Percussion fix is needed for MIDI only, not for IMF/RSXX or CMF
     {
@@ -1260,6 +1270,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 {
     if(m_currentPosition.track.size() == 0)
         m_atEnd = true; // No MIDI track data to play
+
     if(m_atEnd)
         return false;   // No more events in the queue
 
@@ -1290,9 +1301,9 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
             }
 
             // Handle event
-            for(size_t i = 0; i < track.pos->events.size(); i++)
+            for(size_t i = track.pos->events_begin; i < track.pos->events_end; ++i)
             {
-                const MidiEvent &evt = track.pos->events[i];
+                const MidiEvent &evt = m_eventBank[i];
 #ifdef ENABLE_BEGIN_SILENCE_SKIPPING
                 if(!m_currentPosition.began && (evt.type == MidiEvent::T_NOTEON))
                     m_currentPosition.began = true;
@@ -1526,6 +1537,15 @@ void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt
     bank.push_back(0);
     bank.push_back(0); /* Second terminator is an ending fix for UTF16 strings */
     evt.data_block.size = bank.size() - evt.data_block.offset;
+}
+
+void BW_MidiSequencer::addEventToBank(BW_MidiSequencer::MidiTrackRow &row, const MidiEvent &evt)
+{
+    if(row.events_begin == row.events_end)
+        row.events_begin = m_eventBank.size();
+
+    m_eventBank.push_back(evt);
+    row.events_end = m_eventBank.size();
 }
 
 static bool strEqual(const uint8_t *in_str, size_t length, const char *needle)
@@ -2637,7 +2657,7 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     event.data_loc[1] = static_cast<uint8_t>((imfTempo >> 16) & 0xFF);
     event.data_loc[2] = static_cast<uint8_t>((imfTempo >> 8) & 0xFF);
     event.data_loc[3] = static_cast<uint8_t>((imfTempo & 0xFF));
-    evtPos.events.push_back(event);
+    addEventToBank(evtPos, event);
     temposList.push_back(event);
 
     // Define the draft for IMF events
@@ -2661,7 +2681,7 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
         event.absPosition = abs_position;
         event.isValid = 1;
 
-        evtPos.events.push_back(event);
+        addEventToBank(evtPos, event);
         evtPos.delay = static_cast<uint64_t>(imfRaw[2]) + 256 * static_cast<uint64_t>(imfRaw[3]);
 
         if(evtPos.delay > 0)
@@ -2803,7 +2823,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     event.data_loc[1] = reg_bd_state;
     event.absPosition = abs_position;
     event.isValid = 1;
-    evtPos.events.push_back(event);
+    addEventToBank(evtPos, event);
     evtPos.delay = 0;
 
     // Initial rhythm frequencies
@@ -2814,12 +2834,12 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     {
         event.data_loc[0] = 0xA0 + c;
         event.data_loc[1] = rhythm_a0[c - 6];
-        evtPos.events.push_back(event);
+        addEventToBank(evtPos, event);
 
         reg_b0_state[c] = rhythm_b0[c - 6] & 0xDF;
         event.data_loc[0] = 0xB0 + c;
         event.data_loc[1] = rhythm_b0[c - 6] & 0xDF;
-        evtPos.events.push_back(event);
+        addEventToBank(evtPos, event);
     }
 
 #ifdef KLM_DEBUG
@@ -2868,7 +2888,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 event.data_loc[1] = reg_b0_state[chan];
                 event.absPosition = abs_position;
                 event.isValid = 1;
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
                 break;
 
             default:
@@ -2895,7 +2915,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 event.data_loc[1] = reg_bd_state;
                 event.absPosition = abs_position;
                 event.isValid = 1;
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
                 break;
             }
 
@@ -2924,7 +2944,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
                 event.data_loc[0] = 0xBD;
                 event.data_loc[1] = reg_bd_state;
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
                 break;
             }
 
@@ -2947,7 +2967,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
             event.data_loc[0] = 0xA0 + chan;
             event.data_loc[1] = data[0];
-            evtPos.events.push_back(event);
+            addEventToBank(evtPos, event);
 
             if(chan < 6)
             {
@@ -2959,7 +2979,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
             event.data_loc[0] = 0xB0 + chan;
             event.data_loc[1] = reg_b0_state[chan];
-            evtPos.events.push_back(event);
+            addEventToBank(evtPos, event);
 
             break;
 
@@ -2989,7 +3009,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             event.data_loc[1] = reg_43_state[chan];
             event.absPosition = abs_position;
             event.isValid = 1;
-            evtPos.events.push_back(event);
+            addEventToBank(evtPos, event);
             break;
 
         case 0x30: // Set Instrument
@@ -3034,23 +3054,23 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 uint8_t *ins = m_cmfInstruments[data[0]].data;
                 event.data_loc[0] = 0x40 + inst_off_mod;
                 event.data_loc[1] = ins[0];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0x60 + inst_off_mod;
                 event.data_loc[1] = ins[2];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0x80 + inst_off_mod;
                 event.data_loc[1] = ins[4];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0x20 + inst_off_mod;
                 event.data_loc[1] = ins[6];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0xE0 + inst_off_mod;
                 event.data_loc[1] = ins[8];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
             }
 
             if(inst_off_car != 0xFF)
@@ -3060,23 +3080,23 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 reg_43_state[chan] = ins[1];
                 event.data_loc[0] = 0x40 + inst_off_car;
                 event.data_loc[1] = reg_43_state[chan];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0x60 + inst_off_car;
                 event.data_loc[1] = ins[3];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0x80 + inst_off_car;
                 event.data_loc[1] = ins[5];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0x20 + inst_off_car;
                 event.data_loc[1] = ins[7];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
 
                 event.data_loc[0] = 0xE0 + inst_off_car;
                 event.data_loc[1] = ins[9];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
             }
 
             if(chan <= 6) // Only melodic and bass drum!
@@ -3084,7 +3104,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 uint8_t *ins = m_cmfInstruments[data[0]].data;
                 event.data_loc[0] = 0xC0 + chan;
                 event.data_loc[1] = ins[10] | 0x30;
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
             }
             break;
 
@@ -3097,7 +3117,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 reg_b0_state[chan] |= 0x20;
                 event.data_loc[0] = 0xB0 + chan;
                 event.data_loc[1] = reg_b0_state[chan];
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
             }
             else
             {
@@ -3122,7 +3142,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
                 event.data_loc[0] = 0xBD;
                 event.data_loc[1] = reg_bd_state;
-                evtPos.events.push_back(event);
+                addEventToBank(evtPos, event);
             }
             break;
 
@@ -3184,11 +3204,13 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
             case 0xFF: // Song End
                 eof_reached = 1;
-                if(!evtPos.events.empty()) // If anything left not written, write!
+                if(evtPos.events_begin < evtPos.events_end) // If anything left not written, write!
                 {
                     evtPos.absPos = abs_position;
                     abs_position += evtPos.delay;
                     m_trackData[0].push_back(evtPos);
+                    evtPos.events_begin = 0;
+                    evtPos.events_end = 0;
                     evtPos.clear();
                 }
                 break;

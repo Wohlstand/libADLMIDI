@@ -184,8 +184,12 @@ private:
     {
     public:
         MidiTrackRow();
-        //! Clear MIDI row data
+
+        /*!
+         * \brief Clear MIDI row data
+         */
         void clear();
+
         //! Absolute time position in seconds
         double time;
         //! Delay to next event in ticks
@@ -194,17 +198,17 @@ private:
         uint64_t absPos;
         //! Delay to next event in seconds
         double timeDelay;
+        //! Begin of the events row stored in the bank
         size_t events_begin;
+        //! End of the events row stored in the bank
         size_t events_end;
-        //! List of MIDI events in the current row
-        std::vector<MidiEvent> events;
 
         static int typePriority(const MidiEvent &evt);
         /**
          * @brief Sort events in this position
          * @param noteStates Buffer of currently pressed/released note keys in the track
          */
-        void sortEvents(bool *noteStates = NULL);
+        void sortEvents(std::vector<MidiEvent> &eventsBank, bool *noteStates = NULL);
     };
 
     /**
@@ -224,41 +228,37 @@ private:
      */
     struct Position
     {
-        //! Was track began playing
-        bool began;
-        //! Reserved
-        char __padding[7];
         //! Waiting time before next event in seconds
         double wait;
         //! Absolute time position on the track in seconds
         double absTimePosition;
+        //! Was track began playing
+        bool began;
+
         //! Track information
         struct TrackInfo
         {
+            //! MIDI Events queue position iterator
+            MidiTrackQueue::iterator pos;
             //! Delay to next event in a track
             uint64_t delay;
             //! Last handled event type
             int32_t lastHandledEvent;
-            //! Reserved
-            char    __padding2[4];
-            //! MIDI Events queue position iterator
-            MidiTrackQueue::iterator pos;
 
             TrackInfo() :
                 delay(0),
                 lastHandledEvent(0)
             {}
         };
+
         std::vector<TrackInfo> track;
+
         Position():
-            began(false),
             wait(0.0),
             absTimePosition(0.0),
+            began(false),
             track()
-        {
-            for(size_t i = 0; i < 7; ++i)
-                __padding[i] = 0;
-        }
+        {}
     };
 
     //! MIDI Output interface context
@@ -289,6 +289,8 @@ private:
     static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
     static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length);
     static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+
+    void addEventToBank(MidiTrackRow &row, const MidiEvent &evt);
 
     /**
      * @brief Parse one event from raw MIDI track stream
@@ -399,6 +401,8 @@ private:
 
     //! Storage of data block refered in tracks
     std::vector<uint8_t> m_dataBank;
+
+    std::vector<MidiEvent> m_eventBank;
 
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue > m_trackData;
