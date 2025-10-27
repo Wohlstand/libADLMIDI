@@ -1,7 +1,7 @@
 /*
  * Task manager with timer for DOS
  *
- * Copyright (c) 2017-2025 Vitaly Novichkov (Wohlstand)
+ * Copyright (c) 2025-2025 Vitaly Novichkov (Wohlstand)
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -33,7 +33,10 @@
 
 #include "dos_tman.h"
 
-#define TIMER_IRQ 8
+#define TIMER_IRQ               8
+#define BIOS_TIMER()            _farpeekl(_dos_ds, 0x46C)
+#define BIOS_TIMER_OVERFLOW()   _farpeekl(_dos_ds, 0x470)
+#define BIOS_MAX_TICKS          0x1800B0
 
 static _go32_dpmi_seginfo s_oldIRQ8, s_newIRQ8;
 DosTaskman *DosTaskman::self = NULL;
@@ -93,7 +96,7 @@ void DosTaskman::process()
         if(t.active)
         {
             t.count += self->m_timerRate;
-            while(t.count >= t.rate_real)
+            while(!self->m_suspend && t.count >= t.rate_real)
             {
                 t.count -= t.rate_real;
                 t.callback(&t);
@@ -113,6 +116,7 @@ void DosTaskman::process()
 
 DosTaskman::DosTaskman()
 {
+    m_suspend = false;
     m_running = false;
     m_timerRate  = 0x10000L;
     m_counter = 0;
@@ -120,10 +124,13 @@ DosTaskman::DosTaskman()
     if(self)
     {
         fprintf(stderr, "Only one sample of DosTaskman can exist!\n");
+        fflush(stderr);
         exit(1);
     }
 
     self = this;
+
+    // setSystemClockRate();
 }
 
 DosTaskman::~DosTaskman()
@@ -138,7 +145,7 @@ void DosTaskman::setClockRate(long frequency)
 
     m_timerRate = (frequency > 0 && frequency < 0x10000L) ? frequency : 0x10000L;
     outportb(0x43, 0x36);
-    outportb(0x40, m_timerRate);
+    outportb(0x40, m_timerRate & 0xFF);
     outportb(0x40, m_timerRate >> 8);
 
     restoreInterrupts(flags);
@@ -152,9 +159,21 @@ void DosTaskman::setTimer(long tickBase)
         setClockRate(speed);
 }
 
+void DosTaskman::suspend()
+{
+    if(self)
+        self->m_suspend = true;
+}
+
+void DosTaskman::resume()
+{
+    if(self)
+        self->m_suspend = false;
+}
+
 unsigned long DosTaskman::getCurTicks()
 {
-    return _farpeekl(_dos_ds, 0x46C);
+    return BIOS_TIMER();
 }
 
 unsigned long DosTaskman::getCurClockRate() const

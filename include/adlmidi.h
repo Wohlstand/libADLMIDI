@@ -1216,7 +1216,7 @@ extern ADLMIDI_DECLSPEC int  adl_generateFormat(struct ADL_MIDIPlayer *device, i
  * @param device Instance of the library
  * @param seconds Previous delay. On a first moment, pass the `0.0`
  * @param granulality Minimal size of one MIDI tick in seconds.
- * @return desired number of seconds until next call. Pass this value into `seconds` field in next time
+ * @return desired number of seconds until next call. On error the <0 value gets returned, =0 at end of the song with disabled loop.
  */
 extern ADLMIDI_DECLSPEC double adl_tickEvents(struct ADL_MIDIPlayer *device, double seconds, double granulality);
 

@@ -205,12 +205,11 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 #include <stdio.h> // snprintf is here!
 #define flushout(stream)
 #elif defined(__DJGPP__)
-static bool s_flushing = false;
 #define flushout(stream) \
     {\
-        s_flushing = true;\
+        DosTaskman::suspend();\
         std::fflush(stream);\
-        s_flushing = false;\
+        DosTaskman::resume();\
     }
 #else
 #define flushout(stream) std::fflush(stream)
@@ -223,7 +222,6 @@ static bool s_flushing = false;
 
 #ifdef __DJGPP__
 #include "dos_tman.h"
-#define BIOStimer DosTaskman::getCurTicks()
 #endif//__DJGPP__
 
 #ifdef __WATCOMC__
@@ -662,8 +660,14 @@ static struct TimeCounter
 #ifdef ADLMIDI_ENABLE_HW_DOS
     void waitDosTimerTick()
     {
-        volatile unsigned long timer = BIOStimer;
-        while(timer == BIOStimer);
+        volatile unsigned long timer = DosTaskman::getCurTicks();
+        while(timer == DosTaskman::getCurTicks());
+    }
+
+    void delay(int ticks)
+    {
+        volatile unsigned long timer = DosTaskman::getCurTicks() + ticks;
+        while(timer >= DosTaskman::getCurTicks());
     }
 #endif
 
@@ -1121,34 +1125,26 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
 
 static double s_extra_delay = 0.0;
 static DosTaskman *s_taskman = NULL;
-static volatile unsigned long s_timerPrev = 0;
+static bool s_pause = false;
 
 static void s_midiLoop(DosTaskman::DosTask *task)
 {
-    if(stop || s_flushing)
+    if(stop || s_pause)
         return;
 
     ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
     const double mindelay = 1.0 / task->getFreq();
-    volatile unsigned long timerCur;
     double tickDelay;
+
+    s_extra_delay = 0;
+
+    if(task->getCount() >= task->getRate())
+        s_extra_delay = mindelay;
 
     tickDelay = adl_tickEvents(player, mindelay + s_extra_delay, mindelay / 10.0);
 
-    timerCur = BIOStimer;
-    s_extra_delay = 0.0;
-
-    if(s_taskman && timerCur > s_timerPrev)
-    {
-        double delay = (timerCur - s_timerPrev) / (double)s_taskman->getCurClockRate();
-        if(delay > mindelay)
-            s_extra_delay = (mindelay - delay);
-    }
-
-    s_timerPrev = timerCur;
-
-    if(adl_atEnd(player) && tickDelay <= 0)
-        stop = false;
+    if(adl_atEnd(player) || tickDelay <= 0)
+        stop = true;
 }
 
 static void setCursorVisibility(bool visible)
@@ -1164,13 +1160,32 @@ static void setCursorVisibility(bool visible)
 #endif
 }
 
+static int s_curSong = 0;
+static double s_tempo = 1.0;
+
+static void nextSong(ADL_MIDIPlayer *myDevice)
+{
+    ++s_curSong;
+    if(s_curSong >= adl_getSongsCount(myDevice))
+        s_curSong = 0;
+
+    adl_selectSongNum(myDevice, s_curSong);
+}
+
+static void prevSong(ADL_MIDIPlayer *myDevice)
+{
+    --s_curSong;
+    if(s_curSong < 0)
+        s_curSong = adl_getSongsCount(myDevice) - 1;
+
+    adl_selectSongNum(myDevice, s_curSong);
+}
+
 static void runDOSLoop(ADL_MIDIPlayer *myDevice)
 {
     s_timeCounter.clearLineR();
 
     setCursorVisibility(false);
-
-    s_timerPrev = BIOStimer;
 
     while(!stop)
     {
@@ -1181,6 +1196,77 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
         if(kbhit())
         {   // Quit on ESC key!
             int c = getch();
+            switch(c)
+            {
+            case 27:
+                stop = true;
+                break;
+            case 'p':
+            case 'P':
+            {
+                if(adl_getSongsCount(myDevice) <= 1)
+                    break; // Nothing to do
+                s_pause = true;
+                prevSong(myDevice);
+                s_timeCounter.clearLineR();
+                fprintf(stdout, " - Selecting song %d / %d\n", s_curSong + 1, adl_getSongsCount(myDevice));
+                flushout(stdout);
+                s_pause = false;
+                break;
+            }
+            case 'n':
+            case 'N':
+            {
+                if(adl_getSongsCount(myDevice) <= 1)
+                    break; // Nothing to do
+                s_pause = true;
+                nextSong(myDevice);
+                s_timeCounter.clearLineR();
+                fprintf(stdout, " - Selecting song %d / %d\n", s_curSong + 1, adl_getSongsCount(myDevice));
+                flushout(stdout);
+                s_pause = false;
+                break;
+            }
+            case 'r':
+            case 'R':
+            {
+                s_pause = true;
+                adl_panic(myDevice);
+                adl_positionRewind(myDevice);
+                s_timeCounter.clearLineR();
+                fprintf(stdout, " - Rewind song to begin...\n");
+                flushout(stdout);
+                s_pause = false;
+                break;
+            }
+            case '+':
+            {
+                s_pause = true;
+                if(s_tempo < 8.0)
+                    s_tempo += 0.1;
+                adl_setTempo(myDevice, s_tempo);
+                s_pause = false;
+                break;
+            }
+            case '-':
+            {
+                s_pause = true;
+                if(s_tempo > 0.1)
+                    s_tempo -= 0.1;
+                adl_setTempo(myDevice, s_tempo);
+                s_pause = false;
+                break;
+            }
+            case '*':
+            {
+                s_pause = true;
+                s_tempo = 1.0;
+                adl_setTempo(myDevice, s_tempo);
+                s_pause = false;
+                break;
+            }
+            }
+
             if(c == 27)
                 stop = true;
         }
@@ -1986,7 +2072,12 @@ int main(int argc, char **argv)
 
     int songsCount = adl_getSongsCount(myDevice);
     if(s_devSetup.songNumLoad >= 0)
+    {
         std::fprintf(stdout, " - Attempt to load song number: %d / %d\n", s_devSetup.songNumLoad, songsCount);
+#ifdef ADLMIDI_ENABLE_HW_DOS
+        s_curSong = s_devSetup.songNumLoad;
+#endif
+    }
     else if(songsCount > 0)
         std::fprintf(stdout, " - File contains %d song(s)\n", songsCount);
 
