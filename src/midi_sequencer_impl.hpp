@@ -1921,7 +1921,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         if(evtype == MidiEvent::ST_DEVICESWITCH)
         {
             if(m_interface->onDebugMessage)
-                m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Switching another device: %s", data);
+                m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Switching another device: %.*s", length, data);
             if(m_interface->rt_deviceSwitch)
                 m_interface->rt_deviceSwitch(m_interface->rtUserData, track, data, size_t(length));
             return;
