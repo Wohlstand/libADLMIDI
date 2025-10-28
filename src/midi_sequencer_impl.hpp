@@ -3767,17 +3767,18 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     event.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
     // HACK: Begin every track with "Reset all controllers" event to avoid controllers state break came from end of song
     addEventToBank(evtPos, event);
-    temposList.push_back(event);
 
     std::memset(&event, 0, sizeof(event));
     event.isValid = 1;
     event.type = MidiEvent::T_SPECIAL;
     event.subtype = MidiEvent::ST_TEMPOCHANGE;
+    event.absPosition = abs_position;
     event.data_loc_size = 3;
     event.data_loc[0] = 0x1B;
     event.data_loc[1] = 0x8A;
     event.data_loc[2] = 0x06;
     addEventToBank(evtPos, event);
+    temposList.push_back(event);
 
     // Begin percussion channel with volume 100
     std::memset(&event, 0, sizeof(event));
@@ -4000,6 +4001,9 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
         m_currentPosition.track[0].pos = m_trackData[0].begin();
 
     buildTimeLine(temposList);
+
+    m_smfFormat = 0;
+    m_loop.stackLevel = -1;
 
     return true;
 }
