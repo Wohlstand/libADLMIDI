@@ -703,9 +703,9 @@ static struct TimeCounter
 #endif
                 // std::fprintf(stdout, "                                               \r");
 #ifdef HAS_S_GETTIME
-                len = std::snprintf(linebuff, 79, "Time position: %s / %s [Real time: %s]", posHMS, totalHMS, realHMS);
+                len = snprintf(linebuff, 79, "Time position: %s / %s [Real time: %s]", posHMS, totalHMS, realHMS);
 #else
-                len = std::snprintf(linebuff, 79, "Time position: %s / %s", posHMS, totalHMS);
+                len = snprintf(linebuff, 79, "Time position: %s / %s", posHMS, totalHMS);
 #endif
                 if(len > 0)
                     memset(linebuff + len, ' ',  79 - len);
