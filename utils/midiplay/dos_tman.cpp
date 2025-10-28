@@ -90,6 +90,10 @@ static __attribute__((always_inline)) inline void restoreInterrupts(uint32_t fla
 
 void DosTaskman::process()
 {
+    ++self->m_clock;
+    if(self->m_clock >= 0x10000000)
+        self->m_clock = 0;
+
     for(std::list<DosTask>::iterator it = self->m_tasks.begin(); it != self->m_tasks.end(); ++it)
     {
         DosTask &t = *it;
@@ -120,6 +124,7 @@ DosTaskman::DosTaskman()
     m_running = false;
     m_timerRate  = 0x10000L;
     m_counter = 0;
+    m_clock = 0;
 
     if(self)
     {
@@ -173,7 +178,10 @@ void DosTaskman::resume()
 
 unsigned long DosTaskman::getCurTicks()
 {
-    return BIOS_TIMER();
+    if(self)
+        return self->m_clock;
+    else
+        return 0;
 }
 
 unsigned long DosTaskman::getCurClockRate() const

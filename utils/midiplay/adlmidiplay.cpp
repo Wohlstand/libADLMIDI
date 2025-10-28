@@ -219,6 +219,7 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 #define HW_OPL_MSDOS
 #include <conio.h>
 #include <dos.h>
+#include <sys/nearptr.h>
 
 #ifdef __DJGPP__
 #include "dos_tman.h"
@@ -1851,6 +1852,8 @@ int main(int argc, char **argv)
     ADL_MIDIPlayer *myDevice;
 
 #ifdef ADLMIDI_ENABLE_HW_DOS
+    __djgpp_nearptr_enable();
+
     DosTaskman taskMan;
 
     if(s_devSetup.setHwAddress > 0 || s_devSetup.setChipType != ADLMIDI_DOS_ChipAuto)

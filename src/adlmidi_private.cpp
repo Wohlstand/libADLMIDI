@@ -26,6 +26,10 @@
 #include "adlmidi_private.hpp"
 #include "wopl/wopl_file.h"
 
+#ifdef ENABLE_HW_OPL_DOS
+#include <dpmi.h>
+#endif
+
 
 std::string ADLMIDI_ErrorString;
 
@@ -123,5 +127,47 @@ void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, OplInstMeta &in
 
     instOut.soundKeyOnMs  = instIn.delay_on_ms;
     instOut.soundKeyOffMs = instIn.delay_off_ms;
+}
+#endif
+
+#ifdef ENABLE_HW_OPL_DOS
+bool adl_dpmi_lock_memory(void *address, size_t size)
+{
+    unsigned long baseaddr;
+    __dpmi_meminfo mem;
+
+    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
+        return false;
+
+    mem.handle = 0;
+    mem.address = baseaddr + (intptr_t)address;
+    mem.size = size;
+
+    return __dpmi_lock_linear_region(&mem) != -1;
+}
+
+bool adl_dpmi_lock_region(void *begin, void *end)
+{
+    return adl_dpmi_lock_memory(begin, (uint8_t *)end - (uint8_t *)begin);
+}
+
+bool adl_dpmi_unlock_memory(void *address, size_t size)
+{
+    unsigned long baseaddr;
+    __dpmi_meminfo mem;
+
+    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
+        return false;
+
+    mem.handle = 0;
+    mem.address = baseaddr + (intptr_t)address;
+    mem.size = size;
+
+    return __dpmi_unlock_linear_region(&mem) != -1;
+}
+
+bool adl_dpmi_unlock_region(void *begin, void *end)
+{
+    return adl_dpmi_unlock_memory(begin, (uint8_t *)end - (uint8_t *)begin);
 }
 #endif

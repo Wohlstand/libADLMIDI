@@ -37,6 +37,7 @@ class DosTaskman
     static DosTaskman *self;
     volatile long m_timerRate;
     volatile long m_counter;
+    volatile long m_clock;
     volatile bool m_suspend;
 
     static void process();
