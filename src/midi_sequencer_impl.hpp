@@ -82,10 +82,6 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 }
 #endif
 
-#ifndef BWMIDI_DISABLE_MUS_SUPPORT
-#include "cvt_mus2mid.hpp"
-#endif // MUS
-
 #ifndef BWMIDI_DISABLE_XMI_SUPPORT
 #include "cvt_xmi2mid.hpp"
 #endif // XMI
@@ -102,7 +98,10 @@ static inline uint64_t readBEint(const void *buffer, size_t nbytes)
     const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
 
     for(size_t n = 0; n < nbytes; ++n)
-        result = (result << 8) + data[n];
+    {
+        result <<= 8;
+        result |= data[n];
+    }
 
     return result;
 }
@@ -119,7 +118,18 @@ static inline uint64_t readLEint(const void *buffer, size_t nbytes)
     const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
 
     for(size_t n = 0; n < nbytes; ++n)
-        result = result + static_cast<uint64_t>(data[n] << (n * 8));
+        result += static_cast<uint64_t>(data[n] << (n * 8));
+
+    return result;
+}
+
+static inline uint16_t readLEint16(const void *buffer, size_t nbytes)
+{
+    uint16_t result = 0;
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
+
+    for(size_t n = 0; n < nbytes; ++n)
+        result += static_cast<uint16_t>(data[n] << (n * 8));
 
     return result;
 }
@@ -734,6 +744,8 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
             if(tk == 0)
             {
                 MidiEvent resetEvent;
+                std::memset(&resetEvent, 0, sizeof(resetEvent));
+                resetEvent.isValid = 1;
                 resetEvent.type = MidiEvent::T_SPECIAL;
                 resetEvent.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
                 addEventToBank(evtPos, resetEvent);
@@ -1559,7 +1571,8 @@ static bool strEqual(const uint8_t *in_str, size_t length, const char *needle)
         {
             if(*it_i - ('Z' - 'z') != *it_n)
                 return false; // Mismatch!
-        } else if(*it_i != *it_n)
+        }
+        else if(*it_i != *it_n)
             return false; // Mismatch!
     }
 
@@ -2401,8 +2414,10 @@ bool BW_MidiSequencer::loadMIDI(const std::string &filename)
 {
     FileAndMemReader file;
     file.openFile(filename.c_str());
+
     if(!loadMIDI(file))
         return false;
+
     return true;
 }
 
@@ -2567,13 +2582,11 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
         return parseGMF(fr);
     }
 
-#ifndef BWMIDI_DISABLE_MUS_SUPPORT
     if(std::memcmp(headerBuf, "MUS\x1A", 4) == 0)
     {
         fr.seek(0, FileAndMemReader::SET);
         return parseMUS(fr);
     }
-#endif
 
 #ifndef BWMIDI_DISABLE_XMI_SUPPORT
     if((std::memcmp(headerBuf, "FORM", 4) == 0) && (std::memcmp(headerBuf + 8, "XDIR", 4) == 0))
@@ -3655,13 +3668,29 @@ bool BW_MidiSequencer::parseRMI(FileAndMemReader &fr)
     return parseSMF(fr);
 }
 
-#ifndef BWMIDI_DISABLE_MUS_SUPPORT
 bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 {
-    const size_t headerSize = 14;
-    char headerBuf[headerSize] = "";
+    const size_t headerSize = 16;
     size_t fsize = 0;
-    BufferGuard<uint8_t> cvt_buf;
+    uint8_t headerBuf[headerSize];
+    uint16_t mus_lenSong, mus_offSong, mus_channels1, /*mus_channels2,*/ mus_numInstr, song_read = 0;
+    uint8_t numBuffer[2];
+    int8_t  channel_map[16];
+    uint8_t channel_volume[16];
+    uint8_t channel_cur = 0;
+    uint64_t abs_position = 0;
+    int32_t delay = 0;
+    std::vector<uint16_t> mus_instrs;
+    std::vector<MidiEvent> temposList;
+
+    const uint8_t controller_map[15] =
+    {
+        0,    0,    0x01, 0x07, 0x0A,
+        0x0B, 0x5B, 0x5D, 0x40, 0x43,
+        0x78, 0x7B, 0x7E, 0x7F, 0x79,
+    };
+
+    size_t mus_len = fr.fileSize();
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -3677,47 +3706,303 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
         return false;
     }
 
-    size_t mus_len = fr.fileSize();
+    mus_lenSong = readLEint16(headerBuf + 4, 2);
+    mus_offSong = readLEint16(headerBuf + 6, 2);
+    mus_channels1 = readLEint16(headerBuf + 8, 2);
+    // mus_channels2 = readLEint16(headerBuf + 12, 2);
+    mus_numInstr = readLEint16(headerBuf + 14, 2);
 
-    fr.seek(0, FileAndMemReader::SET);
-    uint8_t *mus = (uint8_t *)malloc(mus_len);
-    if(!mus)
+    if(headerSize + (static_cast<size_t>(mus_numInstr) * 2) > mus_offSong)
     {
-        m_errorString.set("Out of memory!");
+        m_errorString.set("MUS file is invalid: instruments list is larger than song offset!\n");
         return false;
     }
 
-    fsize = fr.read(mus, 1, mus_len);
-    if(fsize < mus_len)
+    if(mus_len < mus_lenSong + mus_offSong)
     {
-        m_errorString.set("Failed to read MUS file data!\n");
+        m_errorString.set("MUS file is invalid: song length is longer than file size!\n");
         return false;
     }
 
-    // Close source stream
-    fr.close();
-
-    uint8_t *mid = NULL;
-    uint32_t mid_len = 0;
-    int m2mret = Convert_mus2midi(mus, static_cast<uint32_t>(mus_len),
-                                  &mid, &mid_len, 0);
-    if(mus)
-        free(mus);
-
-    if(m2mret < 0)
+    if(mus_channels1 > 15)
     {
-        m_errorString.set("Invalid MUS/DMX data format!");
+        m_errorString.set("MUS file is invalid: more than 15 primary channels!\n");
         return false;
     }
 
-    cvt_buf.set(mid);
+    mus_instrs.reserve(mus_numInstr);
 
-    // Open converted MIDI file
-    fr.openData(mid, static_cast<size_t>(mid_len));
+    for(uint16_t i = 0; i < mus_numInstr; ++i)
+    {
+        fsize = fr.read(numBuffer, 1, 2);
+        if(fsize < 2)
+        {
+            m_errorString.set("Unexpected end of file at instruments numbers list!\n");
+            return false;
+        }
 
-    return parseSMF(fr);
+        mus_instrs.push_back(readLEint16(numBuffer, 2));
+    }
+
+    fr.seek(mus_offSong, FileAndMemReader::SET);
+
+    buildSmfSetupReset(1);
+
+    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(0x101));
+    m_tempo         = m_invDeltaTicks * fraction<uint64_t>(0x101) * 2; // MUS has the fixed tempo
+
+    for(int i = 0; i < 16; ++i)
+    {
+        channel_map[i] = -1;
+        channel_volume[i] = 0x40;
+    }
+
+    channel_map[15] = 9; // 15'th channel is mapped to 9'th
+
+    MidiTrackRow evtPos;
+    MidiEvent event;
+    std::memset(&event, 0, sizeof(event));
+    event.isValid = 1;
+    event.type = MidiEvent::T_SPECIAL;
+    event.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
+    // HACK: Begin every track with "Reset all controllers" event to avoid controllers state break came from end of song
+    addEventToBank(evtPos, event);
+    temposList.push_back(event);
+
+    std::memset(&event, 0, sizeof(event));
+    event.isValid = 1;
+    event.type = MidiEvent::T_SPECIAL;
+    event.subtype = MidiEvent::ST_TEMPOCHANGE;
+    event.data_loc_size = 3;
+    event.data_loc[0] = 0x1B;
+    event.data_loc[1] = 0x8A;
+    event.data_loc[2] = 0x06;
+    addEventToBank(evtPos, event);
+
+    // Begin percussion channel with volume 100
+    std::memset(&event, 0, sizeof(event));
+    event.isValid = 1;
+    event.type = MidiEvent::T_CTRLCHANGE;
+    event.channel = 9;
+    event.data_loc_size = 2;
+    event.data_loc[0] = 7;
+    event.data_loc[1] = 100;
+    addEventToBank(evtPos, event);
+
+    delay = 0;
+    channel_cur = 0;
+
+    while(song_read < mus_lenSong)
+    {
+        uint8_t mus_event, mus_channel, bytes[2];
+        std::memset(&event, 0, sizeof(event));
+        event.isValid = 1;
+
+        fsize = fr.read(&mus_event, 1, 1);
+        if(fsize < 1)
+        {
+            m_errorString.set("Failed to read MUS data: Failed to read event type!\n");
+            return false;
+        }
+
+        ++song_read;
+        mus_channel = (mus_event & 15);
+        evtPos.delay = delay;
+
+        // Insert volume for every used channel
+        if(channel_map[mus_channel] < 0)
+        {
+            event.type = MidiEvent::T_CTRLCHANGE;
+            event.data_loc_size = 2;
+            event.data_loc[0] = 7;
+            event.data_loc[1] = 100;
+            addEventToBank(evtPos, event);
+            std::memset(&event, 0, sizeof(event));
+            event.isValid = 1;
+
+            channel_map[mus_channel] = channel_cur++;
+            if(channel_cur == 9)
+                ++channel_cur;
+        }
+
+        event.channel = channel_map[mus_channel];
+
+        switch((mus_event >> 4) & 0x07)
+        {
+        case 0: // Note off
+            fsize = fr.read(&bytes, 1, 1);
+            if(fsize < 1)
+            {
+                m_errorString.set("Failed to read MUS data: Can't read Note OFF event data!\n");
+                return false;
+            }
+
+            ++song_read;
+            event.type = MidiEvent::T_NOTEOFF;
+            event.data_loc_size = 2;
+            event.data_loc[0] = bytes[0] & 0x7F;
+            event.data_loc[1] = 0;
+            addEventToBank(evtPos, event);
+            break;
+
+        case 1: // Note on
+            fsize = fr.read(&bytes, 1, 1);
+            if(fsize < 1)
+            {
+                m_errorString.set("Failed to read MUS data: Can't read Note ON event data!\n");
+                return false;
+            }
+
+            ++song_read;
+            event.type = MidiEvent::T_NOTEON;
+            event.data_loc_size = 2;
+            event.data_loc[0] = bytes[0] & 0x7F;
+
+            if((bytes[0] & 0x80) != 0)
+            {
+                fsize = fr.read(&bytes, 1, 1);
+                if(fsize < 1)
+                {
+                    m_errorString.set("Failed to read MUS data: Can't read Note ON's velocity data!\n");
+                    return false;
+                }
+
+                ++song_read;
+                channel_volume[event.channel] = bytes[0];
+            }
+
+            event.data_loc[1] = channel_volume[event.channel];
+            addEventToBank(evtPos, event);
+            break;
+
+        case 2: // Pitch bend
+            fsize = fr.read(&bytes, 1, 1);
+            if(fsize < 1)
+            {
+                m_errorString.set("Failed to read MUS data: Can't read Pitch Bend event data!\n");
+                return false;
+            }
+
+            ++song_read;
+            event.type = MidiEvent::T_WHEEL;
+            event.data_loc_size = 2;
+            event.data_loc[0] = (bytes[0] & 1) >> 6;
+            event.data_loc[1] = (bytes[0] >> 1);
+            addEventToBank(evtPos, event);
+            break;
+
+        case 3: // System event
+            fsize = fr.read(&bytes, 1, 1);
+            if(fsize < 1)
+            {
+                m_errorString.set("Failed to read MUS data: Can't read System Event data!\n");
+                return false;
+            }
+
+            ++song_read;
+            event.type = MidiEvent::T_CTRLCHANGE;
+            event.data_loc_size = 2;
+
+            if((bytes[0] & 0x7F) >= 15)
+                break; // Skip invalid controller
+
+            event.data_loc[0] = controller_map[bytes[0] & 0x7F];
+            addEventToBank(evtPos, event);
+            break;
+
+        case 4: // Controller
+            fsize = fr.read(&bytes, 1, 2);
+            if(fsize < 1)
+            {
+                m_errorString.set("Failed to read MUS data: Can't read System Event data!\n");
+                return false;
+            }
+
+            song_read += 2;
+            event.type = MidiEvent::T_CTRLCHANGE;
+            event.data_loc_size = 2;
+
+            if((bytes[0] & 0x7F) >= 15)
+                break; // Skip invalid controller
+
+            if((bytes[0] & 0x7F) == 0)
+            {
+                size_t j = 0;
+                event.type = MidiEvent::T_PATCHCHANGE;
+
+                for( ; j < mus_instrs.size(); ++j)
+                {
+                    if((bytes[1] & 0x7F) == mus_instrs[j])
+                        break;
+                }
+
+                if(mus_numInstr > 0 && j >= mus_numInstr)
+                {
+                    m_errorString.set("Failed to read MUS data: Instrument number is not presented in the list!\n");
+                    return false;
+                }
+
+                event.data_loc[0] = bytes[1] & 0x7F;
+                event.data_loc[1] = 0;
+                event.data_loc_size = 1;
+            }
+            else
+            {
+                event.data_loc[0] = controller_map[bytes[0] & 0x7F];
+                event.data_loc[1] = bytes[1] & 0x7F;
+            }
+
+            addEventToBank(evtPos, event);
+            break;
+        case 5: // End of measure
+            break;
+
+        case 6: // Track finished
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_ENDTRACK;
+            addEventToBank(evtPos, event);
+            break;
+
+        case 7: // Unused event;
+            break;
+        }
+
+        delay = 0;
+
+        if((mus_event & 0x80) != 0)
+        {
+            do
+            {
+                fsize = fr.read(&bytes, 1, 1);
+                if(fsize < 1)
+                {
+                    m_errorString.set("Failed to read MUS data: Can't read one of delay bytes!\n");
+                    return false;
+                }
+
+                ++song_read;
+                delay = (delay * 128) + (bytes[0] & 0x7F);
+
+            } while((bytes[0] & 0x80) != 0);
+        }
+
+        if(delay > 0 || event.subtype == MidiEvent::ST_ENDTRACK || song_read >= mus_lenSong)
+        {
+            evtPos.delay = delay;
+            evtPos.absPos = abs_position;
+            abs_position += evtPos.delay;
+            m_trackData[0].push_back(evtPos);
+            evtPos.clear();
+        }
+    }
+
+    if(!m_trackData[0].empty())
+        m_currentPosition.track[0].pos = m_trackData[0].begin();
+
+    buildTimeLine(temposList);
+
+    return true;
 }
-#endif // BWMIDI_DISABLE_MUS_SUPPORT
 
 #ifndef BWMIDI_DISABLE_XMI_SUPPORT
 bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
@@ -3780,6 +4065,7 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
                                         song_buf, XMIDI_CONVERT_NOCONVERSION);
     if(mus)
         free(mus);
+
     if(m2mret < 0)
     {
         song_buf.clear();

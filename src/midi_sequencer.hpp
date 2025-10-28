@@ -402,10 +402,11 @@ private:
     //! Storage of data block refered in tracks
     std::vector<uint8_t> m_dataBank;
 
+    //! Array of all MIDI events across all tracks
     std::vector<MidiEvent> m_eventBank;
 
     //! Pre-processed track data storage
-    std::vector<MidiTrackQueue > m_trackData;
+    std::vector<MidiTrackQueue> m_trackData;
 
     //! CMF instruments
     std::vector<CmfInstrument> m_cmfInstruments;
@@ -937,14 +938,12 @@ private:
      */
     bool parseRMI(FileAndMemReader &fr);
 
-#ifndef BWMIDI_DISABLE_MUS_SUPPORT
     /**
      * @brief Load file as DMX MUS file (Doom)
      * @param fr Context with opened file
      * @return true on successful load
      */
     bool parseMUS(FileAndMemReader &fr);
-#endif
 
 #ifndef BWMIDI_DISABLE_XMI_SUPPORT
     /**

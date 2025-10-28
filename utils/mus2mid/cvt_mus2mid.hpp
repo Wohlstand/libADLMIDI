@@ -230,7 +230,7 @@ static int Convert_mus2midi(uint8_t *in, uint32_t insize,
     uint8_t *cur, *end;
     uint32_t track_size_pos, begin_track_pos, current_pos;
     int32_t delta_time;/* Delta time for midi event */
-    int temp, ret = -1;
+    int temp, ret = -1, skip;
     int channel_volume[MUS_MIDI_MAXCHANNELS];
     int channelMap[MUS_MIDI_MAXCHANNELS], currentChannel;
 
@@ -319,6 +319,7 @@ static int Convert_mus2midi(uint8_t *in, uint32_t insize,
 
     currentChannel = 0;
     delta_time = 0;
+    skip = 0;
 
     /* main loop */
     while(cur < end){
@@ -334,7 +335,10 @@ static int Convert_mus2midi(uint8_t *in, uint32_t insize,
         channel = (event & 15);     /* current channel */
 
         /* write variable length delta time */
-        out_local += mus2mid_writevarlen(delta_time, out_local);
+        if(!skip)
+            out_local += mus2mid_writevarlen(delta_time, out_local);
+
+        skip = 0;
 
         /* set all channels to 127 (max) volume */
         if (channelMap[channel] < 0) {
@@ -370,12 +374,13 @@ static int Convert_mus2midi(uint8_t *in, uint32_t insize,
             case MUSEVENT_CHANNELMODE:
                 status |= 0xB0;
                 if (*cur >= sizeof(mus_midimap) / sizeof(mus_midimap[0])) {
-                    /*_WM_ERROR_NEW("%s:%i: can't map %u to midi",
-                                  __FUNCTION__, __LINE__, *cur);*/
-                    goto _end;
+                    ++cur;
+                    skip = 1;
+                    continue;
                 }
                 bit1 = mus_midimap[*cur++];
-                bit2 = (*cur++ == 12) ? header.channels + 1 : 0x00;
+                bit2 = 0;
+                /* bit2 = (*cur++ == 12) ? header.channels + 1 : 0x00; */
                 break;
             case MUSEVENT_CONTROLLERCHANGE:
                 if (*cur == 0) {
@@ -387,11 +392,13 @@ static int Convert_mus2midi(uint8_t *in, uint32_t insize,
                 } else {
                     status |= 0xB0;
                     if (*cur >= sizeof(mus_midimap) / sizeof(mus_midimap[0])) {
-                        /*_WM_ERROR_NEW("%s:%i: can't map %u to midi",
-                                      __FUNCTION__, __LINE__, *cur);*/
-                        goto _end;
+                        /* Skip this event */
+                        cur += 2;
+                        skip = 1;
+                        continue;
+                    } else {
+                        bit1 = mus_midimap[*cur++];
                     }
-                    bit1 = mus_midimap[*cur++];
                     bit2 = *cur++;
                 }
                 break;
