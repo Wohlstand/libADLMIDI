@@ -291,8 +291,8 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
                 end.pop();
             }
         }
+#endif
     }
-
 
     /*
      * If Note-Off and it's Note-On is on the same row - move this damned note off down!
@@ -381,6 +381,9 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
 
 BW_MidiSequencer::BW_MidiSequencer() :
     m_interface(NULL),
+    m_loadTrackNumber(0),
+    m_triggerHandler(NULL),
+    m_triggerUserData(NULL),
     m_format(Format_MIDI),
     m_smfFormat(0),
     m_loopFormat(Loop_Default),
@@ -390,13 +393,10 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_postSongWaitDelay(1.0),
     m_loopStartTime(-1.0),
     m_loopEndTime(-1.0),
-    m_tempoMultiplier(1.0),
     m_atEnd(false),
     m_loopCount(-1),
-    m_loadTrackNumber(0),
     m_trackSolo(~static_cast<size_t>(0)),
-    m_triggerHandler(NULL),
-    m_triggerUserData(NULL)
+    m_tempoMultiplier(1.0)
 {
     m_loop.reset();
     m_loop.invalidLoop = false;
@@ -703,7 +703,7 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
      * Otherwise, after sort those notes will play infinite sound       */
 
     //! Tempo change events list
-    std::vector<MidiEvent> temposList;
+    std::vector<TempoEvent> temposList;
 
     /*
      * TODO: Make this be safer for memory in case of broken input data
@@ -774,8 +774,8 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
             {
                 if(event.subtype == MidiEvent::ST_TEMPOCHANGE)
                 {
-                    event.absPosition = abs_position;
-                    temposList.push_back(event);
+                    TempoEvent t = {readBEint(event.data_loc, event.data_loc_size), abs_position};
+                    temposList.push_back(t);
                 }
                 else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
                 {
@@ -936,7 +936,7 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
     return true;
 }
 
-void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
+void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                                           uint64_t loopStartTicks,
                                           uint64_t loopEndTicks)
 {
@@ -984,9 +984,9 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<MidiEvent> &tempos,
                     do
                     {
                         TempoChangePoint tempoMarker;
-                        const MidiEvent &tempoPoint = tempos[tempo_change_index];
+                        const TempoEvent &tempoPoint = tempos[tempo_change_index];
                         tempoMarker.absPos = tempoPoint.absPosition;
-                        tempoMarker.tempo = m_invDeltaTicks * fraction<uint64_t>(readBEint(tempoPoint.data_loc, tempoPoint.data_loc_size));
+                        tempoMarker.tempo = m_invDeltaTicks * fraction<uint64_t>(tempoPoint.tempo);
                         points.push_back(tempoMarker);
                         tempo_change_index++;
                     }
@@ -2632,7 +2632,7 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
 {
     const size_t    deltaTicks = 1;
     const size_t    trackCount = 1;
-    const uint32_t  imfTempo = 1428;
+    // const uint32_t  imfTempo = 1428;
     size_t          imfEnd = 0;
     uint64_t        abs_position = 0;
     uint8_t         imfRaw[4];
@@ -2643,7 +2643,7 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     std::memset(&event, 0, sizeof(event));
     event.isValid = 1;
 
-    std::vector<MidiEvent> temposList;
+    std::vector<TempoEvent> temposList;
 
     m_format = Format_IMF;
 
@@ -2664,19 +2664,17 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     // Define the playing tempo
     event.type = MidiEvent::T_SPECIAL;
     event.subtype = MidiEvent::ST_TEMPOCHANGE;
-    event.absPosition = 0;
-    event.data_loc_size = 4;
-    event.data_loc[0] = static_cast<uint8_t>((imfTempo >> 24) & 0xFF);
-    event.data_loc[1] = static_cast<uint8_t>((imfTempo >> 16) & 0xFF);
-    event.data_loc[2] = static_cast<uint8_t>((imfTempo >> 8) & 0xFF);
-    event.data_loc[3] = static_cast<uint8_t>((imfTempo & 0xFF));
+    event.data_loc_size = 3;
+    event.data_loc[0] = 0x00; // static_cast<uint8_t>((imfTempo >> 16) & 0xFF);
+    event.data_loc[1] = 0x05; // static_cast<uint8_t>((imfTempo >> 8) & 0xFF);
+    event.data_loc[2] = 0x94; // static_cast<uint8_t>((imfTempo & 0xFF));
     addEventToBank(evtPos, event);
-    temposList.push_back(event);
+    TempoEvent tempoEvent = {readBEint(event.data_loc, event.data_loc_size), 0};
+    temposList.push_back(tempoEvent);
 
     // Define the draft for IMF events
     event.type = MidiEvent::T_SPECIAL;
     event.subtype = MidiEvent::ST_RAWOPL;
-    event.absPosition = 0;
     event.data_loc_size = 2;
 
     fr.seek((imfEnd > 0) ? 2 : 0, FileAndMemReader::SET);
@@ -2691,7 +2689,6 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
 
         event.data_loc[0] = imfRaw[0]; // port index
         event.data_loc[1] = imfRaw[1]; // port value
-        event.absPosition = abs_position;
         event.isValid = 1;
 
         addEventToBank(evtPos, event);
@@ -2789,7 +2786,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     // Define the draft for IMF events
     event.type = MidiEvent::T_SPECIAL;
     event.subtype = MidiEvent::ST_RAWOPL;
-    event.absPosition = 0;
     event.data_loc_size = 2;
 
 #ifdef KLM_DEBUG
@@ -2834,7 +2830,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     reg_bd_state = 0x20;
     event.data_loc[0] = 0xBD;
     event.data_loc[1] = reg_bd_state;
-    event.absPosition = abs_position;
     event.isValid = 1;
     addEventToBank(evtPos, event);
     evtPos.delay = 0;
@@ -2899,7 +2894,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 reg_b0_state[chan] &= 0xDF;
                 event.data_loc[0] = 0xB0 + chan;
                 event.data_loc[1] = reg_b0_state[chan];
-                event.absPosition = abs_position;
                 event.isValid = 1;
                 addEventToBank(evtPos, event);
                 break;
@@ -2926,7 +2920,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
                 event.data_loc[0] = 0xBD;
                 event.data_loc[1] = reg_bd_state;
-                event.absPosition = abs_position;
                 event.isValid = 1;
                 addEventToBank(evtPos, event);
                 break;
@@ -2975,7 +2968,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             fflush(stdout);
 #endif
 
-            event.absPosition = abs_position;
             event.isValid = 1;
 
             event.data_loc[0] = 0xA0 + chan;
@@ -3020,7 +3012,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 event.data_loc[0] = 0x40 + rm_vol_map[chan - 6];
 
             event.data_loc[1] = reg_43_state[chan];
-            event.absPosition = abs_position;
             event.isValid = 1;
             addEventToBank(evtPos, event);
             break;
@@ -3059,7 +3050,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                 inst_off_car = rm_map[((chan - 6) * 2) + 1];
             }
 
-            event.absPosition = abs_position;
             event.isValid = 1;
 
             if(inst_off_mod != 0xFF)
@@ -3122,7 +3112,6 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             break;
 
         case 0x40: // Note ON without frequency
-            event.absPosition = abs_position;
             event.isValid = 1;
 
             if(chan < 6)
@@ -3256,7 +3245,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     if(!m_trackData[0].empty())
         m_currentPosition.track[0].pos = m_trackData[0].begin();
 
-    buildTimeLine(std::vector<MidiEvent>());
+    buildTimeLine(std::vector<TempoEvent>());
 
     return true;
 }
@@ -3681,7 +3670,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     uint64_t abs_position = 0;
     int32_t delay = 0;
     std::vector<uint16_t> mus_instrs;
-    std::vector<MidiEvent> temposList;
+    std::vector<TempoEvent> temposList;
 
     const uint8_t controller_map[15] =
     {
@@ -3772,13 +3761,13 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     event.isValid = 1;
     event.type = MidiEvent::T_SPECIAL;
     event.subtype = MidiEvent::ST_TEMPOCHANGE;
-    event.absPosition = abs_position;
     event.data_loc_size = 3;
     event.data_loc[0] = 0x1B;
     event.data_loc[1] = 0x8A;
     event.data_loc[2] = 0x06;
     addEventToBank(evtPos, event);
-    temposList.push_back(event);
+    TempoEvent tempoEvent = {readBEint(event.data_loc, event.data_loc_size), abs_position};
+    temposList.push_back(tempoEvent);
 
     // Begin percussion channel with volume 100
     std::memset(&event, 0, sizeof(event));

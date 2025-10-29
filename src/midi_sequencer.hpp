@@ -276,10 +276,17 @@ private:
         //! 4 bytes of locally placed data bytes
         uint8_t data_loc[5];
         uint8_t data_loc_size;
-        //! Absolute tick position (Used for the tempo calculation only)
-        uint64_t absPosition;
         //! Larger data blocks such as SysEx queries
         DataBlock data_block;
+    };
+
+    /*!
+     * \brief Individual tempo value used for the timeline calculation
+     */
+    struct TempoEvent
+    {
+        uint64_t tempo;
+        uint64_t absPosition;
     };
 
     /**
@@ -540,6 +547,29 @@ private:
     //! MIDI Output interface context
     const BW_MidiRtInterface *m_interface;
 
+    //! Storage of data block refered in tracks
+    std::vector<uint8_t> m_dataBank;
+
+    //! Array of all MIDI events across all tracks
+    std::vector<MidiEvent> m_eventBank;
+
+    //! Bank of all loaded songs
+    std::vector<MIDISong> m_songs;
+    //! Currently playing song (if single)
+    MIDISong *m_songCurrent;
+
+    //! The number of track of multi-track file (for exmaple, XMI) to load
+    int m_loadTrackNumber;
+
+    //! Handler of callback trigger events
+    TriggerHandler m_triggerHandler;
+    //! User data of callback trigger events
+    void *m_triggerUserData;
+
+
+
+    // TO MOVE INTO MIDISong!
+
     //! Music file format type. MIDI is default.
     FileFormat m_format;
     //! SMF format identifier.
@@ -569,12 +599,6 @@ private:
     //! Global loop end time
     double m_loopEndTime;
 
-    //! Storage of data block refered in tracks
-    std::vector<uint8_t> m_dataBank;
-
-    //! Array of all MIDI events across all tracks
-    std::vector<MidiEvent> m_eventBank;
-
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue> m_trackData;
 
@@ -594,17 +618,12 @@ private:
     fraction<uint64_t> m_invDeltaTicks;
     //! Current tempo
     fraction<uint64_t> m_tempo;
-
-    //! Tempo multiplier factor
-    double  m_tempoMultiplier;
     //! Is song at end
     bool    m_atEnd;
 
     //! Set the number of loops limit. Lesser than 0 - loop infinite
     int     m_loopCount;
 
-    //! The number of track of multi-track file (for exmaple, XMI) to load
-    int     m_loadTrackNumber;
 
     //! The XMI-specific list of raw songs, converted into SMF format
     std::vector<std::vector<uint8_t > > m_rawSongsData;
@@ -618,12 +637,12 @@ private:
     size_t m_trackSolo;
     //! MIDI channel disable (exception for extra port-prefix-based channels)
     bool m_channelDisable[16];
-    //! Handler of callback trigger events
-    TriggerHandler m_triggerHandler;
-    //! User data of callback trigger events
-    void *m_triggerUserData;
 
 
+    // KEEP HERE AS A GLOBAL STATE
+
+    //! Global tempo multiplier factor
+    double  m_tempoMultiplier;
     //! File parsing errors string (adding into m_errorString on aborting of the process)
     ErrString m_parsingErrorsString;
     //! Common error string
@@ -651,7 +670,7 @@ private:
      * @param loopStartTicks Global loop start tick (give zero if no global loop presented)
      * @param loopEndTicks Global loop end tick (give zero if no global loop presented)
      */
-    void buildTimeLine(const std::vector<MidiEvent> &tempos,
+    void buildTimeLine(const std::vector<TempoEvent> &tempos,
                        uint64_t loopStartTicks = 0,
                        uint64_t loopEndTicks = 0);
 
