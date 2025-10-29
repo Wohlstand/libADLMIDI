@@ -191,6 +191,8 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
         return 1;
 
     case MidiEvent::T_SPECIAL:
+    case MidiEvent::T_SYSCOMSPOSPTR:
+    case MidiEvent::T_SYSCOMSNGSEL:
         switch(evt.subtype)
         {
         case MidiEvent::ST_MARKER:
@@ -203,15 +205,22 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
         case MidiEvent::ST_LOOPSTACK_BREAK:
             return 2;
 
+        case MidiEvent::ST_ENDTRACK:
+            return 20;
+
         default:
             return 10;
         }
 
+    case MidiEvent::T_NOTETOUCH:
     case MidiEvent::T_CTRLCHANGE:
     case MidiEvent::T_PATCHCHANGE:
-    case MidiEvent::T_WHEEL:
     case MidiEvent::T_CHANAFTTOUCH:
+    case MidiEvent::T_WHEEL:
         return 3;
+
+    case MidiEvent::T_NOTEON:
+        return 4;
 
     default:
         return 10;
@@ -222,76 +231,27 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
 {
     //if(events.size() > 0)
     size_t arr_size = 0;
-    MidiEvent *arr = NULL;
+    MidiEvent *arr = NULL, *arr_end = NULL;
 
-    if(events_begin != events_end)
+    if(events_begin != events_end && events_begin < events_end)
     {
-        class local_stack : public std::stack<long>
-        {
-        public:
-            using std::stack<long>::c; // expose the container
-        };
-
-        local_stack beg;
-        local_stack end;
         MidiEvent piv;
-        long i = 0, L, R, swapv;
-        int priority;
+        MidiEvent *i, *j;
 
         arr = eventsBank.data() + events_begin;
+        arr_end = eventsBank.data() + events_end;
         arr_size = events_end - events_begin;
 
-        beg.push(0);
-        end.push(arr_size);
-
-        while(i >= 0)
+        for(i = arr + 1; i < arr_end; ++i)
         {
-            L = beg.c[i];
-            R = end.c[i] - 1;
-            if(L < R)
-            {
-                piv = arr[L];
-                priority = typePriority(piv);
+            memcpy(&piv, i, sizeof(MidiEvent));
+            int piv_pri = typePriority(piv);
 
-                while(L < R)
-                {
-                    while(typePriority(arr[R]) > priority && L < R)
-                        --R;
+            for(j = i; j > arr && piv_pri < typePriority(*(j - 1)); --j)
+                memcpy(j, j - 1, sizeof(MidiEvent));
 
-                    if(L < R)
-                        arr[L++] = arr[R];
-
-                    while(typePriority(arr[L]) < priority && L < R)
-                        ++L;
-
-                    if(L < R)
-                        arr[R--] = arr[L];
-                }
-
-                arr[L] = piv;
-                beg.push(L + 1);
-                end.push(end.c[i]);
-                end.c[i++] = L;
-
-                if(end.c[i] - beg.c[i] > end.c[i - 1] - beg.c[i - 1])
-                {
-                    swapv = beg.c[i];
-                    beg.c[i] = beg.c[i - 1];
-                    beg.c[i - 1] = swapv;
-
-                    swapv = end.c[i];
-                    end.c[i] = end.c[i - 1];
-                    end.c[i - 1] = swapv;
-                }
-            }
-            else
-            {
-                --i;
-                beg.pop();
-                end.pop();
-            }
+            memcpy(j, &piv, sizeof(MidiEvent));
         }
-#endif
     }
 
     /*
@@ -301,80 +261,103 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
     {
         size_t max_size = arr_size;
 
-        for(size_t i = 0; i < max_size; i++)
+        if(arr_size > 1)
         {
-            const MidiEvent &e = arr[i];
-            if(e.type != MidiEvent::T_NOTEON)
-                continue;
-
-            const size_t note_i = static_cast<size_t>(e.channel * 255) + (e.data_loc[0] & 0x7F);
-
-            //Check, was previously note is on or off
-            bool wasOn = noteStates[note_i];
-            noteStates[note_i] = true;
-
-            // Detect zero-length notes are following previously pressed note
-            int noteOffsOnSameNote = 0;
-
-            for(size_t j = 0; j < max_size; )
+            for(size_t i = arr_size - 1; ; --i)
             {
-                const MidiEvent &o = arr[j];
-                if(o.type != MidiEvent::T_NOTEOFF)
+                const MidiEvent &e = arr[i];
+
+                if(e.type == MidiEvent::T_NOTEOFF)
+                    break;
+
+                if(e.type != MidiEvent::T_NOTEON)
                 {
-                    ++j;
+                    if(i == 0)
+                        break;
                     continue;
                 }
 
-                const size_t note_j = static_cast<size_t>(o.channel * 255) + (o.data_loc[0] & 0x7F);
+                const size_t note_i = (static_cast<size_t>(e.channel) << 7) | (e.data_loc[0] & 0x7F);
 
-                // If note was off, and note-off on same row with note-on - move it down!
-                if(
-                    (o.channel == e.channel) &&
-                    (o.data_loc[0] == e.data_loc[0])
-                )
+                //Check, was previously note is on or off
+                bool wasOn = noteStates[note_i];
+
+                // Detect zero-length notes are following previously pressed note
+                int noteOffsOnSameNote = 0;
+
+                for(size_t j = 0; j < max_size; )
                 {
-                    // If note is already off OR more than one note-off on same row and same note
-                    if(!wasOn || (noteOffsOnSameNote != 0))
+                    const MidiEvent &o = arr[j];
+                    if(o.type == MidiEvent::T_NOTEON)
+                        break;
+
+                    if(o.type != MidiEvent::T_NOTEOFF)
                     {
-                        MidiEvent tmp;
-                        MidiEvent *dst = arr + j;
-                        MidiEvent *src = dst + 1;
-
-                        // Move this event to end of the list
-                        memcpy(&tmp, &o, sizeof(MidiEvent));
-
-                        if(j < arr_size - 1)
-                        {
-                            for(size_t k = j + 1; k < arr_size; ++k)
-                                memcpy(dst++, src++, sizeof(MidiEvent));
-
-                            --max_size;
-
-                            if(j < i) // Caused offset of i
-                                --i;
-
-                            memcpy(&arr[arr_size - 1], &tmp, sizeof(MidiEvent));
-                        }
-
-                        noteStates[note_i] = false;
+                        ++j;
                         continue;
                     }
-                    else
-                    {
-                        // When same row has many note-offs on same row
-                        // that means a zero-length note follows previous note
-                        // it must be shuted down
-                        noteOffsOnSameNote++;
-                        noteStates[note_j] = false;
-                    }
-                }
-                else
-                {
-                    noteStates[note_j] = false;
-                }
 
-                ++j;
-            }
+                    const size_t note_j = (static_cast<size_t>(o.channel) << 7) | (o.data_loc[0] & 0x7F);
+
+                    // If note was off, and note-off on same row with note-on - move it down!
+                    if(note_j == note_i)
+                    {
+                        // If note is already off OR more than one note-off on same row and same note
+                        if(!wasOn || (noteOffsOnSameNote != 0))
+                        {
+                            MidiEvent tmp;
+
+                            if(j < arr_size - 1)
+                            {
+                                MidiEvent *dst = arr + j;
+                                MidiEvent *src = dst + 1;
+
+                                // Move this event to end of the list
+                                memcpy(&tmp, &o, sizeof(MidiEvent));
+
+                                for(size_t k = j + 1; k < arr_size; ++k)
+                                    memcpy(dst++, src++, sizeof(MidiEvent));
+
+                                memcpy(&arr[arr_size - 1], &tmp, sizeof(MidiEvent));
+
+                                --max_size;
+
+                                // Caused offset of i (j is always smaller than i!)
+                                if(j < i)
+                                    --i;
+
+                            }
+                            else
+                                ++j;
+
+                            continue;
+                        }
+                        else
+                        {
+                            // When same row has many note-offs on same row
+                            // that means a zero-length note follows previous note
+                            // it must be shuted down
+                            ++noteOffsOnSameNote;
+                        }
+                    }
+
+                    ++j;
+                } // Sub-Loop through note-offs
+
+                if(i == 0)
+                    break;
+            } // loop through note-ons
+        } // arr_size > 1
+
+        // Apply note states according to event types
+        for(size_t i = 0; i < arr_size ; ++i)
+        {
+            const MidiEvent &e = arr[i];
+
+            if(e.type == MidiEvent::T_NOTEON)
+                noteStates[(static_cast<size_t>(e.channel) << 7) | (e.data_loc[0] & 0x7F)] = true;
+            else if(e.type == MidiEvent::T_NOTEOFF)
+                noteStates[(static_cast<size_t>(e.channel) << 7) | (e.data_loc[0] & 0x7F)] = false;
         }
     }
 }
@@ -697,7 +680,7 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
     char error[150];
 
     //! Caches note on/off states.
-    bool noteStates[16 * 255];
+    bool noteStates[0x7FF]; // [ccc|cnnnnnnn] - c = channel, n = note
     /* This is required to carefully detect zero-length notes           *
      * and avoid a move of "note-off" event over "note-on" while sort.  *
      * Otherwise, after sort those notes will play infinite sound       */
