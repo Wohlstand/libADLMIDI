@@ -553,11 +553,6 @@ private:
     //! Array of all MIDI events across all tracks
     std::vector<MidiEvent> m_eventBank;
 
-    //! Bank of all loaded songs
-    std::vector<MIDISong> m_songs;
-    //! Currently playing song (if single)
-    MIDISong *m_songCurrent;
-
     //! The number of track of multi-track file (for exmaple, XMI) to load
     int m_loadTrackNumber;
 
