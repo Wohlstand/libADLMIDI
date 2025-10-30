@@ -27,6 +27,7 @@
 #define DOS_TMAN_H
 
 #include <stddef.h>
+#include <stdio.h>
 #include <list>
 
 #define DOS_TASK_CLOCK_BASE 1192030L
@@ -39,6 +40,7 @@ class DosTaskman
     volatile long m_counter;
     volatile long m_clock;
     volatile bool m_suspend;
+    volatile bool m_insideInterrupt;
 
     static void process();
 
@@ -79,6 +81,10 @@ public:
 
     DosTaskman();
     ~DosTaskman();
+
+    static bool isInsideInterrupt();
+    static int reserve_fprintf(FILE *stream, const char *format, va_list args);
+    static void reserve_flush(FILE *stream);
 
     void setClockRate(long frequency);
     void setTimer(long tickBase);

@@ -29,7 +29,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
 
 #include "dos_tman.h"
 
@@ -40,6 +41,10 @@
 
 static _go32_dpmi_seginfo s_oldIRQ8, s_newIRQ8;
 DosTaskman *DosTaskman::self = NULL;
+
+static char s_snpirntf[300];
+static char s_reserve_print_buffer_out[2048] = "";
+static char s_reserve_print_buffer_err[2048] = "";
 
 static __attribute__((always_inline)) inline uint32_t disableInterrupts(void)
 {
@@ -90,6 +95,8 @@ static __attribute__((always_inline)) inline void restoreInterrupts(uint32_t fla
 
 void DosTaskman::process()
 {
+    self->m_insideInterrupt = true;
+
     ++self->m_clock;
     if(self->m_clock >= 0x10000000)
         self->m_clock = 0;
@@ -116,12 +123,15 @@ void DosTaskman::process()
     }
 
     outportb(0x20, 0x20);
+
+    self->m_insideInterrupt = false;
 }
 
 DosTaskman::DosTaskman()
 {
     m_suspend = false;
     m_running = false;
+    m_insideInterrupt = false;
     m_timerRate  = 0x10000L;
     m_counter = 0;
     m_clock = 0;
@@ -142,6 +152,40 @@ DosTaskman::~DosTaskman()
 {
     close();
     self = NULL;
+}
+
+bool DosTaskman::isInsideInterrupt()
+{
+    if(self)
+        return self->m_insideInterrupt;
+    else
+        return false;
+}
+
+int DosTaskman::reserve_fprintf(FILE *stream, const char *format, va_list args)
+{
+    int ret = vsnprintf(s_snpirntf, 300, format, args);
+
+    if(stream == stderr)
+        strncat(s_reserve_print_buffer_err, s_snpirntf, 2047);
+    else if(stream == stdout)
+        strncat(s_reserve_print_buffer_out, s_snpirntf, 2047);
+
+    return ret;
+}
+
+void DosTaskman::reserve_flush(FILE *stream)
+{
+    if(stream == stderr && s_reserve_print_buffer_err[0])
+    {
+        fprintf(stderr, "%s", s_reserve_print_buffer_err);
+        s_reserve_print_buffer_err[0] = 0;
+    }
+    else if(stream == stdout && s_reserve_print_buffer_out[0])
+    {
+        fprintf(stdout, "%s", s_reserve_print_buffer_out);
+        s_reserve_print_buffer_out[0] = 0;
+    }
 }
 
 void DosTaskman::setClockRate(long frequency)

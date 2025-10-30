@@ -203,16 +203,22 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 
 #if defined(__WATCOMC__)
 #include <stdio.h> // snprintf is here!
-#define flushout(stream)
+// Use normal fprintf, but don't call fflush since this ruins the runtime
+#   define s_fprintf        std::fprintf
+#   define flushout(stream)
 #elif defined(__DJGPP__)
-#define flushout(stream) \
-    {\
-        DosTaskman::suspend();\
-        std::fflush(stream);\
-        DosTaskman::resume();\
-    }
+// Use printf and flush with interrupt triggering suspension to avoid execution of interrupt just in a middle of the fprintf and fflush execution
+#   define flushout(stream) \
+        {\
+            DosTaskman::suspend();\
+            DosTaskman::reserve_flush(stream);\
+            std::fflush(stream);\
+            DosTaskman::resume();\
+        }
 #else
-#define flushout(stream) std::fflush(stream)
+// Use normal fprintf and fflush
+#   define s_fprintf        std::fprintf
+#   define flushout(stream) std::fflush(stream)
 #endif
 
 #if defined(__DJGPP__) || (defined(__WATCOMC__) && (defined(__DOS__) || defined(__DOS4G__) || defined(__DOS4GNZ__)))
@@ -223,6 +229,20 @@ __inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 
 #ifdef __DJGPP__
 #include "dos_tman.h"
+static int s_fprintf(FILE *stream, const char *format, ...)
+{
+    int ret;
+    va_list args;
+    DosTaskman::suspend();
+    va_start(args, format);
+    if(DosTaskman::isInsideInterrupt())
+        ret = DosTaskman::reserve_fprintf(stream, format, args);
+    else
+        ret = vfprintf(stream, format, args);
+    va_end(args);
+    DosTaskman::resume();
+    return ret;
+}
 #endif//__DJGPP__
 
 #ifdef __WATCOMC__
@@ -469,9 +489,9 @@ static bool is_number(const std::string &s)
 static void printError(const char *err, const char *what = NULL)
 {
     if(what)
-        std::fprintf(stderr, "\nERROR (%s): %s\n\n", what, err);
+        s_fprintf(stderr, "\nERROR (%s): %s\n\n", what, err);
     else
-        std::fprintf(stderr, "\nERROR: %s\n\n", err);
+        s_fprintf(stderr, "\nERROR: %s\n\n", err);
     flushout(stderr);
 }
 
@@ -502,14 +522,14 @@ static bool gotXmiTrigger = false;
 
 static void xmiTriggerCallback(void *, unsigned trigger, size_t track)
 {
-    std::fprintf(stdout, " - Trigger hook: trigger %u, track: %u\n", trigger, (unsigned)track);
+    s_fprintf(stdout, " - Trigger hook: trigger %u, track: %u\n", trigger, (unsigned)track);
     flushout(stdout);
     gotXmiTrigger = true;
 }
 
 static void loopEndCallback(void *)
 {
-    std::fprintf(stdout, " - Loop End hook: trigger\n");
+    s_fprintf(stdout, " - Loop End hook: trigger\n");
     flushout(stdout);
     gotXmiTrigger = true;
 }
@@ -524,8 +544,8 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
     va_end(args);
     if(rc > 0)
     {
-        std::fprintf(stdout, "                                                                              \r");
-        std::fprintf(stdout, " - Debug: %s\n", buffer);
+        s_fprintf(stdout, "                                                                              \r");
+        s_fprintf(stdout, " - Debug: %s\n", buffer);
         flushout(stdout);
     }
 }
@@ -533,9 +553,10 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
 #ifdef ADLMIDI_ENABLE_HW_DOS
 static inline void keyWait()
 {
-    std::printf("<press any key to continue...>");
+    s_fprintf(stdout, "<press any key to continue...>");
+    flushout(stdout);
     getch();
-    std::printf("\r                              \r");
+    s_fprintf(stdout, "\r                              \r");
 }
 #endif
 
@@ -548,7 +569,7 @@ static void printBanks()
 
     if(banksCount > 0)
     {
-        std::printf("    Available embedded banks by number:\n\n");
+        s_fprintf(stdout, "    Available embedded banks by number:\n\n");
 
         for(int a = 0; a < banksCount; ++a)
         {
@@ -559,7 +580,7 @@ static void printBanks()
 #endif
         }
 
-        std::printf(
+        s_fprintf(stdout,
             "\n"
             "     Use banks 2-5 to play Descent \"q\" soundtracks.\n"
             "     Look up the relevant bank number from descent.sng.\n"
@@ -574,7 +595,7 @@ static void printBanks()
     }
     else
     {
-        std::printf("    This build of libADLMIDI has no embedded banks!\n\n");
+        s_fprintf(stdout, "    This build of libADLMIDI has no embedded banks!\n\n");
     }
 
     flushout(stdout);
@@ -584,7 +605,7 @@ static void printBanks()
 #ifdef DEBUG_TRACE_ALL_EVENTS
 static void debugPrintEvent(void * /*userdata*/, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 channel, const ADL_UInt8 * /*data*/, size_t len)
 {
-    std::fprintf(stdout, " - E: 0x%02X 0x%02X %02d (%d)\r\n", type, subtype, channel, (int)len);
+    s_fprintf(stdout, " - E: 0x%02X 0x%02X %02d (%d)\r\n", type, subtype, channel, (int)len);
     flushout(stdout);
 }
 #endif
@@ -682,7 +703,7 @@ static struct TimeCounter
 
     void clearLineR()
     {
-        std::fprintf(stdout, "                                                                              \r");
+        s_fprintf(stdout,  "                                                                              \r");
         flushout(stdout);
     }
 
@@ -701,7 +722,7 @@ static struct TimeCounter
 #ifdef HAS_S_GETTIME
                 secondsToHMSM(s_getTime() - realTimeStart, realHMS, 25);
 #endif
-                // std::fprintf(stdout, "                                               \r");
+                // s_fprintf(stdout, "                                               \r");
 #ifdef HAS_S_GETTIME
                 len = snprintf(linebuff, 79, "Time position: %s / %s [Real time: %s]", posHMS, totalHMS, realHMS);
 #else
@@ -710,7 +731,7 @@ static struct TimeCounter
                 if(len > 0)
                     memset(linebuff + len, ' ',  79 - len);
                 linebuff[79] = '\r';
-                std::fprintf(stdout, "%s", linebuff);
+                s_fprintf(stdout, "%s", linebuff);
                 flushout(stdout);
                 milliseconds_prev = milliseconds;
             }
@@ -725,8 +746,8 @@ static struct TimeCounter
 
         if(complete_prev != complete)
         {
-            std::fprintf(stdout, "                                                                              \r");
-            std::fprintf(stdout, "Recording WAV... [%d%% completed]\r", complete);
+            s_fprintf(stdout, "                                                                              \r");
+            s_fprintf(stdout, "Recording WAV... [%d%% completed]\r", complete);
             flushout(stdout);
             complete_prev = complete;
         }
@@ -734,7 +755,7 @@ static struct TimeCounter
 
     void clearLine()
     {
-        std::fprintf(stdout, "                                                                              \n\n");
+        s_fprintf(stdout, "                                                                              \n\n");
         flushout(stdout);
     }
 
@@ -862,14 +883,14 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
     // Set up SDL
     if(audio_init(&spec, &obtained, SDL_AudioCallbackX) < 0)
     {
-        std::fprintf(stderr, "\nERROR: Couldn't open audio: %s\n\n", audio_get_error());
+        s_fprintf(stdout, "\nERROR: Couldn't open audio: %s\n\n", audio_get_error());
         return 1;
     }
 
     if(spec.samples != obtained.samples)
     {
-        std::fprintf(stderr, " - Audio wanted (format=%s,samples=%u,rate=%u,channels=%u);\n"
-                             " - Audio obtained (format=%s,samples=%u,rate=%u,channels=%u)\n",
+        s_fprintf(stdout, " - Audio wanted (format=%s,samples=%u,rate=%u,channels=%u);\n"
+                          " - Audio obtained (format=%s,samples=%u,rate=%u,channels=%u)\n",
                      audio_format_to_str(spec.format, spec.is_msb),         spec.samples,     spec.freq,     spec.channels,
                      audio_format_to_str(obtained.format, obtained.is_msb), obtained.samples, obtained.freq, obtained.channels);
     }
@@ -915,13 +936,13 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 
 #   ifdef DEBUG_SONG_CHANGE
     int delayBeforeSongChange = 50;
-    std::fprintf(stdout, "DEBUG: === Random song set test is active! ===\n");
+    s_fprintf(stdout, "DEBUG: === Random song set test is active! ===\n");
     flushout(stdout);
 #   endif
 
 #   ifdef DEBUG_SEEKING_TEST
     int delayBeforeSeek = 50;
-    std::fprintf(stdout, "DEBUG: === Random position set test is active! ===\n");
+    s_fprintf(stdout, "DEBUG: === Random position set test is active! ===\n");
     flushout(stdout);
 #   endif
 
@@ -958,8 +979,8 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         char channelText[TerminalColumns + 1];
         char channelAttr[TerminalColumns + 1];
         adl_describeChannels(myDevice, channelText, channelAttr, sizeof(channelText));
-        std::fprintf(stdout, "%*s\r", TerminalColumns, "");  // erase the line
-        std::fprintf(stdout, "%s\n", channelText);
+        s_fprintf(stdout, "%*s\r", TerminalColumns, "");  // erase the line
+        s_fprintf(stdout, "%s\n", channelText);
 #   endif
 
 #   ifndef DEBUG_TRACE_ALL_EVENTS
@@ -1003,7 +1024,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     if(songNumLoad >= songsCount)
                         songNumLoad = songsCount;
                     adl_selectSongNum(myDevice, songNumLoad);
-                    std::fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
+                    s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
                     flushout(stdout);
                     break;
                 case 'D':
@@ -1012,7 +1033,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     if(songNumLoad < 0)
                         songNumLoad = 0;
                     adl_selectSongNum(myDevice, songNumLoad);
-                    std::fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
+                    s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
                     flushout(stdout);
                     break;
 #endif
@@ -1028,7 +1049,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     if(bankId >= adl_getBanksCount())
                         bankId = 0;
                     adl_setBank(myDevice, bankId);
-                    std::fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
+                    s_fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
                     flushout(stdout);
                     break;
                 case 'V':
@@ -1037,7 +1058,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     if(bankId < 0)
                         bankId = adl_getBanksCount() - 1;
                     adl_setBank(myDevice, bankId);
-                    std::fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
+                    s_fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
                     flushout(stdout);
                     break;
                 case 27: // Quit by ESC key
@@ -1086,8 +1107,8 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, unsigned sampleRate)
 {
     std::string wave_out = musPath + ".wav";
-    std::fprintf(stdout, " - Recording WAV file %s...\n", wave_out.c_str());
-    std::fprintf(stdout, "\n==========================================\n");
+    s_fprintf(stdout, " - Recording WAV file %s...\n", wave_out.c_str());
+    s_fprintf(stdout, "\n==========================================\n");
     flushout(stdout);
 
     if(wave_open(static_cast<long>(sampleRate), wave_out.c_str()) == 0)
@@ -1109,9 +1130,9 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
         s_timeCounter.clearLine();
 
         if(stop)
-            std::fprintf(stdout, "Interrupted! Recorded WAV is incomplete, but playable!\n");
+            s_fprintf(stdout, "Interrupted! Recorded WAV is incomplete, but playable!\n");
         else
-            std::fprintf(stdout, "Completed!\n");
+            s_fprintf(stdout, "Completed!\n");
         flushout(stdout);
     }
     else
@@ -1138,12 +1159,16 @@ static void s_midiLoop(DosTaskman::DosTask *task)
     const double mindelay = 1.0 / task->getFreq();
     double tickDelay;
 
-    s_extra_delay = 0;
-
     if(task->getCount() >= task->getRate())
-        s_extra_delay = mindelay;
+    {
+        s_extra_delay += mindelay;
+        return; // Skip this iteration
+    }
 
     tickDelay = adl_tickEvents(player, mindelay + s_extra_delay, mindelay / 10.0);
+
+    if(s_extra_delay > 0)
+        s_extra_delay = 0;
 
     if(adl_atEnd(player) || tickDelay <= 0)
         stop = true;
@@ -1211,7 +1236,7 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
                 s_pause = true;
                 prevSong(myDevice);
                 s_timeCounter.clearLineR();
-                fprintf(stdout, " - Selecting song %d / %d\n", s_curSong + 1, adl_getSongsCount(myDevice));
+                s_fprintf(stdout, " - Selecting song %d / %d\n", s_curSong + 1, adl_getSongsCount(myDevice));
                 flushout(stdout);
                 s_pause = false;
                 break;
@@ -1224,7 +1249,7 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
                 s_pause = true;
                 nextSong(myDevice);
                 s_timeCounter.clearLineR();
-                fprintf(stdout, " - Selecting song %d / %d\n", s_curSong + 1, adl_getSongsCount(myDevice));
+                s_fprintf(stdout, " - Selecting song %d / %d\n", s_curSong + 1, adl_getSongsCount(myDevice));
                 flushout(stdout);
                 s_pause = false;
                 break;
@@ -1236,7 +1261,7 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
                 adl_panic(myDevice);
                 adl_positionRewind(myDevice);
                 s_timeCounter.clearLineR();
-                fprintf(stdout, " - Rewind song to begin...\n");
+                s_fprintf(stdout, " - Rewind song to begin...\n");
                 flushout(stdout);
                 s_pause = false;
                 break;
@@ -1530,7 +1555,7 @@ static struct Args
                 }
             }
 #else
-            std::printf("%s", help_text);
+            s_fprintf(stdout, "%s", help_text);
             flushout(stdout);
 #endif
 
@@ -1548,7 +1573,7 @@ static struct Args
             bool had_option = false;
 
             if(!std::strcmp("-p", argv[2]))
-                fprintf(stderr, "Warning: -p argument is deprecated and useless!\n"); //adl_setPercMode(myDevice, 1);//Turn on AdLib percussion mode
+                s_fprintf(stderr, "Warning: -p argument is deprecated and useless!\n"); //adl_setPercMode(myDevice, 1);//Turn on AdLib percussion mode
             else if(!std::strcmp("-v", argv[2]))
                 setHwVibrato = 1;
 
@@ -1834,13 +1859,13 @@ static struct Args
 
 int main(int argc, char **argv)
 {
-    std::fprintf(stdout, "==========================================\n"
-                        #ifdef ADLMIDI_ENABLE_HW_DOS
-                         "      libADLMIDI demo utility (HW OPL)\n"
-                        #else
-                         "         libADLMIDI demo utility\n"
-                        #endif
-                         "==========================================\n\n");
+    s_fprintf(stdout, "==========================================\n"
+#ifdef ADLMIDI_ENABLE_HW_DOS
+                      "      libADLMIDI demo utility (HW OPL)\n"
+#else
+                      "         libADLMIDI demo utility\n"
+#endif
+                      "==========================================\n\n");
     flushout(stdout);
 
     bool doQuit = false;
@@ -1915,16 +1940,16 @@ int main(int argc, char **argv)
     adl_switchEmulator(myDevice, s_devSetup.emulator);
 #endif
 
-    std::fprintf(stdout, " - Library version %s\n", adl_linkedLibraryVersion());
+    s_fprintf(stdout, " - Library version %s\n", adl_linkedLibraryVersion());
 #ifdef ADLMIDI_ENABLE_HW_DOS
-    std::fprintf(stdout, " - Hardware chip in use: %s\n", adl_chipEmulatorName(myDevice));
+    s_fprintf(stdout, " - Hardware chip in use: %s\n", adl_chipEmulatorName(myDevice));
 #elif defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
     if(s_devSetup.hwSerial)
-        std::fprintf(stdout, " - %s [device %s] in use\n", adl_chipEmulatorName(myDevice), s_devSetup.serialName.c_str());
+        s_fprintf(stdout, " - %s [device %s] in use\n", adl_chipEmulatorName(myDevice), s_devSetup.serialName.c_str());
     else
-        std::fprintf(stdout, " - %s Emulator in use\n", adl_chipEmulatorName(myDevice));
+        s_fprintf(stdout, " - %s Emulator in use\n", adl_chipEmulatorName(myDevice));
 #else
-    std::fprintf(stdout, " - %s Emulator in use\n", adl_chipEmulatorName(myDevice));
+    s_fprintf(stdout, " - %s Emulator in use\n", adl_chipEmulatorName(myDevice));
 #endif
 
     if(s_devSetup.setBankNo >= 0)
@@ -1937,25 +1962,25 @@ int main(int argc, char **argv)
             return 1;
         }
 
-        std::fprintf(stdout, " - Use embedded bank #%d [%s]\n", s_devSetup.setBankNo, adl_getBankNames()[s_devSetup.setBankNo]);
+        s_fprintf(stdout, " - Use embedded bank #%d [%s]\n", s_devSetup.setBankNo, adl_getBankNames()[s_devSetup.setBankNo]);
     }
     else if(!s_devSetup.setBankFile.empty())
     {
-        std::fprintf(stdout, " - Use custom bank [%s]...", s_devSetup.setBankFile.c_str());
+        s_fprintf(stdout, " - Use custom bank [%s]...", s_devSetup.setBankFile.c_str());
         flushout(stdout);
 
         //Open external bank file (WOPL format is supported)
         //to create or edit them, use OPL3 Bank Editor you can take here https://github.com/Wohlstand/OPL3BankEditor
         if(adl_openBankFile(myDevice, s_devSetup.setBankFile.c_str()) != 0)
         {
-            std::fprintf(stdout, "FAILED!\n");
+            s_fprintf(stdout, "FAILED!\n");
             flushout(stdout);
             printError(adl_errorInfo(myDevice), "Can't open a custom bank file");
             adl_close(myDevice);
             return 1;
         }
 
-        std::fprintf(stdout, "OK!\n");
+        s_fprintf(stdout, "OK!\n");
     }
 
 
@@ -1991,7 +2016,7 @@ int main(int argc, char **argv)
             }
         }
 
-        std::fprintf(stdout, " - Ran a test of multibank over embedded\n");
+        s_fprintf(stdout, " - Ran a test of multibank over embedded\n");
     }
 
 #ifndef ADLMIDI_ENABLE_HW_DOS
@@ -2052,42 +2077,42 @@ int main(int argc, char **argv)
     //Open MIDI file to play
     if(adl_openFile(myDevice, s_devSetup.musPath.c_str()) != 0)
     {
-        std::fprintf(stdout, " - File [%s] failed!\n", s_devSetup.musPath.c_str());
+        s_fprintf(stdout, " - File [%s] failed!\n", s_devSetup.musPath.c_str());
         flushout(stdout);
         printError(adl_errorInfo(myDevice), "Can't open MIDI file");
         adl_close(myDevice);
         return 2;
     }
 
-    std::fprintf(stdout, " - Number of chips %d\n", adl_getNumChipsObtained(myDevice));
-    std::fprintf(stdout, " - Number of four-ops %d\n", adl_getNumFourOpsChnObtained(myDevice));
-    std::fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
-    std::fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
-    std::fprintf(stdout, " - Channel allocation mode: %s\n", chanalloc_to_str(adl_getChannelAllocMode(myDevice)));
+    s_fprintf(stdout, " - Number of chips %d\n", adl_getNumChipsObtained(myDevice));
+    s_fprintf(stdout, " - Number of four-ops %d\n", adl_getNumFourOpsChnObtained(myDevice));
+    s_fprintf(stdout, " - Track count: %lu\n", static_cast<unsigned long>(adl_trackCount(myDevice)));
+    s_fprintf(stdout, " - Volume model: %s\n", volume_model_to_str(adl_getVolumeRangeModel(myDevice)));
+    s_fprintf(stdout, " - Channel allocation mode: %s\n", chanalloc_to_str(adl_getChannelAllocMode(myDevice)));
 
 #ifndef ADLMIDI_ENABLE_HW_DOS
 #   ifdef ADLMIDI_ENABLE_HW_SERIAL
     if(!s_devSetup.hwSerial)
 #   endif
     {
-        std::fprintf(stdout, " - Gain level: %g\n", g_gaining);
+        s_fprintf(stdout, " - Gain level: %g\n", g_gaining);
     }
 #endif
 
     int songsCount = adl_getSongsCount(myDevice);
     if(s_devSetup.songNumLoad >= 0)
     {
-        std::fprintf(stdout, " - Attempt to load song number: %d / %d\n", s_devSetup.songNumLoad, songsCount);
+        s_fprintf(stdout, " - Attempt to load song number: %d / %d\n", s_devSetup.songNumLoad, songsCount);
 #ifdef ADLMIDI_ENABLE_HW_DOS
         s_curSong = s_devSetup.songNumLoad;
 #endif
     }
     else if(songsCount > 0)
-        std::fprintf(stdout, " - File contains %d song(s)\n", songsCount);
+        s_fprintf(stdout, " - File contains %d song(s)\n", songsCount);
 
     if(s_devSetup.soloTrack != ~static_cast<size_t>(0))
     {
-        std::fprintf(stdout, " - Solo track: %lu\n", static_cast<unsigned long>(s_devSetup.soloTrack));
+        s_fprintf(stdout, " - Solo track: %lu\n", static_cast<unsigned long>(s_devSetup.soloTrack));
         adl_setTrackOptions(myDevice, s_devSetup.soloTrack, ADLMIDI_TrackOption_Solo);
     }
 
@@ -2096,19 +2121,19 @@ int main(int argc, char **argv)
         size_t count = adl_trackCount(myDevice);
         for(size_t track = 0; track < count; ++track)
             adl_setTrackOptions(myDevice, track, ADLMIDI_TrackOption_Off);
-        std::fprintf(stdout, " - Only tracks:");
+        s_fprintf(stdout, " - Only tracks:");
         for(size_t i = 0, n = s_devSetup.onlyTracks.size(); i < n; ++i)
         {
             size_t track = s_devSetup.onlyTracks[i];
             adl_setTrackOptions(myDevice, track, ADLMIDI_TrackOption_On);
-            std::fprintf(stdout, " %lu", static_cast<unsigned long>(track));
+            s_fprintf(stdout, " %lu", static_cast<unsigned long>(track));
         }
-        std::fprintf(stdout, "\n");
+        s_fprintf(stdout, "\n");
     }
 
-    std::fprintf(stdout, " - Automatic arpeggio is turned %s\n", adl_getAutoArpeggio(myDevice) ? "ON" : "OFF");
+    s_fprintf(stdout, " - Automatic arpeggio is turned %s\n", adl_getAutoArpeggio(myDevice) ? "ON" : "OFF");
 
-    std::fprintf(stdout, " - File [%s] opened!\n", s_devSetup.musPath.c_str());
+    s_fprintf(stdout, " - File [%s] opened!\n", s_devSetup.musPath.c_str());
     flushout(stdout);
 
 #ifndef ADLMIDI_ENABLE_HW_DOS
@@ -2119,7 +2144,7 @@ int main(int argc, char **argv)
 #   endif
 
 #else // ADLMIDI_ENABLE_HW_DOS
-    std::fprintf(stdout, " - [DOS] Running clock with %d hz\n", s_devSetup.clock_freq);
+    s_fprintf(stdout, " - [DOS] Running clock with %d hz\n", s_devSetup.clock_freq);
 #endif//ADLMIDI_ENABLE_HW_DOS
 
     s_timeCounter.setTotal(adl_totalTimeLength(myDevice));
@@ -2131,15 +2156,15 @@ int main(int argc, char **argv)
     if(!s_devSetup.recordWave)
 #   endif
     {
-        std::fprintf(stdout, " - Loop is turned %s\n", s_devSetup.loopEnabled ? "ON" : "OFF");
+        s_fprintf(stdout, " - Loop is turned %s\n", s_devSetup.loopEnabled ? "ON" : "OFF");
         if(s_timeCounter.hasLoop)
-            std::fprintf(stdout, " - Has loop points: %s ... %s\n", s_timeCounter.loopStartHMS, s_timeCounter.loopEndHMS);
-        std::fprintf(stdout, "\n==========================================\n");
+            s_fprintf(stdout, " - Has loop points: %s ... %s\n", s_timeCounter.loopStartHMS, s_timeCounter.loopEndHMS);
+        s_fprintf(stdout, "\n==========================================\n");
 
 #ifndef ADLMIDI_ENABLE_HW_DOS
-        printf("Playing... Hit Ctrl+C to quit!\n");
+        s_fprintf(stdout, "Playing... Hit Ctrl+C to quit!\n");
 #else
-        printf("Playing... Hit Ctrl+C or ESC to quit!\n");
+        s_fprintf(stdout, "Playing... Hit Ctrl+C or ESC to quit!\n");
 #endif
         flushout(stdout);
 
@@ -2186,7 +2211,7 @@ int main(int argc, char **argv)
 
     adl_close(myDevice);
 
-    printf("\n");
+    s_fprintf(stdout, "\n");
     flushout(stdout);
 
     return 0;
