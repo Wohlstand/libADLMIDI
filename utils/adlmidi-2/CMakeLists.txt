@@ -67,6 +67,7 @@ if(ADLMIDI2_VIDEO_OUT_SUPPORT)
 endif()
 
 if(ADLMIDI_DOS)
+    set_target_properties(adlmidi2 PROPERTIES SUFFIX ".exe") # Don't make an .exe-less copy!
     target_compile_definitions(adlmidi2 PUBLIC HARDWARE_OPL3)
     message("Turn on hardware OPL3 support on ADLMIDI2 tool")
 endif()

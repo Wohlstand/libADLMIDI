@@ -92,7 +92,7 @@ elseif(NOT ADLMIDI_DOS)
 endif()
 
 if(ADLMIDI_DOS)
-    set_target_properties(adlmidiplay PROPERTIES OUTPUT_NAME adlmidi)
+    set_target_properties(adlmidiplay PROPERTIES OUTPUT_NAME adlmidi SUFFIX ".exe")
 endif()
 
 if(TARGET ADLMIDI_shared)

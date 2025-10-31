@@ -9,3 +9,7 @@ if(WIN32)
         target_compile_definitions(mus2mid PRIVATE -DWIN32_CONSOLE)
     endif()
 endif()
+
+if(ADLMIDI_DOS)
+    set_target_properties(mus2mid PROPERTIES SUFFIX ".exe")
+endif()
