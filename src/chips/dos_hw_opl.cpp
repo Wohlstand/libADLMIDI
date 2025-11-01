@@ -124,7 +124,7 @@ void DOS_HW_OPL::writeReg(uint16_t addr, uint8_t data)
 
     outportb(port + 1, data);
 
-    for(unsigned c = 0; c < 35; ++c)
+    for(unsigned c = 0; c < 27; ++c)
         inportb(port);
 #   endif
 
