@@ -1352,7 +1352,7 @@ static bool oplChipInit(ADL_UInt16 address)
     ret = ((status1 & 0xE0) == 0x00) && ((status2 & 0xE0) == 0xC0);
 
     if(!ret)
-        printf("OPL detect status: addr=0x%02X 0x%02X, 0x%02X\n", address, status1, status2);
+        s_fprintf(stdout, " - OPL detect status: addr=0x%02X 0x%02X, 0x%02X\n", address, status1, status2);
 
     return ret;
 }
