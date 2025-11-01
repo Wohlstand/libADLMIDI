@@ -160,6 +160,29 @@ static inline uint64_t readVarLenEx(const uint8_t **ptr, const uint8_t *end, boo
     return result;
 }
 
+static inline uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
+{
+    uint64_t result = 0;
+    uint8_t byte;
+
+    ok = false;
+
+    for(;;)
+    {
+        if(fr.tell() >= end || fr.read(&byte, 1, 1) != 1)
+            return 2;
+
+        result = (result << 7) + (byte & 0x7F);
+
+        if((byte & 0x80) == 0)
+            break;
+    }
+
+    ok = true;
+
+    return result;
+}
+
 BW_MidiSequencer::MidiTrackRow::MidiTrackRow() :
     time(0.0),
     delay(0),
@@ -660,23 +683,67 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_currentPosition.track.resize(trackCount);
 }
 
-bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> > &trackData)
+bool BW_MidiSequencer::buildSmfTrackData(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count)
 {
-    const size_t trackCount = trackData.size();
-    buildSmfSetupReset(trackCount);
+    // bool gotGlobalLoopStart = false,
+    //      gotGlobalLoopEnd = false,
+    //      gotStackLoopStart = false,
+    //      gotLoopEventInThisRow = false;
 
-    bool gotGlobalLoopStart = false,
-         gotGlobalLoopEnd = false,
-         gotStackLoopStart = false,
-         gotLoopEventInThisRow = false;
+    uint8_t headBuf[8];
+    size_t fsize = 0;
+    size_t trackLength;
+    //! Tempo change events list
+    std::vector<TempoEvent> temposList;
+    LoopPointParseState loopState;
 
-    //! Tick position of loop start tag
-    uint64_t loopStartTicks = 0;
-    //! Tick position of loop end tag
-    uint64_t loopEndTicks = 0;
-    //! Full length of song in ticks
-    uint64_t ticksSongLength = 0;
-    //! Cache for error message strign
+    std::memset(&loopState, 0, sizeof(loopState));
+
+    buildSmfSetupReset(tracks_count);
+
+    // Read tracks from here
+    fr.seek(tracks_offset, FileAndMemReader::SET);
+
+    /*
+     * TODO: Make this be safer for memory in case of broken input data
+     * which may cause going away of available track data (and then give a crash!)
+     *
+     * POST: Check this more carefully for possible vulnuabilities are can crash this
+     */
+    for(size_t tk = 0; tk < tracks_count; ++tk)
+    {
+        fsize = fr.read(headBuf, 1, 8);
+        if((fsize < 8) || (std::memcmp(headBuf, "MTrk", 4) != 0))
+        {
+            m_errorString.set(fr.fileName().c_str());
+            m_errorString.append(": Invalid format, MTrk signature is not found!\n");
+            return false;
+        }
+
+        trackLength = (size_t)readBEint(headBuf + 4, 4);
+
+        if(!buildSmfTrack(fr, tk, trackLength, temposList, loopState))
+            return false; // Failed to parse track (error already written!)
+    }
+
+    installLoop(loopState);
+    buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
+
+    return true;
+}
+
+bool BW_MidiSequencer::buildSmfTrack(FileAndMemReader &fr,
+                                     const size_t track_idx,
+                                     const size_t track_size,
+                                     std::vector<TempoEvent> &temposList,
+                                     LoopPointParseState &loopState)
+{
+    MidiTrackRow evtPos;
+    MidiEvent event;
+    uint64_t abs_position = 0;
+    int status = 0;
+    const size_t end = fr.tell() + track_size;
+    bool ok = false;
     char error[150];
 
     //! Caches note on/off states.
@@ -685,227 +752,209 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
      * and avoid a move of "note-off" event over "note-on" while sort.  *
      * Otherwise, after sort those notes will play infinite sound       */
 
-    //! Tempo change events list
-    std::vector<TempoEvent> temposList;
+    std::memset(noteStates, 0, sizeof(noteStates));
 
-    /*
-     * TODO: Make this be safer for memory in case of broken input data
-     * which may cause going away of available track data (and then give a crash!)
-     *
-     * POST: Check this more carefully for possible vulnuabilities are can crash this
-     */
-    for(size_t tk = 0; tk < trackCount; ++tk)
+    // Time delay that follows the first event in the track
+    if(m_format == Format_RSXX)
+        ok = true;
+    else
+        evtPos.delay = readVarLenEx(fr, end, ok);
+
+    if(!ok)
     {
-        uint64_t abs_position = 0;
-        int status = 0;
-        MidiEvent event;
-        std::memset(&event, 0, sizeof(event));
-        event.isValid = 1;
-
-        bool ok = false;
-        const uint8_t *end      = trackData[tk].data() + trackData[tk].size();
-        const uint8_t *trackPtr = trackData[tk].data();
-        std::memset(noteStates, 0, sizeof(noteStates));
-
-        // Time delay that follows the first event in the track
-        {
-            MidiTrackRow evtPos;
-            if(m_format == Format_RSXX)
-                ok = true;
-            else
-                evtPos.delay = readVarLenEx(&trackPtr, end, ok);
-
-            if(!ok)
-            {
-                int len = snprintf(error, 150, "buildTrackData: Can't read variable-length value at begin of track %d.\n", (int)tk);
-                if((len > 0) && (len < 150))
-                    m_parsingErrorsString.append(error, (size_t)len);
-                return false;
-            }
-
-            // HACK: Begin every track with "Reset all controllers" event to avoid controllers state break came from end of song
-            if(tk == 0)
-            {
-                MidiEvent resetEvent;
-                std::memset(&resetEvent, 0, sizeof(resetEvent));
-                resetEvent.isValid = 1;
-                resetEvent.type = MidiEvent::T_SPECIAL;
-                resetEvent.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
-                addEventToBank(evtPos, resetEvent);
-            }
-
-            evtPos.absPos = abs_position;
-            abs_position += evtPos.delay;
-            m_trackData[tk].push_back(evtPos);
-        }
-
-        MidiTrackRow evtPos;
-        do
-        {
-            event = parseEvent(&trackPtr, end, status);
-            if(!event.isValid)
-            {
-                int len = snprintf(error, 150, "buildTrackData: Fail to parse event in the track %d.\n", (int)tk);
-                if((len > 0) && (len < 150))
-                    m_parsingErrorsString.append(error, (size_t)len);
-                return false;
-            }
-
-            addEventToBank(evtPos, event);
-
-            if(event.type == MidiEvent::T_SPECIAL)
-            {
-                if(event.subtype == MidiEvent::ST_TEMPOCHANGE)
-                {
-                    TempoEvent t = {readBEint(event.data_loc, event.data_loc_size), abs_position};
-                    temposList.push_back(t);
-                }
-                else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
-                {
-                    /*
-                     * loopStart is invalid when:
-                     * - starts together with loopEnd
-                     * - appears more than one time in same MIDI file
-                     */
-                    if(gotGlobalLoopStart || gotLoopEventInThisRow)
-                        m_loop.invalidLoop = true;
-                    else
-                    {
-                        gotGlobalLoopStart = true;
-                        loopStartTicks = abs_position;
-                    }
-                    // In this row we got loop event, register this!
-                    gotLoopEventInThisRow = true;
-                }
-                else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPEND))
-                {
-                    /*
-                     * loopEnd is invalid when:
-                     * - starts before loopStart
-                     * - starts together with loopStart
-                     * - appars more than one time in same MIDI file
-                     */
-                    if(gotGlobalLoopEnd || gotLoopEventInThisRow)
-                    {
-                        m_loop.invalidLoop = true;
-                        if(m_interface->onDebugMessage)
-                        {
-                            m_interface->onDebugMessage(
-                                m_interface->onDebugMessage_userData,
-                                "== Invalid loop detected! %s %s ==",
-                                (gotGlobalLoopEnd ? "[Caught more than 1 loopEnd!]" : ""),
-                                (gotLoopEventInThisRow ? "[loopEnd in same row as loopStart!]" : "")
-                            );
-                        }
-                    }
-                    else
-                    {
-                        gotGlobalLoopEnd = true;
-                        loopEndTicks = abs_position;
-                    }
-                    // In this row we got loop event, register this!
-                    gotLoopEventInThisRow = true;
-                }
-                else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN))
-                {
-                    if(!gotStackLoopStart)
-                    {
-                        if(!gotGlobalLoopStart)
-                            loopStartTicks = abs_position;
-                        gotStackLoopStart = true;
-                    }
-
-                    m_loop.stackUp();
-                    if(m_loop.stackLevel >= static_cast<int>(m_loop.stack.size()))
-                    {
-                        LoopStackEntry e;
-                        e.loops = event.data_loc[0];
-                        e.infinity = (event.data_loc[0] == 0);
-                        e.start = abs_position;
-                        e.end = abs_position;
-                        m_loop.stack.push_back(e);
-                    }
-                }
-                else if(!m_loop.invalidLoop &&
-                    ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
-                     (event.subtype == MidiEvent::ST_LOOPSTACK_BREAK))
-                )
-                {
-                    if(m_loop.stackLevel <= -1)
-                    {
-                        m_loop.invalidLoop = true; // Caught loop end without of loop start!
-                        if(m_interface->onDebugMessage)
-                        {
-                            m_interface->onDebugMessage(
-                                m_interface->onDebugMessage_userData,
-                                "== Invalid loop detected! [Caught loop end without of loop start] =="
-                            );
-                        }
-                    }
-                    else
-                    {
-                        if(loopEndTicks < abs_position)
-                            loopEndTicks = abs_position;
-                        m_loop.getCurStack().end = abs_position;
-                        m_loop.stackDown();
-                    }
-                }
-            }
-
-            if(event.subtype != MidiEvent::ST_ENDTRACK) // Don't try to read delta after EndOfTrack event!
-            {
-                evtPos.delay = readVarLenEx(&trackPtr, end, ok);
-                if(!ok)
-                {
-                    /* End of track has been reached! However, there is no EOT event presented */
-                    event.type = MidiEvent::T_SPECIAL;
-                    event.subtype = MidiEvent::ST_ENDTRACK;
-                }
-            }
-
-#ifdef ENABLE_END_SILENCE_SKIPPING
-            //Have track end on its own row? Clear any delay on the row before
-            if(event.subtype == MidiEvent::ST_ENDTRACK && (evtPos.events_end - evtPos.events_begin) == 1)
-            {
-                if (!m_trackData[tk].empty())
-                {
-                    MidiTrackRow &previous = m_trackData[tk].back();
-                    previous.delay = 0;
-                    previous.timeDelay = 0;
-                }
-            }
-#endif
-
-            if((evtPos.delay > 0) || (event.subtype == MidiEvent::ST_ENDTRACK))
-            {
-                evtPos.absPos = abs_position;
-                abs_position += evtPos.delay;
-                evtPos.sortEvents(m_eventBank, noteStates);
-                m_trackData[tk].push_back(evtPos);
-                evtPos.clear();
-                gotLoopEventInThisRow = false;
-            }
-        }
-        while((trackPtr <= end) && (event.subtype != MidiEvent::ST_ENDTRACK));
-
-        if(ticksSongLength < abs_position)
-            ticksSongLength = abs_position;
-        // Set the chain of events begin
-        if(m_trackData[tk].size() > 0)
-            m_currentPosition.track[tk].pos = m_trackData[tk].begin();
+        int len = snprintf(error, 150, "buildTrackData: Can't read variable-length value at begin of track %lu.\n", (unsigned long)track_idx);
+        if((len > 0) && (len < 150))
+            m_parsingErrorsString.append(error, (size_t)len);
+        return false;
     }
 
-    if(gotGlobalLoopStart && !gotGlobalLoopEnd)
+    // HACK: Begin every track with "Reset all controllers" event to avoid controllers state break came from end of song
+    if(track_idx == 0)
     {
-        gotGlobalLoopEnd = true;
-        loopEndTicks = ticksSongLength;
+        MidiEvent resetEvent;
+        std::memset(&resetEvent, 0, sizeof(resetEvent));
+        resetEvent.isValid = 1;
+        resetEvent.type = MidiEvent::T_SPECIAL;
+        resetEvent.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
+        addEventToBank(evtPos, resetEvent);
+    }
+
+    evtPos.absPos = abs_position;
+    abs_position += evtPos.delay;
+    m_trackData[track_idx].push_back(evtPos);
+    evtPos.clear();
+
+    do
+    {
+        event = parseEvent(fr, end, status);
+        if(!event.isValid)
+        {
+            int len = snprintf(error, 150, "buildTrackData: Fail to parse event in the track %lu.\n", (unsigned long)track_idx);
+            if((len > 0) && (len < 150))
+                m_parsingErrorsString.append(error, (size_t)len);
+            return false;
+        }
+
+        addEventToBank(evtPos, event);
+
+        if(event.type == MidiEvent::T_SPECIAL)
+        {
+            if(event.subtype == MidiEvent::ST_TEMPOCHANGE)
+            {
+                TempoEvent t = {readBEint(event.data_loc, event.data_loc_size), abs_position};
+                temposList.push_back(t);
+            }
+            else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
+            {
+                /*
+                 * loopStart is invalid when:
+                 * - starts together with loopEnd
+                 * - appears more than one time in same MIDI file
+                 */
+                if(loopState.gotLoopStart || loopState.gotLoopEventsInThisRow)
+                    m_loop.invalidLoop = true;
+                else
+                {
+                    loopState.gotLoopStart = true;
+                    loopState.loopStartTicks = abs_position;
+                }
+                // In this row we got loop event, register this!
+                loopState.gotLoopEventsInThisRow = true;
+            }
+            else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPEND))
+            {
+                /*
+                 * loopEnd is invalid when:
+                 * - starts before loopStart
+                 * - starts together with loopStart
+                 * - appars more than one time in same MIDI file
+                 */
+                if(loopState.gotLoopEnd || loopState.gotLoopEventsInThisRow)
+                {
+                    m_loop.invalidLoop = true;
+                    if(m_interface->onDebugMessage)
+                    {
+                        m_interface->onDebugMessage(
+                            m_interface->onDebugMessage_userData,
+                            "== Invalid loop detected! %s %s ==",
+                            (loopState.gotLoopEnd ? "[Caught more than 1 loopEnd!]" : ""),
+                            (loopState.gotLoopEventsInThisRow ? "[loopEnd in same row as loopStart!]" : "")
+                        );
+                    }
+                }
+                else
+                {
+                    loopState.gotLoopEnd = true;
+                    loopState.loopEndTicks = abs_position;
+                }
+                // In this row we got loop event, register this!
+                loopState.gotLoopEventsInThisRow = true;
+            }
+            else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN))
+            {
+                if(!loopState.gotStackLoopStart)
+                {
+                    if(!loopState.gotLoopStart)
+                        loopState.loopStartTicks = abs_position;
+                    loopState.gotStackLoopStart = true;
+                }
+
+                m_loop.stackUp();
+                if(m_loop.stackLevel >= static_cast<int>(m_loop.stack.size()))
+                {
+                    LoopStackEntry e;
+                    e.loops = event.data_loc[0];
+                    e.infinity = (event.data_loc[0] == 0);
+                    e.start = abs_position;
+                    e.end = abs_position;
+                    m_loop.stack.push_back(e);
+                }
+            }
+            else if(!m_loop.invalidLoop &&
+                ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
+                 (event.subtype == MidiEvent::ST_LOOPSTACK_BREAK))
+            )
+            {
+                if(m_loop.stackLevel <= -1)
+                {
+                    m_loop.invalidLoop = true; // Caught loop end without of loop start!
+                    if(m_interface->onDebugMessage)
+                    {
+                        m_interface->onDebugMessage(
+                            m_interface->onDebugMessage_userData,
+                            "== Invalid loop detected! [Caught loop end without of loop start] =="
+                        );
+                    }
+                }
+                else
+                {
+                    if(loopState.loopEndTicks < abs_position)
+                        loopState.loopEndTicks = abs_position;
+                    m_loop.getCurStack().end = abs_position;
+                    m_loop.stackDown();
+                }
+            }
+        }
+
+        if(event.subtype != MidiEvent::ST_ENDTRACK) // Don't try to read delta after EndOfTrack event!
+        {
+            evtPos.delay = readVarLenEx(fr, end, ok);
+            if(!ok)
+            {
+                /* End of track has been reached! However, there is no EOT event presented */
+                event.type = MidiEvent::T_SPECIAL;
+                event.subtype = MidiEvent::ST_ENDTRACK;
+            }
+        }
+
+#ifdef ENABLE_END_SILENCE_SKIPPING
+        //Have track end on its own row? Clear any delay on the row before
+        if(event.subtype == MidiEvent::ST_ENDTRACK && (evtPos.events_end - evtPos.events_begin) == 1)
+        {
+            if (!m_trackData[track_idx].empty())
+            {
+                MidiTrackRow &previous = m_trackData[track_idx].back();
+                previous.delay = 0;
+                previous.timeDelay = 0;
+            }
+        }
+#endif
+
+        if((evtPos.delay > 0) || (event.subtype == MidiEvent::ST_ENDTRACK))
+        {
+            evtPos.absPos = abs_position;
+            abs_position += evtPos.delay;
+            evtPos.sortEvents(m_eventBank, noteStates);
+            m_trackData[track_idx].push_back(evtPos);
+            evtPos.clear();
+            loopState.gotLoopEventsInThisRow = false;
+        }
+    }
+    while((fr.tell() <= end) && (event.subtype != MidiEvent::ST_ENDTRACK));
+
+    if(loopState.ticksSongLength < abs_position)
+        loopState.ticksSongLength = abs_position;
+
+    // Set the chain of events begin
+    if(m_trackData[track_idx].size() > 0)
+        m_currentPosition.track[track_idx].pos = m_trackData[track_idx].begin();
+
+    return true;
+}
+
+void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopState)
+{
+    if(loopState.gotLoopStart && !loopState.gotLoopEnd)
+    {
+        loopState.gotLoopEnd = true;
+        loopState.loopEndTicks = loopState.ticksSongLength;
     }
 
     // loopStart must be located before loopEnd!
-    if(loopStartTicks >= loopEndTicks)
+    if(loopState.loopStartTicks >= loopState.loopEndTicks)
     {
         m_loop.invalidLoop = true;
-        if(m_interface->onDebugMessage && (gotGlobalLoopStart || gotGlobalLoopEnd))
+        if(m_interface->onDebugMessage && (loopState.gotLoopStart || loopState.gotLoopEnd))
         {
             m_interface->onDebugMessage(
                 m_interface->onDebugMessage_userData,
@@ -913,10 +962,6 @@ bool BW_MidiSequencer::buildSmfTrackData(const std::vector<std::vector<uint8_t> 
             );
         }
     }
-
-    buildTimeLine(temposList, loopStartTicks, loopEndTicks);
-
-    return true;
 }
 
 void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
@@ -1517,6 +1562,14 @@ void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, std::v
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
+void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length)
+{
+    evt.data_block.offset = bank.size();
+    bank.resize(bank.size() + length);
+    fr.read(bank.data() + evt.data_block.offset, 1, length);
+    evt.data_block.size = bank.size() - evt.data_block.offset;
+}
+
 void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length)
 {
     evt.data_block.offset = bank.size();
@@ -1525,10 +1578,29 @@ void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
+void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length)
+{
+    evt.data_block.offset = bank.size();
+    bank.push_back(begin_byte);
+    bank.resize(bank.size() + length);
+    fr.read(bank.data() + evt.data_block.offset, 1, length);
+    evt.data_block.size = bank.size() - evt.data_block.offset;
+}
+
 void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length)
 {
     evt.data_block.offset = bank.size();
     std::copy(data, data + length, std::back_inserter(bank));
+    bank.push_back(0);
+    bank.push_back(0); /* Second terminator is an ending fix for UTF16 strings */
+    evt.data_block.size = bank.size() - evt.data_block.offset;
+}
+
+void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length)
+{
+    evt.data_block.offset = bank.size();
+    bank.resize(bank.size() + length);
+    fr.read(bank.data() + evt.data_block.offset, 1, length);
     bank.push_back(0);
     bank.push_back(0); /* Second terminator is an ending fix for UTF16 strings */
     evt.data_block.size = bank.size() - evt.data_block.offset;
@@ -1562,15 +1634,15 @@ static bool strEqual(const uint8_t *in_str, size_t length, const char *needle)
     return i == length && *it_n == 0; // Length is same
 }
 
-BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, const uint8_t *end, int &status)
+BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(FileAndMemReader &fr, const size_t end, int &status)
 {
-    const uint8_t *&ptr = *pptr;
+    // const uint8_t *&ptr = *pptr;
     BW_MidiSequencer::MidiEvent evt;
 
     std::memset(&evt, 0, sizeof(evt));
     evt.isValid = 1;
 
-    if(ptr + 1 > end)
+    if(fr.tell() + 1 > end)
     {
         // When track doesn't ends on the middle of event data, it's must be fine
         evt.type = MidiEvent::T_SPECIAL;
@@ -1578,13 +1650,21 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         return evt;
     }
 
-    unsigned char byte = *(ptr++);
+    uint8_t byte;
     bool ok = false;
+    std::vector<uint8_t> m_text_buffer;
+
+    if(fr.read(&byte, 1, 1) != 1)
+    {
+        m_parsingErrorsString.append("parseEvent: Failed to read first byte of the event\n");
+        evt.isValid = 0;
+        return evt;
+    }
 
     if(byte == MidiEvent::T_SYSEX || byte == MidiEvent::T_SYSEX2) // Ignore SysEx
     {
-        uint64_t length = readVarLenEx(pptr, end, ok);
-        if(!ok || (ptr + length > end))
+        uint64_t length = readVarLenEx(fr, end, ok);
+        if(!ok || (fr.tell() + length > end))
         {
             m_parsingErrorsString.append("parseEvent: Can't read SysEx event - Unexpected end of track data.\n");
             evt.isValid = 0;
@@ -1592,25 +1672,34 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         }
 
         evt.type = MidiEvent::T_SYSEX;
-        insertDataToBankWithByte(evt, m_dataBank, byte, ptr, length);
-        ptr += (size_t)length;
+        insertDataToBankWithByte(evt, m_dataBank, byte, fr, length);
         return evt;
     }
 
     if(byte == MidiEvent::T_SPECIAL)
     {
         // Special event FF
-        uint8_t  evtype = *(ptr++);
-        uint64_t length = readVarLenEx(pptr, end, ok);
-        if(!ok || (ptr + length > end))
+        uint8_t  evtype;
+        uint64_t length;
+
+        if(fr.read(&evtype, 1, 1) != 1)
+        {
+            m_parsingErrorsString.append("parseEvent: Failed to read event type!\n");
+            evt.isValid = 0;
+            return evt;
+        }
+
+        length = readVarLenEx(fr, end, ok);
+
+        if(!ok || (fr.tell() + length > end))
         {
             m_parsingErrorsString.append("parseEvent: Can't read Special event - Unexpected end of track data.\n");
             evt.isValid = 0;
             return evt;
         }
 
-        const uint8_t *data = ptr;
-        ptr += (size_t)length;
+        // const uint8_t *data = ptr;
+        // ptr += (size_t)length;
 
         evt.type = byte;
         evt.subtype = evtype;
@@ -1630,9 +1719,13 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
                 return evt;
             }
 
-            evt.data_loc_size = 0;
-            for(size_t i = 0; i < length && i < 5; ++i)
-                evt.data_loc[evt.data_loc_size++] = *(data++);
+            evt.data_loc_size = length;
+            if(fr.read(evt.data_loc, 1, length) != length)
+            {
+                m_parsingErrorsString.append("parseEvent: Failed to read event's data (1).\n");
+                evt.isValid = 0;
+                return evt;
+            }
 
 #if 0 /* Print all tempo events */
             if(evt.subtype == MidiEvent::ST_TEMPOCHANGE && hooks.onDebugMessage)
@@ -1643,7 +1736,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
          * by external functions (to display song title and copyright in the player) */
         else if(evt.subtype == MidiEvent::ST_COPYRIGHT)
         {
-            insertDataToBankWithTerm(evt, m_dataBank, data, length);
+            insertDataToBankWithTerm(evt, m_dataBank, fr, length);
             const char *entry = reinterpret_cast<const char*>(getData(evt.data_block));
 
             if(m_musCopyright.size == 0)
@@ -1658,7 +1751,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         }
         else if(evt.subtype == MidiEvent::ST_SQTRKTITLE)
         {
-            insertDataToBankWithTerm(evt, m_dataBank, data, length);
+            insertDataToBankWithTerm(evt, m_dataBank, fr, length);
             const char *entry = reinterpret_cast<const char*>(getData(evt.data_block));
 
             if(m_musTitle.size == 0)
@@ -1677,7 +1770,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         }
         else if(evt.subtype == MidiEvent::ST_INSTRTITLE)
         {
-            insertDataToBankWithTerm(evt, m_dataBank, data, length);
+            insertDataToBankWithTerm(evt, m_dataBank, fr, length);
             const uint8_t *entry = getData(evt.data_block);
 
             if(m_interface->onDebugMessage)
@@ -1685,23 +1778,32 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         }
         else if(evt.subtype == MidiEvent::ST_MARKER)
         {
-            if(strEqual(data, length, "loopstart"))
+            m_text_buffer.resize(length);
+
+            if(fr.read(m_text_buffer.data(), 1, length) != length)
+            {
+                m_parsingErrorsString.append("parseEvent: Failed to read marker data!\n");
+                evt.isValid = 0;
+                return evt;
+            }
+
+            if(strEqual(m_text_buffer.data(), length, "loopstart"))
             {
                 // Return a custom Loop Start event instead of Marker
                 evt.subtype = MidiEvent::ST_LOOPSTART;
                 return evt;
             }
-            else if(strEqual(data, length, "loopend"))
+            else if(strEqual(m_text_buffer.data(), length, "loopend"))
             {
                 // Return a custom Loop End event instead of Marker
                 evt.subtype = MidiEvent::ST_LOOPEND;
                 return evt;
             }
-            else if(length > 10 && strEqual(data, 10, "loopstart="))
+            else if(length > 10 && strEqual(m_text_buffer.data(), 10, "loopstart="))
             {
                 char loop_key[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
                 size_t key_len = length - 10;
-                std::memcpy(loop_key, data + 10, key_len > 10 ? 10 : key_len);
+                std::memcpy(loop_key, m_text_buffer.data() + 10, key_len > 10 ? 10 : key_len);
 
                 evt.type = MidiEvent::T_SPECIAL;
                 evt.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
@@ -1721,7 +1823,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
 
                 return evt;
             }
-            else if(length > 8 && strEqual(data, 8, "loopend="))
+            else if(length > 8 && strEqual(m_text_buffer.data(), 8, "loopend="))
             {
                 evt.type = MidiEvent::T_SPECIAL;
                 evt.subtype = MidiEvent::ST_LOOPSTACK_END;
@@ -1741,7 +1843,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             }
             else
             {
-                insertDataToBankWithTerm(evt, m_dataBank, data, length);
+                insertDataToBankWithTerm(evt, m_dataBank, m_text_buffer.data(), length);
             }
         }
         else if(evtype == MidiEvent::ST_ENDTRACK)
@@ -1750,7 +1852,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         }
         else
         {
-            insertDataToBank(evt, m_dataBank, data, length);
+            insertDataToBank(evt, m_dataBank, fr, length);
         }
 
         return evt;
@@ -1760,20 +1862,21 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
     if(byte < 0x80)
     {
         byte = static_cast<uint8_t>(status | 0x80);
-        --ptr;
+        // --ptr;
+        fr.seek(-1, FileAndMemReader::CUR);
     }
 
     // Sys Com Song Select(Song #) [0-127]
     if(byte == MidiEvent::T_SYSCOMSNGSEL)
     {
-        if(ptr + 1 > end)
+        if(fr.tell() + 1 > end)
         {
             m_parsingErrorsString.append("parseEvent: Can't read System Command Song Select event - Unexpected end of track data.\n");
             evt.isValid = 0;
             return evt;
         }
         evt.type = byte;
-        evt.data_loc[0] = *(ptr++);
+        fr.read(evt.data_loc, 1, 1);
         evt.data_loc_size = 1;
         return evt;
     }
@@ -1781,7 +1884,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
     // Sys Com Song Position Pntr [LSB, MSB]
     if(byte == MidiEvent::T_SYSCOMSPOSPTR)
     {
-        if(ptr + 2 > end)
+        if(fr.tell() + 2 > end)
         {
             m_parsingErrorsString.append("parseEvent: Can't read System Command Position Pointer event - Unexpected end of track data.\n");
             evt.isValid = 0;
@@ -1789,8 +1892,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         }
 
         evt.type = byte;
-        evt.data_loc[0] = *(ptr++);
-        evt.data_loc[1] = *(ptr++);
+        fr.read(evt.data_loc, 1, 2);
         evt.data_loc_size = 2;
         return evt;
     }
@@ -1807,15 +1909,14 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
     case MidiEvent::T_NOTETOUCH:
     case MidiEvent::T_CTRLCHANGE:
     case MidiEvent::T_WHEEL:
-        if(ptr + 2 > end)
+        if(fr.tell() + 2 > end)
         {
             m_parsingErrorsString.append("parseEvent: Can't read regular 2-byte event - Unexpected end of track data.\n");
             evt.isValid = 0;
             return evt;
         }
 
-        evt.data_loc[0] = *(ptr++);
-        evt.data_loc[1] = *(ptr++);
+        fr.read(evt.data_loc, 1, 2);
         evt.data_loc_size = 2;
 
         if((evType == MidiEvent::T_NOTEON) && (evt.data_loc[1] == 0))
@@ -1996,14 +2097,14 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
         return evt;
     case MidiEvent::T_PATCHCHANGE: // 1 byte length
     case MidiEvent::T_CHANAFTTOUCH:
-        if(ptr + 1 > end)
+        if(fr.tell() + 1 > end)
         {
             m_parsingErrorsString.append("parseEvent: Can't read regular 1-byte event - Unexpected end of track data.\n");
             evt.isValid = 0;
             return evt;
         }
 
-        evt.data_loc[0] = *(ptr++);
+        fr.read(evt.data_loc, 1, 1);
         evt.data_loc_size = 1;
 
         return evt;
@@ -3237,9 +3338,15 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
 {
     const size_t headerSize = 14;
     char headerBuf[headerSize] = "";
-    size_t fsize = 0;
-    size_t deltaTicks = 192, trackCount = 1;
-    std::vector<std::vector<uint8_t> > rawTrackData;
+    size_t fsize = 0, deltaTicks = 192;
+    size_t trackLength, trackPos, totalGotten;
+    LoopPointParseState loopState;
+    char start;
+
+    std::vector<TempoEvent> temposList;
+
+    std::memset(&loopState, 0, sizeof(loopState));
+
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -3249,7 +3356,7 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
     }
 
     // Try to identify RSXX format
-    char start = headerBuf[0];
+    start = headerBuf[0];
     if(start < 0x5D)
     {
         m_errorString.set("RSXX song too short!\n");
@@ -3263,7 +3370,6 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
         {
             m_format = Format_RSXX;
             fr.seek(start, FileAndMemReader::SET);
-            trackCount = 1;
             deltaTicks = 60;
         }
         else
@@ -3273,40 +3379,20 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
         }
     }
 
-    rawTrackData.clear();
-    rawTrackData.resize(trackCount, std::vector<uint8_t>());
     m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
     m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks));
 
-    size_t totalGotten = 0;
+    totalGotten = 0;
 
-    for(size_t tk = 0; tk < trackCount; ++tk)
-    {
-        // Read track header
-        size_t trackLength;
+    // Read track header
+    trackPos = fr.tell();
+    fr.seek(0, FileAndMemReader::END);
+    trackLength = fr.tell() - trackPos;
+    fr.seek(static_cast<long>(trackPos), FileAndMemReader::SET);
+    totalGotten += trackLength;
 
-        size_t pos = fr.tell();
-        fr.seek(0, FileAndMemReader::END);
-        trackLength = fr.tell() - pos;
-        fr.seek(static_cast<long>(pos), FileAndMemReader::SET);
-
-        // Read track data
-        rawTrackData[tk].resize(trackLength);
-        fsize = fr.read(&rawTrackData[tk][0], 1, trackLength);
-        if(fsize < trackLength)
-        {
-            m_errorString.set(fr.fileName().c_str());
-            m_errorString.append(": Unexpected file ending while getting raw track data!\n");
-            return false;
-        }
-        totalGotten += fsize;
-
-        //Finalize raw track data with a zero
-        rawTrackData[tk].push_back(0);
-    }
-
-    for(size_t tk = 0; tk < trackCount; ++tk)
-        totalGotten += rawTrackData[tk].size();
+    //Finalize raw track data with a zero
+    // rawTrackData[0].push_back(0);
 
     if(totalGotten == 0)
     {
@@ -3315,8 +3401,13 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
         return false;
     }
 
+    m_smfFormat = 0;
+    m_loop.stackLevel   = -1;
+
+    buildSmfSetupReset(1);
+
     // Build new MIDI events table
-    if(!buildSmfTrackData(rawTrackData))
+    if(!buildSmfTrack(fr, 0, trackLength, temposList, loopState))
     {
         m_errorString.set(fr.fileName().c_str());
         m_errorString.append(": MIDI data parsing error has occouped!\n");
@@ -3324,8 +3415,8 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
         return false;
     }
 
-    m_smfFormat = 0;
-    m_loop.stackLevel   = -1;
+    installLoop(loopState);
+    buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
 
     return true;
 }
@@ -3334,9 +3425,14 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
 {
     const size_t headerSize = 14;
     char headerBuf[headerSize] = "";
-    size_t fsize = 0;
-    size_t deltaTicks = 192, trackCount = 1;
-    std::vector<std::vector<uint8_t> > rawTrackData;
+    size_t fsize = 0, deltaTicks = 192, totalGotten = 0, trackPos, trackLength;
+    uint64_t ins_start, mus_start, ticks, ins_count;
+    LoopPointParseState loopState;
+
+    std::vector<TempoEvent> temposList;
+
+    std::memset(&loopState, 0, sizeof(loopState));
+
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -3355,10 +3451,10 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     m_format = Format_CMF;
 
     //unsigned version   = ReadLEint(HeaderBuf+4, 2);
-    uint64_t ins_start = readLEint(headerBuf + 6, 2);
-    uint64_t mus_start = readLEint(headerBuf + 8, 2);
+    ins_start = readLEint(headerBuf + 6, 2);
+    mus_start = readLEint(headerBuf + 8, 2);
     //unsigned deltas    = ReadLEint(HeaderBuf+10, 2);
-    uint64_t ticks     = readLEint(headerBuf + 12, 2);
+    ticks     = readLEint(headerBuf + 12, 2);
     // Read title, author, remarks start offsets in file
     fsize = fr.read(headerBuf, 1, 6);
     if(fsize < 6)
@@ -3378,7 +3474,7 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
         return false;
     }
 
-    uint64_t ins_count =  readLEint(headerBuf + 0, 2);
+    ins_count =  readLEint(headerBuf + 0, 2);
     fr.seek(static_cast<long>(ins_start), FileAndMemReader::SET);
 
     m_cmfInstruments.reserve(static_cast<size_t>(ins_count));
@@ -3396,39 +3492,19 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     }
 
     fr.seeku(mus_start, FileAndMemReader::SET);
-    trackCount = 1;
     deltaTicks = (size_t)ticks;
 
-    rawTrackData.clear();
-    rawTrackData.resize(trackCount, std::vector<uint8_t>());
     m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
     m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks));
 
-    size_t totalGotten = 0;
+    totalGotten = 0;
 
-    for(size_t tk = 0; tk < trackCount; ++tk)
-    {
-        // Read track header
-        size_t trackLength;
-        size_t pos = fr.tell();
-        fr.seek(0, FileAndMemReader::END);
-        trackLength = fr.tell() - pos;
-        fr.seek(static_cast<long>(pos), FileAndMemReader::SET);
-
-        // Read track data
-        rawTrackData[tk].resize(trackLength);
-        fsize = fr.read(&rawTrackData[tk][0], 1, trackLength);
-        if(fsize < trackLength)
-        {
-            m_errorString.set(fr.fileName().c_str());
-            m_errorString.append(": Unexpected file ending while getting raw track data!\n");
-            return false;
-        }
-        totalGotten += fsize;
-    }
-
-    for(size_t tk = 0; tk < trackCount; ++tk)
-        totalGotten += rawTrackData[tk].size();
+    // Read track header
+    trackPos = fr.tell();
+    fr.seek(0, FileAndMemReader::END);
+    trackLength = fr.tell() - trackPos;
+    fr.seek(static_cast<long>(trackPos), FileAndMemReader::SET);
+    totalGotten += trackLength;
 
     if(totalGotten == 0)
     {
@@ -3437,14 +3513,19 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
         return false;
     }
 
+    buildSmfSetupReset(1);
+
     // Build new MIDI events table
-    if(!buildSmfTrackData(rawTrackData))
+    if(!buildSmfTrack(fr, 0, trackLength, temposList, loopState))
     {
         m_errorString.set(fr.fileName().c_str());
         m_errorString.append(": MIDI data parsing error has occouped!\n");
         m_errorString.append(m_parsingErrorsString.c_str());
         return false;
     }
+
+    installLoop(loopState);
+    buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
 
     return true;
 }
@@ -3454,9 +3535,13 @@ bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
 {
     const size_t headerSize = 14;
     char headerBuf[headerSize] = "";
-    size_t fsize = 0;
-    size_t deltaTicks = 192, trackCount = 1;
-    std::vector<std::vector<uint8_t> > rawTrackData;
+    size_t fsize = 0, deltaTicks = 192, totalGotten, trackLength, trackPos;
+    LoopPointParseState loopState;
+
+    std::vector<TempoEvent> temposList;
+
+    std::memset(&loopState, 0, sizeof(loopState));
+
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -3474,38 +3559,17 @@ bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
 
     fr.seek(7 - static_cast<long>(headerSize), FileAndMemReader::CUR);
 
-    rawTrackData.clear();
-    rawTrackData.resize(trackCount, std::vector<uint8_t>());
     m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
     m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks) * 2);
-    static const unsigned char EndTag[4] = {0xFF, 0x2F, 0x00, 0x00};
-    size_t totalGotten = 0;
+    // static const unsigned char EndTag[4] = {0xFF, 0x2F, 0x00, 0x00};
+    totalGotten = 0;
 
-    for(size_t tk = 0; tk < trackCount; ++tk)
-    {
-        // Read track header
-        size_t trackLength;
-        size_t pos = fr.tell();
-        fr.seek(0, FileAndMemReader::END);
-        trackLength = fr.tell() - pos;
-        fr.seek(static_cast<long>(pos), FileAndMemReader::SET);
-
-        // Read track data
-        rawTrackData[tk].resize(trackLength);
-        fsize = fr.read(&rawTrackData[tk][0], 1, trackLength);
-        if(fsize < trackLength)
-        {
-            m_errorString.set(fr.fileName().c_str());
-            m_errorString.append(": Unexpected file ending while getting raw track data!\n");
-            return false;
-        }
-        totalGotten += fsize;
-        // Note: GMF does include the track end tag.
-        rawTrackData[tk].insert(rawTrackData[tk].end(), EndTag + 0, EndTag + 4);
-    }
-
-    for(size_t tk = 0; tk < trackCount; ++tk)
-        totalGotten += rawTrackData[tk].size();
+    // Read track header
+    trackPos = fr.tell();
+    fr.seek(0, FileAndMemReader::END);
+    trackLength = fr.tell() - trackPos;
+    fr.seek(static_cast<long>(trackPos), FileAndMemReader::SET);
+    totalGotten += trackLength;
 
     if(totalGotten == 0)
     {
@@ -3514,14 +3578,19 @@ bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
         return false;
     }
 
+    buildSmfSetupReset(1);
+
     // Build new MIDI events table
-    if(!buildSmfTrackData(rawTrackData))
+    if(!buildSmfTrack(fr, 0, trackLength, temposList, loopState))
     {
         m_errorString.set(fr.fileName().c_str());
         m_errorString.append(": MIDI data parsing error has occouped!\n");
         m_errorString.append(m_parsingErrorsString.c_str());
         return false;
     }
+
+    installLoop(loopState);
+    buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
 
     return true;
 }
@@ -3531,9 +3600,8 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     const size_t headerSize = 14; // 4 + 4 + 2 + 2 + 2
     char headerBuf[headerSize] = "";
     size_t fsize = 0;
-    size_t deltaTicks = 192, TrackCount = 1;
+    size_t deltaTicks = 192, trackCount = 1;
     unsigned smfFormat = 0;
-    std::vector<std::vector<uint8_t> > rawTrackData;
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -3550,23 +3618,23 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     }
 
     smfFormat  = static_cast<unsigned>(readBEint(headerBuf + 8,  2));
-    TrackCount = static_cast<size_t>(readBEint(headerBuf + 10, 2));
+    trackCount = static_cast<size_t>(readBEint(headerBuf + 10, 2));
     deltaTicks = static_cast<size_t>(readBEint(headerBuf + 12, 2));
 
     if(smfFormat > 2)
         smfFormat = 1;
 
-    rawTrackData.clear();
-    rawTrackData.resize(TrackCount, std::vector<uint8_t>());
     m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
     m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks) * 2);
 
     size_t totalGotten = 0;
+    size_t tracks_begin = fr.tell();
 
-    for(size_t tk = 0; tk < TrackCount; ++tk)
+    // Read track sizes
+    for(size_t tk = 0; tk < trackCount; ++tk)
     {
         // Read track header
-        size_t trackLength;
+        size_t trackLength, prev_pos;
 
         fsize = fr.read(headerBuf, 1, 8);
         if((fsize < 8) || (std::memcmp(headerBuf, "MTrk", 4) != 0))
@@ -3575,23 +3643,21 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
             m_errorString.append(": Invalid format, MTrk signature is not found!\n");
             return false;
         }
-        trackLength = (size_t)readBEint(headerBuf + 4, 4);
 
-        // Read track data
-        rawTrackData[tk].resize(trackLength);
-        fsize = fr.read(&rawTrackData[tk][0], 1, trackLength);
-        if(fsize < trackLength)
+        trackLength = (size_t)readBEint(headerBuf + 4, 4);
+        prev_pos = fr.tell();
+
+        fr.seek(trackLength, FileAndMemReader::CUR);
+
+        if(fr.tell() - trackLength != prev_pos)
         {
             m_errorString.set(fr.fileName().c_str());
             m_errorString.append(": Unexpected file ending while getting raw track data!\n");
             return false;
         }
 
-        totalGotten += fsize;
+        totalGotten += trackLength;
     }
-
-    for(size_t tk = 0; tk < TrackCount; ++tk)
-        totalGotten += rawTrackData[tk].size();
 
     if(totalGotten == 0)
     {
@@ -3601,7 +3667,7 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     }
 
     // Build new MIDI events table
-    if(!buildSmfTrackData(rawTrackData))
+    if(!buildSmfTrackData(fr, tracks_begin, trackCount))
     {
         m_errorString.set(fr.fileName().c_str());
         m_errorString.append(": MIDI data parsing error has occouped!\n");

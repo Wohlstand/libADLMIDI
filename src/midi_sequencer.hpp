@@ -404,6 +404,20 @@ private:
         }
     };
 
+    struct LoopPointParseState
+    {
+        //! Tick position of loop start tag
+        uint64_t loopStartTicks;
+        //! Tick position of loop end tag
+        uint64_t loopEndTicks;
+        //! Full length of song in ticks
+        uint64_t ticksSongLength;
+        bool gotLoopStart;
+        bool gotLoopEnd;
+        bool gotStackLoopStart;
+        bool gotLoopEventsInThisRow;
+    };
+
     /**
      * @brief Loop stack entry
      */
@@ -655,9 +669,23 @@ private:
 
     /**
      * @brief Build MIDI track data from the raw track data storage
+     * @param fr File read handler
+     * @param tracks_offset Absolute offset where tracks data begins
+     * @param tracks_count Total number of tracks stored in the file
      * @return true if everything successfully processed, or false on any error
      */
-    bool buildSmfTrackData(const std::vector<std::vector<uint8_t> > &trackData);
+    bool buildSmfTrackData(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count);
+
+    /**
+     * @brief Build data for the single track (without header)
+     * @param fr File read handler
+     * @param track_idx Inndex of currently parsing track (at 0)
+     * @return true if everything successfully processed, or false on any error
+     */
+    bool buildSmfTrack(FileAndMemReader &fr, const size_t track_idx, const size_t track_size,
+    std::vector<TempoEvent> &temposList, LoopPointParseState &loopState);
+
+    void installLoop(LoopPointParseState &loopState);
 
     /**
      * @brief Build the time line from off loaded events
@@ -670,8 +698,11 @@ private:
                        uint64_t loopEndTicks = 0);
 
     static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+    static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length);
     static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length);
+    static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length);
     static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+    static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length);
 
     void addEventToBank(MidiTrackRow &row, const MidiEvent &evt);
 
@@ -682,7 +713,7 @@ private:
      * @param [_inout] status status of the track processing
      * @return Parsed MIDI event entry
      */
-    MidiEvent parseEvent(const uint8_t **ptr, const uint8_t *end, int &status);
+    MidiEvent parseEvent(FileAndMemReader &fr, const size_t end, int &status);
 
     /**
      * @brief Process MIDI events on the current tick moment
