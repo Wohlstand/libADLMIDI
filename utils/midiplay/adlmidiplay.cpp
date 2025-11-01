@@ -1307,6 +1307,56 @@ static void runDOSLoop(ADL_MIDIPlayer *myDevice)
 
     adl_panic(myDevice); //Shut up all sustaining notes
 }
+
+static void oplSend(ADL_UInt16 port, ADL_UInt16 reg, ADL_UInt8 val)
+{
+    int delay;
+
+    outportb(port, reg);
+
+    for(delay = 6; delay > 0; --delay)
+        inportb(port);
+
+    outportb(port + 1, val);
+
+    for(delay = 27; delay > 0; --delay)
+        inportb(port);
+}
+
+static bool oplChipInit(ADL_UInt16 address)
+{
+    int status1 = 0;
+    int status2 = 0;
+    int i;
+    bool ret;
+
+    if(address == 0)
+        address = 0x388; // Default!
+
+    oplSend(address, 4, 0x60);
+    oplSend(address, 4, 0x80);
+
+    status1 = inportb(address);
+
+    oplSend(address, 2, 0xFF);
+    oplSend(address, 4, 0x21);
+
+    for(i = 100; i > 0; --i)
+        inportb(address);
+
+    status2 = inp(address);
+
+    oplSend(address, 4, 0x60);
+    oplSend(address, 4, 0x80);
+
+    ret = ((status1 & 0xE0) == 0x00) && ((status2 & 0xE0) == 0xC0);
+
+    if(!ret)
+        printf("OPL detect status: addr=0x%02X 0x%02X, 0x%02X\n", address, status1, status2);
+
+    return ret;
+}
+
 #endif // ADLMIDI_ENABLE_HW_DOS
 
 
@@ -1878,6 +1928,12 @@ int main(int argc, char **argv)
 
 #ifdef ADLMIDI_ENABLE_HW_DOS
     __djgpp_nearptr_enable();
+
+    if(!oplChipInit(s_devSetup.setHwAddress))
+    {
+        printError("Failed to detect OPL2/OPL3 chip!\n");
+        return 1;
+    }
 
     DosTaskman taskMan;
 
