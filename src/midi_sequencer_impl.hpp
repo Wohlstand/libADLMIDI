@@ -315,6 +315,7 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
         return 3;
 
     case MidiEvent::T_NOTEON:
+    case MidiEvent::T_NOTEON_DURATED:
         return 4;
 
     default:
@@ -722,6 +723,44 @@ double BW_MidiSequencer::getTempoMultiplier()
     return m_tempoMultiplier;
 }
 
+bool BW_MidiSequencer::duratedNoteInsert(size_t track, BW_MidiSequencer::DuratedNote *note)
+{
+    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+
+    if(cache.notes_count >= 128)
+        return false; // Can't insert delayed note off!
+
+    std::memcpy(cache.notes + cache.notes_count, note, sizeof(DuratedNote));
+    ++cache.notes_count;
+
+    return true;
+}
+
+void BW_MidiSequencer::duratedNoteClear()
+{
+    for(std::vector<DuratedNotesCache>::iterator it = m_trackDuratedNotes.begin(); it != m_trackDuratedNotes.end(); ++it)
+        it->notes_count = 0;
+}
+
+void BW_MidiSequencer::duratedNoteTick(size_t track, int64_t ticks)
+{
+    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+
+    for(size_t i = 0; i < cache.notes_count; ++i)
+        cache.notes[i].ttl -= ticks;
+}
+
+void BW_MidiSequencer::duratedNotePop(size_t track, size_t i)
+{
+    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+
+    if(i < cache.notes_count)
+    {
+        if(cache.notes_count > 1)
+            std::memcpy(cache.notes + i, cache.notes + cache.notes_count - 1, sizeof(DuratedNote));
+        --cache.notes_count;
+    }
+}
 
 void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 {
@@ -742,6 +781,9 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_eventBank.clear();
     m_trackData.clear();
     m_trackData.resize(trackCount, MidiTrackQueue());
+    m_trackDuratedNotes.clear();
+    m_trackDuratedNotes.resize(trackCount);
+    std::memset(m_trackDuratedNotes.data(), 0, sizeof(DuratedNotesCache) * trackCount);
     m_trackDisable.resize(trackCount);
 
     m_loop.reset();
@@ -1065,7 +1107,14 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
         std::fflush(stdout);
 #endif
 
-        MidiTrackRow *posPrev = &(*(track.begin()));//First element
+        MidiTrackRow fakePos, *posPrev = &(*(track.begin()));//First element
+        if(posPrev->absPos > 0) // If doesn't begins with zero!
+        {
+            fakePos.absPos = 0;
+            fakePos.delay = posPrev->absPos;
+            posPrev = &fakePos;
+        }
+
         for(MidiTrackQueue::iterator it = track.begin(); it != track.end(); it++)
         {
 #ifdef DEBUG_TIME_CALCULATION
@@ -1409,6 +1458,10 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
+
+        // Process note-OFFs
+        processDuratedNotes(tk, track.lastHandledEvent);
+
         if((track.lastHandledEvent >= 0) && (track.delay <= 0))
         {
             // Check is an end of track has been reached
@@ -1426,8 +1479,9 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                 if(!m_currentPosition.began && (evt.type == MidiEvent::T_NOTEON))
                     m_currentPosition.began = true;
 #endif
-                if(isSeek && (evt.type == MidiEvent::T_NOTEON))
+                if(isSeek && (evt.type == MidiEvent::T_NOTEON || evt.type == MidiEvent::T_NOTEON_DURATED))
                     continue;
+
                 handleEvent(tk, evt, track.lastHandledEvent);
 
                 if(m_loop.caughtStart)
@@ -1496,16 +1550,38 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
+        DuratedNotesCache &timedNotes = m_trackDuratedNotes[tk];
+
+        // Normal events
         if((track.lastHandledEvent >= 0) && (shortestDelayNotFound || track.delay < shortestDelay))
         {
             shortestDelay = track.delay;
             shortestDelayNotFound = false;
         }
+
+        // Note events with duration
+        for(size_t i = 0; i < timedNotes.notes_count; ++i)
+        {
+            DuratedNote &n = timedNotes.notes[i];
+            if(n.ttl <= 0)
+            {
+                shortestDelay = 0; // Just zero!
+                shortestDelayNotFound = false;
+            }
+            else if(shortestDelayNotFound || static_cast<uint64_t>(n.ttl) < shortestDelay)
+            {
+                shortestDelay = n.ttl; // Extra tick
+                shortestDelayNotFound = false;
+            }
+        }
     }
 
     // Schedule the next playevent to be processed after that delay
     for(size_t tk = 0; tk < trackCount; ++tk)
+    {
         m_currentPosition.track[tk].delay -= shortestDelay;
+        duratedNoteTick(tk, shortestDelay);
+    }
 
     fraction<uint64_t> t = shortestDelay * m_tempo;
 
@@ -1608,7 +1684,6 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 
         // Loop if song end or loop end point has reached
         m_loop.caughtEnd         = false;
-        shortestDelay = 0;
 
         if(!m_loopEnabled || (shortestDelayNotFound && m_loop.loopsCount >= 0 && m_loop.loopsLeft < 1) || m_loopHooksOnly)
         {
@@ -1631,6 +1706,34 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     }
 
     return true; // Has events in queue
+}
+
+void BW_MidiSequencer::processDuratedNotes(size_t track, int32_t &status)
+{
+    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+
+    if(cache.notes_count == 0)
+        return; // Nothing to do!
+
+    for(size_t i = 0; i < cache.notes_count; )
+    {
+        if(cache.notes[i].ttl <= 0)
+        {
+            DuratedNote *n = &cache.notes[i];
+
+            if(m_interface->rt_noteOff)
+                m_interface->rt_noteOff(m_interface->rtUserData, n->channel, n->note);
+
+            if(m_interface->rt_noteOffVel)
+                m_interface->rt_noteOffVel(m_interface->rtUserData, n->channel, n->note, n->velocity);
+
+            status = MidiEvent::T_NOTEOFF;
+
+            duratedNotePop(track, i);
+        }
+        else
+            ++i;
+    }
 }
 
 void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length)
@@ -2354,6 +2457,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     size_t midCh = evt.channel;
     if(m_interface->rt_currentDevice)
         midCh += m_interface->rt_currentDevice(m_interface->rtUserData, track);
+
     status = evt.type;
 
     switch(evt.type)
@@ -2378,6 +2482,20 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         uint8_t note = evt.data_loc[0];
         uint8_t vol  = evt.data_loc[1];
         m_interface->rt_noteOn(m_interface->rtUserData, static_cast<uint8_t>(midCh), note, vol);
+        break;
+    }
+
+    case MidiEvent::T_NOTEON_DURATED: // Note on with duration
+    {
+        if(midCh < 16 && m_channelDisable[midCh])
+            break; // Disabled channel
+        DuratedNote note;
+        note.channel = evt.channel;
+        note.note = evt.data_loc[0];
+        note.velocity = evt.data_loc[1];
+        note.ttl = readBEint(evt.data_loc + 2, 3);
+        if(duratedNoteInsert(track, &note)) // Do call true Note ON only when note OFF is successfully added into the list!
+            m_interface->rt_noteOn(m_interface->rtUserData, static_cast<uint8_t>(midCh), note.note, note.velocity);
         break;
     }
 
@@ -2564,6 +2682,9 @@ void BW_MidiSequencer::rewind()
     m_loop.caughtStart  = true;
     m_loop.temporaryBroken = false;
     m_time.reset();
+
+    // Clear any hanging timed notes
+    duratedNoteClear();
 }
 
 void BW_MidiSequencer::setTempo(double tempo)
@@ -4140,18 +4261,11 @@ struct HMITrackDir
     uint16_t designations[8];
 };
 
-struct HMIDelayedOff
-{
-    uint64_t insert_on_tick;
-    uint8_t channel;
-    uint8_t data[2];
-};
-
 bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 {
     char readBuf[20];
     size_t fsize, tracksCount = 0, division = 0, track_dir, tracks_offset, file_size,
-           file_length, totalGotten, abs_position, prev_position, track_number;
+           file_length, totalGotten, abs_position, track_number;
     uint64_t (*readHmiVarLen)(FileAndMemReader &fr, const size_t end, bool &ok) = NULL;
     bool isHMP = false, ok = false;
     uint8_t byte;
@@ -4161,7 +4275,6 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     MidiEvent event;
 
     std::vector<TempoEvent> temposList;
-    std::vector<HMIDelayedOff> noteOffs;
     std::vector<HMITrackDir> dir;
 
     std::memset(&loopState, 0, sizeof(loopState));
@@ -4212,11 +4325,13 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             return false;
         }
 
+#ifdef DEBUG_HMI_PARSE
         printf("== Division: %lu\n", division);
         fflush(stdout);
+#endif
 
         m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(division));
-        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(division) * 2);
+        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(division));
 
         dir.resize(tracksCount);
         std::memset(dir.data(), 0, sizeof(HMITrackDir) * tracksCount);
@@ -4463,9 +4578,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     m_trackData[0].push_back(evtPos);
     evtPos.clear();
 
-
+#ifdef DEBUG_HMI_PARSE
     printf("==Tempo %g, Div %g=========================\n", m_tempo.value(), m_invDeltaTicks.value());
     fflush(stdout);
+#endif
 
     size_t tk_v = 0;
 
@@ -4473,18 +4589,18 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     {
         HMITrackDir &d = dir[tk];
 
-        noteOffs.clear();
-
         if(d.len == 0)
             continue; // This track is broken
 
-        prev_position = 0;
         status = 0;
         fr.seek(d.start + d.offset, FileAndMemReader::SET);
 
+#ifdef DEBUG_HMI_PARSE
         printf("==Track %lu=(de-facto %lu)=============================\n", (unsigned long)tk, (unsigned long)tk_v);
         fflush(stdout);
+#endif
 
+        // Time delay that follows the first event in the track
         abs_position = readHmiVarLen(fr, d.end, ok);
         if(!ok)
         {
@@ -4521,8 +4637,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         return false;
                     }
 
+#ifdef DEBUG_HMI_PARSE
                     printf("-- SysEx event\n");
                     fflush(stdout);
+#endif
 
                     event.type = MidiEvent::T_SYSEX;
                     insertDataToBankWithByte(event, m_dataBank, byte, fr, length);
@@ -4540,8 +4658,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         return false;
                     }
 
+#ifdef DEBUG_HMI_PARSE
                     printf("-- Special event 0x%02X\n", evtype);
                     fflush(stdout);
+#endif
 
                     length = (evtype != MidiEvent::ST_ENDTRACK) ? readHmiVarLen(fr, d.end, ok) : 0;
 
@@ -4614,9 +4734,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         m_errorString.append("HMI/HMP: Failed to read event type!\n");
                         return false;
                     }
-
+#ifdef DEBUG_HMI_PARSE
                     printf("-- HMI-specific tricky event 0x%02X\n", evtype);
                     fflush(stdout);
+#endif
 
                     switch(evtype)
                     {
@@ -4656,7 +4777,9 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 {
                     uint8_t midCh, evType;
 
+#ifdef DEBUG_HMI_PARSE
                     printf("Byte=0x%02X (off=%ld = 0x%lX) : ", byte, fr.tell(), fr.tell());
+#endif
 
                     // Any normal event (80..EF)
                     if(byte < 0x80)
@@ -4681,25 +4804,24 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         if(fr.tell() + 2 > d.end)
                         {
                             m_errorString.append("HMI/HMP: Can't read regular 2-byte event - Unexpected end of track data.\n");
-                            // return false;
-                            event.type = MidiEvent::T_SPECIAL;
-                            event.subtype = MidiEvent::ST_ENDTRACK;
-                            event.data_loc_size = 0;
-                            break;
+                            return false;
+                            // event.type = MidiEvent::T_SPECIAL;
+                            // event.subtype = MidiEvent::ST_ENDTRACK;
+                            // event.data_loc_size = 0;
+                            // break;
                         }
 
                         fr.read(event.data_loc, 1, 2);
                         event.data_loc_size = 2;
 
+#ifdef DEBUG_HMI_PARSE
                         printf("-- Regular 2-byte event 0x%02X, chan=%u\n", evType, midCh);
                         fflush(stdout);
+#endif
 
                         if(!isHMP && evType == MidiEvent::T_NOTEON)
                         {
-                            HMIDelayedOff offEvent;
                             uint64_t duration;
-                            bool pushed = false;
-
                             duration = readHmiVarLen(fr, d.end, ok);
                             if(!ok)
                             {
@@ -4707,24 +4829,14 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                                 return false;
                             }
 
-                            offEvent.channel = event.channel;
-                            offEvent.insert_on_tick = abs_position + duration;
-                            offEvent.data[0] = event.data_loc[0];
-                            offEvent.data[1] = event.data_loc[1];
+                            event.type = MidiEvent::T_NOTEON_DURATED;
+                            if(duration > 0xFFFFFF)
+                                duration = 0xFFFFFF; // Fit to 3 bytes
 
-                            // Try to insert in time order!
-                            for(std::vector<HMIDelayedOff>::iterator it = noteOffs.begin(); it != noteOffs.end(); ++it)
-                            {
-                                if(it->insert_on_tick <= offEvent.insert_on_tick)
-                                {
-                                    noteOffs.insert(it, offEvent);
-                                    pushed = true;
-                                    break;
-                                }
-                            }
-
-                            if(!pushed) // Just push to end
-                                noteOffs.push_back(offEvent);
+                            event.data_loc_size = 5;
+                            event.data_loc[2] = ((duration << 16) & 0xFF0000);
+                            event.data_loc[3] = ((duration << 8) & 0x00FF00);
+                            event.data_loc[4] = (duration & 0x0000FF);
                         }
                         else if((evType == MidiEvent::T_NOTEON) && (event.data_loc[1] == 0))
                         {
@@ -4803,8 +4915,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                             return false;
                         }
 
+#ifdef DEBUG_HMI_PARSE
                         printf("-- Regular 1-byte event 0x%02X, chan=%u\n", evType, midCh);
                         fflush(stdout);
+#endif
 
                         fr.read(event.data_loc, 1, 1);
                         event.data_loc_size = 1;
@@ -4840,61 +4954,22 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         event.subtype = MidiEvent::ST_ENDTRACK;
                         event.isValid = 1;
                     }
-
-                    if(evtPos.delay > 400000)
-                    {
-                        printf("- Delay %lu IS A BOMB!\n",
-                            (unsigned long)evtPos.delay);
-                        fflush(stdout);
-                        m_errorString.append("HMI/HMP: Abnormal delay.\n");
-                        return false;
-                    }
                 }
 
                 if((evtPos.delay > 0) || (event.subtype == MidiEvent::ST_ENDTRACK))
                 {
+#ifdef DEBUG_HMI_PARSE
                     printf("- Delay %lu, Position %lu, stored events: %lu, time: %g seconds\n",
                             (unsigned long)evtPos.delay, abs_position, evtPos.events_end - evtPos.events_begin,
                             (abs_position * m_tempo).value());
                     fflush(stdout);
+#endif
 
                     evtPos.absPos = abs_position;
-                    prev_position = abs_position;
                     abs_position += evtPos.delay;
-                    m_trackData[tk].push_back(evtPos);
+                    m_trackData[tk_v].push_back(evtPos);
                     evtPos.clear();
                     loopState.gotLoopEventsInThisRow = false;
-                }
-
-                // Insert delayed NoteOFFs
-                for(std::vector<HMIDelayedOff>::iterator it = noteOffs.begin(); it != noteOffs.end(); )
-                {
-                    if(abs_position >= it->insert_on_tick || (status < 0))
-                    {
-                        std::memset(&event, 0, sizeof(event));
-                        event.isValid = 1;
-                        event.type = MidiEvent::T_NOTEOFF;
-                        event.data_loc[0] = it->data[0];
-                        event.data_loc[1] = it->data[1];
-                        event.data_loc_size = 2;
-                        addEventToBank(evtPos, event);
-
-                        if(it->insert_on_tick > prev_position)
-                        {
-                            evtPos.delay = it->insert_on_tick - prev_position;
-                            evtPos.absPos = it->insert_on_tick;
-                            prev_position = it->insert_on_tick;
-                            m_trackData[tk_v].push_back(evtPos);
-                            evtPos.clear();
-                            loopState.gotLoopEventsInThisRow = false;
-                            if(status < 0)
-                                abs_position = it->insert_on_tick;
-                        }
-
-                        it = noteOffs.erase(it);
-                    }
-                    else
-                        ++it;
                 }
 
                 if(status < 0 && evtPos.events_begin != evtPos.events_end) // Last row in the track
@@ -4908,8 +4983,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
         } while((fr.tell() <= d.end) && (event.subtype != MidiEvent::ST_ENDTRACK));
 
+#ifdef DEBUG_HMI_PARSE
         printf("==Track %lu==END=========================\n", (unsigned long)tk_v);
         fflush(stdout);
+#endif
 
         if(loopState.ticksSongLength < abs_position)
             loopState.ticksSongLength = abs_position;
@@ -4926,6 +5003,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     {
         m_trackData.resize(tk_v);
         m_trackDisable.resize(tk_v);
+        m_trackDuratedNotes.resize(tk_v);
     }
 
     installLoop(loopState);

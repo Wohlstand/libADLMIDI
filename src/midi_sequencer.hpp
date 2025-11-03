@@ -205,7 +205,11 @@ private:
             //! System Exclusive message, type 2
             T_SYSEX2        = 0xF7,//size == len
             //! Special event
-            T_SPECIAL       = 0xFF
+            T_SPECIAL       = 0xFF,
+
+            // Non-Standard
+            //! Note-On with duration time (HMI and XMI only)
+            T_NOTEON_DURATED  = 0x109 //size = 5
         };
         /**
          * @brief Special MIDI event sub-types
@@ -263,7 +267,7 @@ private:
             //! [Non-Standard] Callback Trigger
             ST_CALLBACK_TRIGGER = 0xE7,//size == 1 <CUSTOM>
 
-            // Built-in hooks
+            //! Built-in hooks
             ST_SONG_BEGIN_HOOK    = 0x101
         };
 
@@ -339,6 +343,20 @@ private:
     //P.S. I declared it here instead of local in-function because C++98 can't process templates with locally-declared structures
 
     typedef std::list<MidiTrackRow> MidiTrackQueue;
+
+    struct DuratedNote
+    {
+        int64_t ttl;
+        uint8_t channel;
+        uint8_t note;
+        uint8_t velocity;
+    };
+
+    struct DuratedNotesCache
+    {
+        DuratedNote notes[128];
+        size_t notes_count;
+    };
 
     /**
      * @brief Song position context
@@ -613,6 +631,9 @@ private:
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue> m_trackData;
 
+    //! Cache of active durated notes per track
+    std::vector<DuratedNotesCache> m_trackDuratedNotes;
+
     //! CMF instruments
     std::vector<CmfInstrument> m_cmfInstruments;
 
@@ -662,6 +683,10 @@ private:
     SequencerTime m_time;
 
 
+    bool duratedNoteInsert(size_t track, DuratedNote *note);
+    void duratedNoteClear();
+    void duratedNoteTick(size_t track, int64_t ticks);
+    void duratedNotePop(size_t track, size_t i);
 
     /**
      * @brief Prepare internal events storage for track data building
@@ -735,6 +760,13 @@ private:
      * @return returns false on reaching end of the song
      */
     bool processEvents(bool isSeek = false);
+
+    /**
+     * @brief Run processing of active durated notes, trigger true Note-OFF events for expired notes
+     * @param track Track where to run the operation
+     * @param status [_out] Last-triggered event (Note-Off) will be returned here
+     */
+    void processDuratedNotes(size_t track, int32_t &status);
 
     /**
      * @brief Handle one event from the chain
