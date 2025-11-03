@@ -148,6 +148,7 @@ static inline uint32_t readLEint32(const void *buffer, size_t nbytes)
     return result;
 }
 
+#if __SIZEOF_POINTER__ != 4
 static bool readUInt32LE(size_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[4];
@@ -159,6 +160,7 @@ static bool readUInt32LE(size_t &out, FileAndMemReader &fr)
 
     return true;
 }
+#endif
 
 static bool readUInt32LE(uint32_t &out, FileAndMemReader &fr)
 {
