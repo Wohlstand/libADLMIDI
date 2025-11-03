@@ -90,7 +90,9 @@ public:
         //! AIL's XMIDI format (act same as MIDI, but with exceptions)
         Format_XMIDI,
         //! KLM format
-        Format_KLM
+        Format_KLM,
+        //! HMI/HMP format
+        Format_HMI
     };
 
     /**
@@ -244,7 +246,7 @@ private:
             //! Sequencer specs
             ST_SEQUENCERSPEC = 0x7F, //size == len, dataBank
 
-            /* Non-standard, internal ADLMIDI usage only */
+            /* Non-standard, internal usage only */
             //! [Non-Standard] Loop Start point
             ST_LOOPSTART    = 0xE1,//size == 0 <CUSTOM>
             //! [Non-Standard] Loop End point
@@ -685,7 +687,19 @@ private:
     bool buildSmfTrack(FileAndMemReader &fr, const size_t track_idx, const size_t track_size,
     std::vector<TempoEvent> &temposList, LoopPointParseState &loopState);
 
+    /**
+     * @brief Installs the final state of the loop state after all the music data parsed
+     * @param loopState The loop state structure resulted after everything got been passed
+     */
     void installLoop(LoopPointParseState &loopState);
+
+    /**
+     * @brief During the parse, inspects the loop event and according to the current loop state, installs the necessary properties
+     * @param loopState Loop state for the currently parsing music file
+     * @param event An event entry that was been proceeded just now
+     * @param abs_position Current in-track absolute position
+     */
+    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position);
 
     /**
      * @brief Build the time line from off loaded events
@@ -1020,6 +1034,13 @@ private:
      * @return true on successful load
      */
     bool parseMUS(FileAndMemReader &fr);
+
+    /**
+     * @brief Load file as HMI/HMP file for the HMI Sound Operating System
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseHMI(FileAndMemReader &fr);
 
 #ifndef BWMIDI_DISABLE_XMI_SUPPORT
     /**

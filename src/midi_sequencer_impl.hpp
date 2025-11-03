@@ -134,6 +134,53 @@ static inline uint16_t readLEint16(const void *buffer, size_t nbytes)
     return result;
 }
 
+static inline uint32_t readLEint32(const void *buffer, size_t nbytes)
+{
+    uint32_t result = 0;
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
+
+    for(size_t n = 0; n < nbytes; ++n)
+        result += static_cast<uint32_t>(data[n] << (n * 8));
+
+    return result;
+}
+
+static bool readUInt32LE(size_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[4];
+
+    if(fr.read(buf, 1, 4) != 4)
+        return false;
+
+    out = readLEint32(buf, 4);
+
+    return true;
+}
+
+static bool readUInt16LE(size_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[2];
+
+    if(fr.read(buf, 1, 2) != 2)
+        return false;
+
+    out = readLEint16(buf, 2);
+
+    return true;
+}
+
+static bool readUInt16LE(uint16_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[2];
+
+    if(fr.read(buf, 1, 2) != 2)
+        return false;
+
+    out = readLEint16(buf, 2);
+
+    return true;
+}
+
 /**
  * @brief Secure Standard MIDI Variable-Length numeric value parser with anti-out-of-range protection
  * @param [_inout] ptr Pointer to memory block that contains begin of variable-length value, will be iterated forward
@@ -175,6 +222,31 @@ static inline uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool
         result = (result << 7) + (byte & 0x7F);
 
         if((byte & 0x80) == 0)
+            break;
+    }
+
+    ok = true;
+
+    return result;
+}
+
+static inline uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
+{
+    uint64_t result = 0;
+    uint8_t byte;
+    int offset = 0;
+
+    ok = false;
+
+    for(;;)
+    {
+        if(fr.tell() >= end || fr.read(&byte, 1, 1) != 1)
+            return 2;
+
+        result |= (byte & 0x7F) << offset;
+        offset += 7;
+
+        if((byte & 0x80) != 0)
             break;
     }
 
@@ -804,96 +876,8 @@ bool BW_MidiSequencer::buildSmfTrack(FileAndMemReader &fr,
                 TempoEvent t = {readBEint(event.data_loc, event.data_loc_size), abs_position};
                 temposList.push_back(t);
             }
-            else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
-            {
-                /*
-                 * loopStart is invalid when:
-                 * - starts together with loopEnd
-                 * - appears more than one time in same MIDI file
-                 */
-                if(loopState.gotLoopStart || loopState.gotLoopEventsInThisRow)
-                    m_loop.invalidLoop = true;
-                else
-                {
-                    loopState.gotLoopStart = true;
-                    loopState.loopStartTicks = abs_position;
-                }
-                // In this row we got loop event, register this!
-                loopState.gotLoopEventsInThisRow = true;
-            }
-            else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPEND))
-            {
-                /*
-                 * loopEnd is invalid when:
-                 * - starts before loopStart
-                 * - starts together with loopStart
-                 * - appars more than one time in same MIDI file
-                 */
-                if(loopState.gotLoopEnd || loopState.gotLoopEventsInThisRow)
-                {
-                    m_loop.invalidLoop = true;
-                    if(m_interface->onDebugMessage)
-                    {
-                        m_interface->onDebugMessage(
-                            m_interface->onDebugMessage_userData,
-                            "== Invalid loop detected! %s %s ==",
-                            (loopState.gotLoopEnd ? "[Caught more than 1 loopEnd!]" : ""),
-                            (loopState.gotLoopEventsInThisRow ? "[loopEnd in same row as loopStart!]" : "")
-                        );
-                    }
-                }
-                else
-                {
-                    loopState.gotLoopEnd = true;
-                    loopState.loopEndTicks = abs_position;
-                }
-                // In this row we got loop event, register this!
-                loopState.gotLoopEventsInThisRow = true;
-            }
-            else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN))
-            {
-                if(!loopState.gotStackLoopStart)
-                {
-                    if(!loopState.gotLoopStart)
-                        loopState.loopStartTicks = abs_position;
-                    loopState.gotStackLoopStart = true;
-                }
-
-                m_loop.stackUp();
-                if(m_loop.stackLevel >= static_cast<int>(m_loop.stack.size()))
-                {
-                    LoopStackEntry e;
-                    e.loops = event.data_loc[0];
-                    e.infinity = (event.data_loc[0] == 0);
-                    e.start = abs_position;
-                    e.end = abs_position;
-                    m_loop.stack.push_back(e);
-                }
-            }
-            else if(!m_loop.invalidLoop &&
-                ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
-                 (event.subtype == MidiEvent::ST_LOOPSTACK_BREAK))
-            )
-            {
-                if(m_loop.stackLevel <= -1)
-                {
-                    m_loop.invalidLoop = true; // Caught loop end without of loop start!
-                    if(m_interface->onDebugMessage)
-                    {
-                        m_interface->onDebugMessage(
-                            m_interface->onDebugMessage_userData,
-                            "== Invalid loop detected! [Caught loop end without of loop start] =="
-                        );
-                    }
-                }
-                else
-                {
-                    if(loopState.loopEndTicks < abs_position)
-                        loopState.loopEndTicks = abs_position;
-                    m_loop.getCurStack().end = abs_position;
-                    m_loop.stackDown();
-                }
-            }
+            else
+                analyseLoopEvent(loopState, event, abs_position);
         }
 
         if(event.subtype != MidiEvent::ST_ENDTRACK) // Don't try to read delta after EndOfTrack event!
@@ -960,6 +944,100 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
                 m_interface->onDebugMessage_userData,
                 "== Invalid loop detected! [loopEnd is going before loopStart] =="
             );
+        }
+    }
+}
+
+void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position)
+{
+    if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
+    {
+        /*
+         * loopStart is invalid when:
+         * - starts together with loopEnd
+         * - appears more than one time in same MIDI file
+         */
+        if(loopState.gotLoopStart || loopState.gotLoopEventsInThisRow)
+            m_loop.invalidLoop = true;
+        else
+        {
+            loopState.gotLoopStart = true;
+            loopState.loopStartTicks = abs_position;
+        }
+        // In this row we got loop event, register this!
+        loopState.gotLoopEventsInThisRow = true;
+    }
+    else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPEND))
+    {
+        /*
+         * loopEnd is invalid when:
+         * - starts before loopStart
+         * - starts together with loopStart
+         * - appars more than one time in same MIDI file
+         */
+        if(loopState.gotLoopEnd || loopState.gotLoopEventsInThisRow)
+        {
+            m_loop.invalidLoop = true;
+            if(m_interface->onDebugMessage)
+            {
+                m_interface->onDebugMessage(
+                    m_interface->onDebugMessage_userData,
+                    "== Invalid loop detected! %s %s ==",
+                    (loopState.gotLoopEnd ? "[Caught more than 1 loopEnd!]" : ""),
+                    (loopState.gotLoopEventsInThisRow ? "[loopEnd in same row as loopStart!]" : "")
+                );
+            }
+        }
+        else
+        {
+            loopState.gotLoopEnd = true;
+            loopState.loopEndTicks = abs_position;
+        }
+        // In this row we got loop event, register this!
+        loopState.gotLoopEventsInThisRow = true;
+    }
+    else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN))
+    {
+        if(!loopState.gotStackLoopStart)
+        {
+            if(!loopState.gotLoopStart)
+                loopState.loopStartTicks = abs_position;
+            loopState.gotStackLoopStart = true;
+        }
+
+        m_loop.stackUp();
+        if(m_loop.stackLevel >= static_cast<int>(m_loop.stack.size()))
+        {
+            LoopStackEntry e;
+            e.loops = event.data_loc[0];
+            e.infinity = (event.data_loc[0] == 0);
+            e.start = abs_position;
+            e.end = abs_position;
+            m_loop.stack.push_back(e);
+        }
+    }
+    else if(!m_loop.invalidLoop &&
+        ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
+         (event.subtype == MidiEvent::ST_LOOPSTACK_BREAK))
+    )
+    {
+        if(m_loop.stackLevel <= -1)
+        {
+            m_loop.invalidLoop = true; // Caught loop end without of loop start!
+            if(m_interface->onDebugMessage)
+            {
+                m_interface->onDebugMessage(
+                    m_interface->onDebugMessage_userData,
+                    "== Invalid loop detected! [Caught loop end without of loop start] =="
+                );
+            }
+        }
+        else
+        {
+            if(loopState.loopEndTicks < abs_position)
+                loopState.loopEndTicks = abs_position;
+            m_loop.getCurStack().end = abs_position;
+            m_loop.stackDown();
         }
     }
 }
@@ -1661,7 +1739,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(FileAndMemReader &fr, c
         return evt;
     }
 
-    if(byte == MidiEvent::T_SYSEX || byte == MidiEvent::T_SYSEX2) // Ignore SysEx
+    if(byte == MidiEvent::T_SYSEX || byte == MidiEvent::T_SYSEX2) // Parse SysEx
     {
         uint64_t length = readVarLenEx(fr, end, ok);
         if(!ok || (fr.tell() + length > end))
@@ -1913,7 +1991,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(FileAndMemReader &fr, c
         {
             m_parsingErrorsString.append("parseEvent: Can't read regular 2-byte event - Unexpected end of track data.\n");
             evt.isValid = 0;
-            return evt;
+            break;
         }
 
         fr.read(evt.data_loc, 1, 2);
@@ -1923,8 +2001,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(FileAndMemReader &fr, c
         {
             evt.type = MidiEvent::T_NOTEOFF; // Note ON with zero velocity is Note OFF!
         }
-        else
-        if(evType == MidiEvent::T_CTRLCHANGE)
+        else if(evType == MidiEvent::T_CTRLCHANGE)
         {
             // 111'th loopStart controller (RPG Maker and others)
             if(m_format == Format_MIDI)
@@ -2670,6 +2747,12 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
     {
         fr.seek(0, FileAndMemReader::SET);
         return parseMUS(fr);
+    }
+
+    if(std::memcmp(headerBuf, "HMI-MIDISONG06", 14) == 0 || std::memcmp(headerBuf, "HMIMIDIP", 8) == 0)
+    {
+        fr.seek(0, FileAndMemReader::SET);
+        return parseHMI(fr);
     }
 
 #ifndef BWMIDI_DISABLE_XMI_SUPPORT
@@ -3733,7 +3816,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
     {
-        m_errorString.set("Unexpected end of file at header!\n");
+        m_errorString.set("MUS: Unexpected end of file at header!\n");
         return false;
     }
 
@@ -4042,6 +4125,811 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 
     m_smfFormat = 0;
     m_loop.stackLevel = -1;
+
+    return true;
+}
+
+
+struct HMITrackDir
+{
+    size_t start;
+    size_t len;
+    size_t end;
+    size_t offset;
+    size_t midichan;
+    uint16_t designations[8];
+};
+
+struct HMIDelayedOff
+{
+    uint64_t insert_on_tick;
+    uint8_t channel;
+    uint8_t data[2];
+};
+
+bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
+{
+    char readBuf[20];
+    size_t fsize, tracksCount = 0, division = 0, track_dir, tracks_offset, file_size,
+           file_length, totalGotten, abs_position, prev_position, track_number;
+    uint64_t (*readHmiVarLen)(FileAndMemReader &fr, const size_t end, bool &ok) = NULL;
+    bool isHMP = false, ok = false;
+    uint8_t byte;
+    int status = 0;
+    MidiTrackRow evtPos;
+    LoopPointParseState loopState;
+    MidiEvent event;
+
+    std::vector<TempoEvent> temposList;
+    std::vector<HMIDelayedOff> noteOffs;
+    std::vector<HMITrackDir> dir;
+
+    std::memset(&loopState, 0, sizeof(loopState));
+
+    file_size = fr.fileSize();
+
+    if(file_size < 0x100)
+    {
+        m_errorString.set("HMI/HMP: Too small file!\n");
+        return false;
+    }
+
+    m_format = Format_HMI;
+    totalGotten = 0;
+
+    fsize = fr.read(readBuf, 1, sizeof(readBuf));
+    if(fsize < sizeof(readBuf))
+    {
+        m_errorString.set("HMI/HMP: Unexpected end of file at header!\n");
+        return false;
+    }
+
+    if(std::memcmp(readBuf, "HMI-MIDISONG061595", 19) == 0)
+    {
+        isHMP = false;
+        readHmiVarLen = readVarLenEx; // Same as SMF!
+
+        fr.seek(0xD4, FileAndMemReader::SET);
+        if(!readUInt16LE(division, fr))
+        {
+            m_errorString.set("HMI/HMP: Failed to read division value!\n");
+            return false;
+        }
+
+        division <<= 2;
+
+        fr.seek(0xE4, FileAndMemReader::SET);
+        if(!readUInt16LE(tracksCount, fr))
+        {
+            m_errorString.set("HMI/HMP: Failed to read tracks count!\n");
+            return false;
+        }
+
+        fr.seek(0xE8, FileAndMemReader::SET); // Already here
+        if(!readUInt32LE(track_dir, fr))
+        {
+            m_errorString.set("HMI/HMP: Failed to read track dir pointer!\n");
+            return false;
+        }
+
+        printf("== Division: %lu\n", division);
+        fflush(stdout);
+
+        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(division));
+        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(division) * 2);
+
+        dir.resize(tracksCount);
+        std::memset(dir.data(), 0, sizeof(HMITrackDir) * tracksCount);
+
+        // Read track sizes
+        for(size_t tk = 0; tk < tracksCount; ++tk)
+        {
+            HMITrackDir &d = dir[tk];
+
+            fr.seek(track_dir + (tk * 4), FileAndMemReader::SET);
+            if(!readUInt32LE(d.start, fr))
+            {
+                m_errorString.set("HMI: Failed to read track start offset!\n");
+                return false;
+            }
+
+            if(d.start > file_size - 0x99 - 4)
+            {
+                d.len = 0;
+                continue; // Track is incomplete
+            }
+
+            fr.seek(d.start, FileAndMemReader::SET);
+            if(fr.read(readBuf, 1, 13) != 13)
+            {
+                m_errorString.set("HMI: Failed to read track magic!\n");
+                return false;
+            }
+
+            if(std::memcmp(readBuf, "HMI-MIDITRACK", 13) != 0)
+            {
+                d.len = 0;
+                continue; // Invalid track magic
+            }
+
+            if(tk == tracksCount - 1)
+            {
+                d.len = file_size - d.start;
+                d.end = d.start + d.len;
+            }
+            else
+            {
+                fr.seek(track_dir + (tk * 4) + 4, FileAndMemReader::SET);
+                if(!readUInt32LE(d.len, fr))
+                {
+                    m_errorString.set("HMI: Failed to read track start offset!\n");
+                    return false;
+                }
+
+                if(d.len < d.start)
+                {
+                    d.len = 0;
+                    continue;
+                }
+
+                d.len -= d.start;
+
+                if(file_size - d.start < d.len)
+                    d.len = file_size - d.start;
+
+                d.end = d.start + d.len;
+            }
+
+            fr.seek(d.start + 0x57, FileAndMemReader::SET);
+            if(!readUInt32LE(d.offset, fr))
+            {
+                m_errorString.set("HMI: Failed to read MIDI events offset!\n");
+                return false;
+            }
+
+            if(d.len < d.offset)
+            {
+                d.len = 0;
+                continue;
+            }
+
+            d.len -= d.offset;
+            totalGotten += d.len;
+
+            fr.seek(d.start + 0x99, FileAndMemReader::SET);
+            for(size_t j = 0; j < 8; ++j)
+            {
+                if(!readUInt16LE(d.designations[j], fr))
+                {
+                    m_errorString.set("HMI: Failed to read track destignation value!\n");
+                    return false;
+                }
+            }
+        }
+    }
+    else if(std::memcmp(readBuf, "HMIMIDIP", 8) == 0)
+    {
+        isHMP = true;
+        readHmiVarLen = readHMPVarLenEx; // Has different format!
+
+        if(readBuf[8] == 0)
+            tracks_offset = 0x308;
+        else if(std::memcmp(readBuf + 8, "013195", 6) == 0)
+            tracks_offset = 0x388;
+        else
+        {
+            m_errorString.set("HMP: Unknown version of the HMIMIDIP!\n");
+            return false;
+        }
+
+        // File length value
+        fr.seek(0x20, FileAndMemReader::SET);
+        if(!readUInt32LE(file_length, fr))
+        {
+            m_errorString.set("HMP: Failed to read file length field value!\n");
+            return false;
+        }
+
+        // Tracks count value
+        fr.seek(0x30, FileAndMemReader::SET);
+        if(!readUInt32LE(tracksCount, fr))
+        {
+            m_errorString.set("HMP: Failed to read tracks count!\n");
+            return false;
+        }
+
+        // Beats per minute
+        fr.seek(0x38, FileAndMemReader::SET);
+        if(!readUInt32LE(division, fr))
+        {
+            m_errorString.set("HMP: Failed to read division value!\n");
+            return false;
+        }
+
+        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(division));
+        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(division));
+
+        dir.resize(tracksCount);
+        std::memset(dir.data(), 0, sizeof(HMITrackDir) * tracksCount);
+
+        for(size_t tk = 0; tk < tracksCount; ++tk)
+        {
+            HMITrackDir &d = dir[tk];
+
+            fr.seek(tracks_offset, FileAndMemReader::SET);
+            d.start = tracks_offset;
+
+            if(d.start > file_size - 12)
+            {
+                d.len = 0;
+                break; // Track is incomplete
+            }
+
+            if(!readUInt32LE(track_number, fr))
+            {
+                m_errorString.set("HMP: Failed to read track number value!\n");
+                return false;
+            }
+
+            if(track_number != tk)
+            {
+                m_errorString.set("HMP: Captured track number value is not matching!\n");
+                return false;
+            }
+
+            if(!readUInt32LE(d.len, fr))
+            {
+                m_errorString.set("HMP: Failed to read track start offset!\n");
+                return false;
+            }
+
+            if(!readUInt32LE(d.midichan, fr))
+            {
+                m_errorString.set("HMP: Failed to read track's MIDI channel value!\n");
+                return false;
+            }
+
+            tracks_offset += d.len;
+            d.end = d.start + d.len;
+
+            if(file_size - d.start < d.len)
+                d.len = file_size - d.start;
+
+            if(d.len <= 12)
+            {
+                d.len = 0;
+                continue;
+            }
+
+            d.offset = 12;
+            d.len -= 12; // Track header size!
+
+            d.designations[0] = 0xA000;
+            d.designations[1] = 0xA00A;
+            d.designations[2] = 0xA002;
+            d.designations[3] = 0;
+
+            totalGotten += d.len;
+        }
+    }
+    else
+    {
+        m_errorString.set("HMI/HMP: Invalid magic number!\n");
+        return false;
+    }
+
+    if(totalGotten == 0)
+    {
+        m_errorString.set(fr.fileName().c_str());
+        m_errorString.append(": Empty track data");
+        return false;
+    }
+
+
+    buildSmfSetupReset(tracksCount);
+
+    m_loopFormat = Loop_HMI;
+
+    std::memset(&event, 0, sizeof(event));
+    event.isValid = 1;
+    event.type = MidiEvent::T_SPECIAL;
+    event.subtype = MidiEvent::ST_SONG_BEGIN_HOOK;
+    // HACK: Begin every track with "Reset all controllers" event to avoid controllers state break came from end of song
+    addEventToBank(evtPos, event);
+
+    std::memset(&event, 0, sizeof(event));
+    event.isValid = 1;
+    event.type = MidiEvent::T_SPECIAL;
+    event.subtype = MidiEvent::ST_TEMPOCHANGE;
+    event.data_loc_size = 3;
+    if(isHMP)
+    {
+        event.data_loc[0] = 0x0F;
+        event.data_loc[1] = 0x42;
+        event.data_loc[2] = 0x40;
+    }
+    else
+    {
+        event.data_loc[0] = 0x3D;
+        event.data_loc[1] = 0x09;
+        event.data_loc[2] = 0x00;
+    }
+    addEventToBank(evtPos, event);
+    TempoEvent tempoEvent = {readBEint(event.data_loc, event.data_loc_size), 0};
+    temposList.push_back(tempoEvent);
+
+    evtPos.delay = 0;
+    evtPos.absPos = 0;
+    m_trackData[0].push_back(evtPos);
+    evtPos.clear();
+
+
+    printf("==Tempo %g, Div %g=========================\n", m_tempo.value(), m_invDeltaTicks.value());
+    fflush(stdout);
+
+    size_t tk_v = 0;
+
+    for(size_t tk = 0; tk < tracksCount; ++tk)
+    {
+        HMITrackDir &d = dir[tk];
+
+        noteOffs.clear();
+
+        if(d.len == 0)
+            continue; // This track is broken
+
+        prev_position = 0;
+        status = 0;
+        fr.seek(d.start + d.offset, FileAndMemReader::SET);
+
+        printf("==Track %lu=(de-facto %lu)=============================\n", (unsigned long)tk, (unsigned long)tk_v);
+        fflush(stdout);
+
+        abs_position = readHmiVarLen(fr, d.end, ok);
+        if(!ok)
+        {
+            m_errorString.set("HMI/HMP: Failed to read first event's delay\n");
+            return false;
+        }
+
+        do
+        {
+            std::memset(&event, 0, sizeof(event));
+            event.isValid = 1;
+
+            if(fr.tell() + 1 > d.end)
+            {
+                // When track doesn't ends on the middle of event data, it's must be fine
+                event.type = MidiEvent::T_SPECIAL;
+                event.subtype = MidiEvent::ST_ENDTRACK;
+                status = -1;
+            }
+            else
+            {
+                if(fr.read(&byte, 1, 1) != 1)
+                {
+                    m_errorString.set("HMI/HMP: Failed to read first byte of the event\n");
+                    return false;
+                }
+
+                if(byte == MidiEvent::T_SYSEX || byte == MidiEvent::T_SYSEX2)
+                {
+                    uint64_t length = readHmiVarLen(fr, d.end, ok);
+                    if(!ok || (fr.tell() + length > d.end))
+                    {
+                        m_errorString.append("HMI/HMP: Can't read SysEx event - Unexpected end of track data.\n");
+                        return false;
+                    }
+
+                    printf("-- SysEx event\n");
+                    fflush(stdout);
+
+                    event.type = MidiEvent::T_SYSEX;
+                    insertDataToBankWithByte(event, m_dataBank, byte, fr, length);
+                }
+                else if(byte == MidiEvent::T_SPECIAL)
+                {
+                    // Special event FF
+                    uint8_t  evtype;
+                    uint64_t length;
+
+                    if(fr.read(&evtype, 1, 1) != 1)
+                    {
+                        m_errorString.append("HMI/HMP: Failed to read event type!\n");
+                        event.isValid = 0;
+                        return false;
+                    }
+
+                    printf("-- Special event 0x%02X\n", evtype);
+                    fflush(stdout);
+
+                    length = (evtype != MidiEvent::ST_ENDTRACK) ? readHmiVarLen(fr, d.end, ok) : 0;
+
+                    if(!ok || (fr.tell() + length > d.end))
+                    {
+                        m_errorString.append("HMI/HMP: Can't read Special event - Unexpected end of track data.\n");
+                        return false;
+                    }
+
+                    event.type = byte;
+                    event.subtype = evtype;
+
+                    if(event.subtype == MidiEvent::ST_TEMPOCHANGE)
+                    {
+                        if(length > 5)
+                        {
+                            m_errorString.append("HMI/HMP: Can't read one of special events - Too long event data (more than 5!).\n");
+                            return false;
+                        }
+
+                        event.data_loc_size = length;
+                        if(fr.read(event.data_loc, 1, length) != length)
+                        {
+                            m_errorString.append("HMI/HMP: Failed to read event's data (2).\n");
+                            return false;
+                        }
+                    }
+                    else if(evtype == MidiEvent::ST_ENDTRACK)
+                    {
+                        status = -1; // Finalize track
+                    }
+                    else
+                    {
+                        m_errorString.append("HMI/HMP: Unsupported meta event sub-type.\n");
+                        return false;
+                    }
+                }
+                else if(byte == MidiEvent::T_SYSCOMSPOSPTR)
+                {
+                    if(fr.tell() + 2 > d.end)
+                    {
+                        m_errorString.append("HMI/HMP: Can't read System Command Position Pointer event - Unexpected end of track data.\n");
+                        return false;
+                    }
+
+                    event.type = byte;
+                    fr.read(event.data_loc, 1, 2);
+                    event.data_loc_size = 2;
+                }
+                else if(byte == MidiEvent::T_SYSCOMSNGSEL)
+                {
+                    if(fr.tell() + 1 > d.end)
+                    {
+                        m_errorString.append("HMI/HMP: Can't read System Command Song Select event - Unexpected end of track data.\n");
+                        return false;
+                    }
+
+                    event.type = byte;
+                    fr.read(event.data_loc, 1, 1);
+                    event.data_loc_size = 1;
+                }
+                else if(byte == 0xFE) // Unknown but valid HMI events to skip
+                {
+                    event.isValid = 0;
+                    uint8_t evtype;
+                    uint8_t skipSize;
+
+                    if(fr.read(&evtype, 1, 1) != 1)
+                    {
+                        m_errorString.append("HMI/HMP: Failed to read event type!\n");
+                        return false;
+                    }
+
+                    printf("-- HMI-specific tricky event 0x%02X\n", evtype);
+                    fflush(stdout);
+
+                    switch(evtype)
+                    {
+                    case 0x13:
+                    case 0x15:
+                        fr.seek(6, FileAndMemReader::CUR); // Skip 6 bytes
+                        break;
+
+                    case 0x12:
+                    case 0x14:
+                        fr.seek(2, FileAndMemReader::CUR); // Skip 2 bytes
+                        break;
+
+                    case 0x10:
+                        fr.seek(2, FileAndMemReader::CUR); // Skip 2 bytes
+
+                        if(fr.read(&skipSize, 1, 1) != 1)
+                        {
+                            m_errorString.append("HMI/HMP: Failed to read unknown event length!\n");
+                            return false;
+                        }
+
+                        fr.seek(skipSize + 5, FileAndMemReader::CUR); // Skip bytes of gotten length
+                        break;
+
+                    default:
+                        m_errorString.append("HMI/HMP: Unsupported unknown event type.\n");
+                        return false;
+                    }
+                }
+                else if(byte == 0xF1 || byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || (byte >= 0xF8 && byte <= 0xFD))
+                {
+                    m_errorString.append("HMI/HMP: Totally unsupported event byte!\n");
+                    return false;
+                }
+                else
+                {
+                    uint8_t midCh, evType;
+
+                    printf("Byte=0x%02X (off=%ld = 0x%lX) : ", byte, fr.tell(), fr.tell());
+
+                    // Any normal event (80..EF)
+                    if(byte < 0x80)
+                    {
+                        byte = static_cast<uint8_t>(status | 0x80);
+                        fr.seek(-1, FileAndMemReader::CUR);
+                    }
+
+                    midCh = byte & 0x0F;
+                    evType = (byte >> 4) & 0x0F;
+                    status = byte;
+                    event.channel = midCh;
+                    event.type = evType;
+
+                    switch(evType)
+                    {
+                    case MidiEvent::T_NOTEOFF: // 2 byte length
+                    case MidiEvent::T_NOTEON:
+                    case MidiEvent::T_NOTETOUCH:
+                    case MidiEvent::T_CTRLCHANGE:
+                    case MidiEvent::T_WHEEL:
+                        if(fr.tell() + 2 > d.end)
+                        {
+                            m_errorString.append("HMI/HMP: Can't read regular 2-byte event - Unexpected end of track data.\n");
+                            // return false;
+                            event.type = MidiEvent::T_SPECIAL;
+                            event.subtype = MidiEvent::ST_ENDTRACK;
+                            event.data_loc_size = 0;
+                            break;
+                        }
+
+                        fr.read(event.data_loc, 1, 2);
+                        event.data_loc_size = 2;
+
+                        printf("-- Regular 2-byte event 0x%02X, chan=%u\n", evType, midCh);
+                        fflush(stdout);
+
+                        if(!isHMP && evType == MidiEvent::T_NOTEON)
+                        {
+                            HMIDelayedOff offEvent;
+                            uint64_t duration;
+                            bool pushed = false;
+
+                            duration = readHmiVarLen(fr, d.end, ok);
+                            if(!ok)
+                            {
+                                m_errorString.append("HMI/HMP: Can't read the duration of timed note.\n");
+                                return false;
+                            }
+
+                            offEvent.channel = event.channel;
+                            offEvent.insert_on_tick = abs_position + duration;
+                            offEvent.data[0] = event.data_loc[0];
+                            offEvent.data[1] = event.data_loc[1];
+
+                            // Try to insert in time order!
+                            for(std::vector<HMIDelayedOff>::iterator it = noteOffs.begin(); it != noteOffs.end(); ++it)
+                            {
+                                if(it->insert_on_tick <= offEvent.insert_on_tick)
+                                {
+                                    noteOffs.insert(it, offEvent);
+                                    pushed = true;
+                                    break;
+                                }
+                            }
+
+                            if(!pushed) // Just push to end
+                                noteOffs.push_back(offEvent);
+                        }
+                        else if((evType == MidiEvent::T_NOTEON) && (event.data_loc[1] == 0))
+                        {
+                            event.type = MidiEvent::T_NOTEOFF; // Note ON with zero velocity is Note OFF!
+                        }
+                        else if(evType == MidiEvent::T_CTRLCHANGE)
+                        {
+                            switch(event.data_loc[0])
+                            {
+                            case 103: // Enable controller restaration when branching and looping
+                                event.isValid = 0; // Skip this event for now
+                                break;
+                            case 104: // Disable controller restaration when branching and looping
+                                event.isValid = 0; // Skip this event for now
+                                break;
+
+                            case 106: // Lock the channel
+                                event.isValid = 0; // Skip this event for now
+                                break;
+                            case 107: // Set the channel priority
+                                event.isValid = 0; // Skip this event for now
+                                break;
+
+                            case 108: // Local branch location
+                                event.isValid = 0; // Skip this event for now
+                                break;
+                            case 109: // branch to local branch location
+                                event.isValid = 0; // Skip this event for now
+                                break;
+
+                            case 110: // Global loop start
+                                event.type = MidiEvent::T_SPECIAL;
+                                event.subtype = MidiEvent::ST_LOOPSTART;
+                                event.data_loc_size = 0;
+                                break;
+                            case 111: // Global loop end
+                                event.type = MidiEvent::T_SPECIAL;
+                                event.subtype = MidiEvent::ST_LOOPEND;
+                                event.data_loc_size = 0;
+                                break;
+
+                            case 113: // Global branch location
+                                event.isValid = 0; // Skip this event for now
+                                break;
+                            case 114: // branch to global branch location
+                                event.isValid = 0; // Skip this event for now
+                                break;
+
+                            case 116: // Local loop start
+                                event.type = MidiEvent::T_SPECIAL;
+                                event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
+                                event.data_loc[0] = event.data_loc[1];
+                                event.data_loc_size = 1;
+                                break;
+                            case 117: // Local loop end
+                                event.type = MidiEvent::T_SPECIAL;
+                                event.subtype = MidiEvent::ST_LOOPSTACK_END;
+                                event.data_loc_size = 0;
+                                break;
+
+                            case 119:  // Callback Trigger
+                                event.type = MidiEvent::T_SPECIAL;
+                                event.subtype = MidiEvent::ST_CALLBACK_TRIGGER;
+                                event.data_loc[0] = event.data_loc[1];
+                                event.data_loc_size = 1;
+                                break;
+                            }
+                        }
+
+                        break;
+                    case MidiEvent::T_PATCHCHANGE: // 1 byte length
+                    case MidiEvent::T_CHANAFTTOUCH:
+                        if(fr.tell() + 1 > d.end)
+                        {
+                            m_errorString.append("HMI/HMP: Can't read regular 1-byte event - Unexpected end of track data.\n");
+                            return false;
+                        }
+
+                        printf("-- Regular 1-byte event 0x%02X, chan=%u\n", evType, midCh);
+                        fflush(stdout);
+
+                        fr.read(event.data_loc, 1, 1);
+                        event.data_loc_size = 1;
+                        break;
+
+                    default:
+                        m_errorString.append("HMI/HMP: Unsupported normal event type.\n");
+                        return false;
+                    }
+                }
+
+                if(event.isValid)
+                    addEventToBank(evtPos, event);
+
+                if(event.type == MidiEvent::T_SPECIAL)
+                {
+                    if(event.subtype == MidiEvent::ST_TEMPOCHANGE)
+                    {
+                        TempoEvent t = {readBEint(event.data_loc, event.data_loc_size), abs_position};
+                        temposList.push_back(t);
+                    }
+                    else
+                        analyseLoopEvent(loopState, event, abs_position);
+                }
+
+                if(event.subtype != MidiEvent::ST_ENDTRACK)
+                {
+                    evtPos.delay = readHmiVarLen(fr, d.end, ok);
+                    if(!ok)
+                    {
+                        /* End of track has been reached! However, there is no EOT event presented */
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_ENDTRACK;
+                        event.isValid = 1;
+                    }
+
+                    if(evtPos.delay > 400000)
+                    {
+                        printf("- Delay %lu IS A BOMB!\n",
+                            (unsigned long)evtPos.delay);
+                        fflush(stdout);
+                        m_errorString.append("HMI/HMP: Abnormal delay.\n");
+                        return false;
+                    }
+                }
+
+                if((evtPos.delay > 0) || (event.subtype == MidiEvent::ST_ENDTRACK))
+                {
+                    printf("- Delay %lu, Position %lu, stored events: %lu, time: %g seconds\n",
+                            (unsigned long)evtPos.delay, abs_position, evtPos.events_end - evtPos.events_begin,
+                            (abs_position * m_tempo).value());
+                    fflush(stdout);
+
+                    evtPos.absPos = abs_position;
+                    prev_position = abs_position;
+                    abs_position += evtPos.delay;
+                    m_trackData[tk].push_back(evtPos);
+                    evtPos.clear();
+                    loopState.gotLoopEventsInThisRow = false;
+                }
+
+                // Insert delayed NoteOFFs
+                for(std::vector<HMIDelayedOff>::iterator it = noteOffs.begin(); it != noteOffs.end(); )
+                {
+                    if(abs_position >= it->insert_on_tick || (status < 0))
+                    {
+                        std::memset(&event, 0, sizeof(event));
+                        event.isValid = 1;
+                        event.type = MidiEvent::T_NOTEOFF;
+                        event.data_loc[0] = it->data[0];
+                        event.data_loc[1] = it->data[1];
+                        event.data_loc_size = 2;
+                        addEventToBank(evtPos, event);
+
+                        if(it->insert_on_tick > prev_position)
+                        {
+                            evtPos.delay = it->insert_on_tick - prev_position;
+                            evtPos.absPos = it->insert_on_tick;
+                            prev_position = it->insert_on_tick;
+                            m_trackData[tk_v].push_back(evtPos);
+                            evtPos.clear();
+                            loopState.gotLoopEventsInThisRow = false;
+                            if(status < 0)
+                                abs_position = it->insert_on_tick;
+                        }
+
+                        it = noteOffs.erase(it);
+                    }
+                    else
+                        ++it;
+                }
+
+                if(status < 0 && evtPos.events_begin != evtPos.events_end) // Last row in the track
+                {
+                    evtPos.delay = 0;
+                    evtPos.absPos = abs_position;
+                    m_trackData[tk_v].push_back(evtPos);
+                    evtPos.clear();
+                    loopState.gotLoopEventsInThisRow = false;
+                }
+            }
+        } while((fr.tell() <= d.end) && (event.subtype != MidiEvent::ST_ENDTRACK));
+
+        printf("==Track %lu==END=========================\n", (unsigned long)tk_v);
+        fflush(stdout);
+
+        if(loopState.ticksSongLength < abs_position)
+            loopState.ticksSongLength = abs_position;
+
+        // Set the chain of events begin
+        if(m_trackData[tk_v].size() > 0)
+            m_currentPosition.track[tk_v].pos = m_trackData[tk_v].begin();
+
+        ++tk_v;
+    }
+
+    // Shrink tracks store if real number of tracks is smaller
+    if(m_trackData.size() != tk_v)
+    {
+        m_trackData.resize(tk_v);
+        m_trackDisable.resize(tk_v);
+    }
+
+    installLoop(loopState);
+    buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
 
     return true;
 }
