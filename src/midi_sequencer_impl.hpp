@@ -5099,6 +5099,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         m_trackData.resize(tk_v);
         m_trackDisable.resize(tk_v);
         m_trackDuratedNotes.resize(tk_v);
+        m_currentPosition.track.resize(tk_v);
     }
 
     installLoop(loopState);
