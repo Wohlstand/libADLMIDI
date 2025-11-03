@@ -814,6 +814,23 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_currentPosition.track.resize(trackCount);
 }
 
+void BW_MidiSequencer::initTracksBegin(size_t track)
+{
+    if(m_trackData[track].size() > 0)
+    {
+        MidiTrackQueue::iterator pos = m_trackData[track].begin();
+        m_currentPosition.track[track].pos = pos;
+        // Some events doesn't begin at zero!
+        m_currentPosition.track[track].delay = pos->absPos;
+        m_currentPosition.track[track].lastHandledEvent = 0;
+    }
+    else
+    {
+        m_currentPosition.track[track].delay = 0;
+        m_currentPosition.track[track].lastHandledEvent = -1;
+    }
+}
+
 bool BW_MidiSequencer::buildSmfTrackData(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count)
 {
     // bool gotGlobalLoopStart = false,
@@ -979,8 +996,7 @@ bool BW_MidiSequencer::buildSmfTrack(FileAndMemReader &fr,
         loopState.ticksSongLength = abs_position;
 
     // Set the chain of events begin
-    if(m_trackData[track_idx].size() > 0)
-        m_currentPosition.track[track_idx].pos = m_trackData[track_idx].begin();
+    initTracksBegin(track_idx);
 
     return true;
 }
@@ -3011,9 +3027,7 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     // Add final row
     evtPos.absPos = abs_position;
     m_trackData[0].push_back(evtPos);
-
-    if(!m_trackData[0].empty())
-        m_currentPosition.track[0].pos = m_trackData[0].begin();
+    initTracksBegin(0);
 
     buildTimeLine(temposList);
 
@@ -3546,9 +3560,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     // Add final row
     evtPos.absPos = abs_position;
     m_trackData[0].push_back(evtPos);
-
-    if(!m_trackData[0].empty())
-        m_currentPosition.track[0].pos = m_trackData[0].begin();
+    initTracksBegin(0);
 
     buildTimeLine(std::vector<TempoEvent>());
 
@@ -5076,8 +5088,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             loopState.ticksSongLength = abs_position;
 
         // Set the chain of events begin
-        if(m_trackData[tk_v].size() > 0)
-            m_currentPosition.track[tk_v].pos = m_trackData[tk_v].begin();
+        initTracksBegin(tk_v);
 
         ++tk_v;
     }

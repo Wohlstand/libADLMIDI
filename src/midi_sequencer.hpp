@@ -695,6 +695,12 @@ private:
     void buildSmfSetupReset(size_t trackCount);
 
     /**
+     * @brief Initialize begin of the track after it completely filled by the data
+     * @param track Index of track to initialize
+     */
+    void initTracksBegin(size_t track);
+
+    /**
      * @brief Build MIDI track data from the raw track data storage
      * @param fr File read handler
      * @param tracks_offset Absolute offset where tracks data begins
