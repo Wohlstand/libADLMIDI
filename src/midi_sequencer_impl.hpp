@@ -4760,7 +4760,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                             return false;
                         }
 
-                        fr.seek(skipSize + 5, FileAndMemReader::CUR); // Skip bytes of gotten length
+                        fr.seek(skipSize + 4, FileAndMemReader::CUR); // Skip bytes of gotten length
                         break;
 
                     default:
