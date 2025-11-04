@@ -613,6 +613,9 @@ private:
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue> m_trackData;
 
+    //! Current count of MIDI tracks
+    size_t m_tracksCount;
+
     //! Cache of active durated notes per track
     std::vector<DuratedNotesCache> m_trackDuratedNotes;
 
@@ -675,6 +678,8 @@ private:
      * @param trackCount Count of tracks
      */
     void buildSmfSetupReset(size_t trackCount);
+
+    void buildSmfResizeTracks(size_t tracksCount);
 
     /**
      * @brief Initialize begin of the track after it completely filled by the data

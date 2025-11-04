@@ -1,5 +1,5 @@
 
-#include "cvt_xmi2mid.hpp"
+#include "midiseq/impl/cvt_xmi2mid.hpp"
 #include <stdio.h>
 #include <sys/stat.h>
 #if !defined(_WIN32)
