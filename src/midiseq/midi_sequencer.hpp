@@ -425,12 +425,7 @@ private:
      */
     struct LoopStackEntry
     {
-        LoopStackEntry() :
-            infinity(false),
-            loops(0),
-            start(0),
-            end(0)
-        {}
+        LoopStackEntry();
 
         //! is infinite loop
         bool infinity;
@@ -478,72 +473,21 @@ private:
         int                         stackLevel;
 
         //! Constructor to initialize member variables
-        LoopState()
-                : caughtStart(false), caughtEnd(false), caughtStackStart(false),
-                caughtStackEnd(false), caughtStackBreak(false), skipStackStart(false),
-                invalidLoop(false), temporaryBroken(false), loopsCount(-1), loopsLeft(0),
-                stackLevel(-1)
-                {}
+        LoopState();
+
         /**
          * @brief Reset loop state to initial
          */
-        void reset()
-        {
-            caughtStart = false;
-            caughtEnd = false;
-            caughtStackStart = false;
-            caughtStackEnd = false;
-            caughtStackBreak = false;
-            skipStackStart = false;
-            loopsLeft = loopsCount;
-        }
+        void reset();
+        void fullReset();
 
-        void fullReset()
-        {
-            loopsCount = -1;
-            reset();
-            invalidLoop = false;
-            temporaryBroken = false;
-            stack.clear();
-            stackLevel = -1;
-        }
+        bool isStackEnd();
 
-        bool isStackEnd()
-        {
-            if(caughtStackEnd && (stackLevel >= 0) && (stackLevel < static_cast<int>(stack.size())))
-            {
-                const LoopStackEntry &e = stack[static_cast<size_t>(stackLevel)];
-                if(e.infinity || (!e.infinity && e.loops > 0))
-                    return true;
-            }
-            return false;
-        }
+        void stackUp(int count = 1);
 
-        void stackUp(int count = 1)
-        {
-            stackLevel += count;
-        }
+        void stackDown(int count = 1);
 
-        void stackDown(int count = 1)
-        {
-            stackLevel -= count;
-        }
-
-        LoopStackEntry &getCurStack()
-        {
-            if((stackLevel >= 0) && (stackLevel < static_cast<int>(stack.size())))
-                return stack[static_cast<size_t>(stackLevel)];
-            if(stack.empty())
-            {
-                LoopStackEntry d;
-                d.loops = 0;
-                d.infinity = 0;
-                d.start = 0;
-                d.end = 0;
-                stack.push_back(d);
-            }
-            return stack[0];
-        }
+        LoopStackEntry &getCurStack();
     };
 
     /**
@@ -667,11 +611,53 @@ private:
     //! Sequencer's time processor
     SequencerTime m_time;
 
+    /**********************************************************************************
+     *                             Durated note                                       *
+     **********************************************************************************/
 
     bool duratedNoteInsert(size_t track, DuratedNote *note);
     void duratedNoteClear();
     void duratedNoteTick(size_t track, int64_t ticks);
     void duratedNotePop(size_t track, size_t i);
+
+
+
+    /**********************************************************************************
+     *                                 Loop                                           *
+     **********************************************************************************/
+
+    /**
+     * @brief Installs the final state of the loop state after all the music data parsed
+     * @param loopState The loop state structure resulted after everything got been passed
+     */
+    void installLoop(LoopPointParseState &loopState);
+
+    /**
+     * @brief During the parse, inspects the loop event and according to the current loop state, installs the necessary properties
+     * @param loopState Loop state for the currently parsing music file
+     * @param event An event entry that was been proceeded just now
+     * @param abs_position Current in-track absolute position
+     */
+    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position);
+
+
+
+    /**********************************************************************************
+     *                                 Data bank                                      *
+     **********************************************************************************/
+
+    static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+    static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length);
+    static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length);
+    static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length);
+    static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
+    static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length);
+    void addEventToBank(MidiTrackRow &row, const MidiEvent &evt);
+
+
+    /**********************************************************************************
+     *                                 MIDI Data                                      *
+     **********************************************************************************/
 
     /**
      * @brief Prepare internal events storage for track data building
@@ -686,6 +672,53 @@ private:
      * @param track Index of track to initialize
      */
     void initTracksBegin(size_t track);
+
+    /**
+     * @brief Build the time line from off loaded events
+     * @param tempos Pre-collected list of tempo events
+     * @param loopStartTicks Global loop start tick (give zero if no global loop presented)
+     * @param loopEndTicks Global loop end tick (give zero if no global loop presented)
+     */
+    void buildTimeLine(const std::vector<TempoEvent> &tempos,
+                       uint64_t loopStartTicks = 0,
+                       uint64_t loopEndTicks = 0);
+
+
+    /**********************************************************************************
+     *                                 Process                                        *
+     **********************************************************************************/
+
+    /**
+     * @brief Handle one event from the chain
+     * @param tk MIDI track
+     * @param evt MIDI event entry
+     * @param status Recent event type, -1 returned when end of track event was handled.
+     */
+    void handleEvent(size_t tk, const MidiEvent &evt, int32_t &status);
+
+    /**
+     * @brief Run processing of active durated notes, trigger true Note-OFF events for expired notes
+     * @param track Track where to run the operation
+     * @param status [_out] Last-triggered event (Note-Off) will be returned here
+     */
+    void processDuratedNotes(size_t track, int32_t &status);
+
+    /**
+     * @brief Process MIDI events on the current tick moment
+     * @param isSeek is a seeking process
+     * @return returns false on reaching end of the song
+     */
+    bool processEvents(bool isSeek = false);
+
+
+    /**********************************************************************************
+     *                             Private file parser functions                      *
+     **********************************************************************************/
+
+
+    /**********************************************************************************
+     *                          Parse Standard MIDI File                              *
+     **********************************************************************************/
 
     /**
      * @brief Build MIDI track data from the raw track data storage
@@ -706,39 +739,6 @@ private:
     std::vector<TempoEvent> &temposList, LoopPointParseState &loopState);
 
     /**
-     * @brief Installs the final state of the loop state after all the music data parsed
-     * @param loopState The loop state structure resulted after everything got been passed
-     */
-    void installLoop(LoopPointParseState &loopState);
-
-    /**
-     * @brief During the parse, inspects the loop event and according to the current loop state, installs the necessary properties
-     * @param loopState Loop state for the currently parsing music file
-     * @param event An event entry that was been proceeded just now
-     * @param abs_position Current in-track absolute position
-     */
-    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position);
-
-    /**
-     * @brief Build the time line from off loaded events
-     * @param tempos Pre-collected list of tempo events
-     * @param loopStartTicks Global loop start tick (give zero if no global loop presented)
-     * @param loopEndTicks Global loop end tick (give zero if no global loop presented)
-     */
-    void buildTimeLine(const std::vector<TempoEvent> &tempos,
-                       uint64_t loopStartTicks = 0,
-                       uint64_t loopEndTicks = 0);
-
-    static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
-    static void insertDataToBank(MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length);
-    static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length);
-    static void insertDataToBankWithByte(MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length);
-    static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length);
-    static void insertDataToBankWithTerm(MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length);
-
-    void addEventToBank(MidiTrackRow &row, const MidiEvent &evt);
-
-    /**
      * @brief Parse one event from raw MIDI track stream
      * @param [_inout] ptr pointer to pointer to current position on the raw data track
      * @param [_in] end Address to end of raw track data, needed to validate position and size
@@ -749,26 +749,108 @@ private:
     MidiEvent parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer);
 
     /**
-     * @brief Process MIDI events on the current tick moment
-     * @param isSeek is a seeking process
-     * @return returns false on reaching end of the song
+     * @brief Load file as Standard MIDI file
+     * @param fr Context with opened file
+     * @return true on successful load
      */
-    bool processEvents(bool isSeek = false);
+    bool parseSMF(FileAndMemReader &fr);
 
     /**
-     * @brief Run processing of active durated notes, trigger true Note-OFF events for expired notes
-     * @param track Track where to run the operation
-     * @param status [_out] Last-triggered event (Note-Off) will be returned here
+     * @brief Load file as RIFF MIDI
+     * @param fr Context with opened file
+     * @return true on successful load
      */
-    void processDuratedNotes(size_t track, int32_t &status);
+    bool parseRMI(FileAndMemReader &fr);
 
+
+
+    /**********************************************************************************
+     *                                Parse GMF File                                  *
+     **********************************************************************************/
     /**
-     * @brief Handle one event from the chain
-     * @param tk MIDI track
-     * @param evt MIDI event entry
-     * @param status Recent event type, -1 returned when end of track event was handled.
+     * @brief Load file as GMD/MUS files (ScummVM)
+     * @param fr Context with opened file
+     * @return true on successful load
      */
-    void handleEvent(size_t tk, const MidiEvent &evt, int32_t &status);
+    bool parseGMF(FileAndMemReader &fr);
+
+
+
+    /**********************************************************************************
+     *                              Parse DMX MUS File                                *
+     **********************************************************************************/
+    /**
+     * @brief Load file as DMX MUS file (Doom)
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseMUS(FileAndMemReader &fr);
+
+
+    /**********************************************************************************
+     *                Parse HMI Sound Operating System specific MIDI File             *
+     **********************************************************************************/
+    /**
+     * @brief Load file as HMI/HMP file for the HMI Sound Operating System
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseHMI(FileAndMemReader &fr);
+
+#ifndef BWMIDI_DISABLE_XMI_SUPPORT
+    /**********************************************************************************
+     *                     Parse Miles Sound System's XMIDI File                      *
+     **********************************************************************************/
+    /**
+     * @brief Load file as AIL eXtended MIdi
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseXMI(FileAndMemReader &fr);
+#endif
+
+
+#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
+    /**********************************************************************************
+     *                            Parse Id's Music File                               *
+     **********************************************************************************/
+    /**
+     * @brief Load file as Id-software-Music-File (Wolfenstein)
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseIMF(FileAndMemReader &fr);
+
+    /**********************************************************************************
+     *                       Parse Wacky Wheels Music File                            *
+     **********************************************************************************/
+    /**
+     * @brief Load file as Wacky Wheels KLM file
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseKLM(FileAndMemReader &fr);
+
+    /**********************************************************************************
+     *                         Parse EA's MUS Music File                              *
+     **********************************************************************************/
+    /**
+     * @brief Load file as EA MUS
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseRSXX(FileAndMemReader &fr);
+
+    /**********************************************************************************
+     *                         Parse Creative Music File                              *
+     **********************************************************************************/
+    /**
+     * @brief Load file as Creative Music Format
+     * @param fr Context with opened file
+     * @return true on successful load
+     */
+    bool parseCMF(FileAndMemReader &fr);
+#endif
 
 
 public:
@@ -784,14 +866,6 @@ public:
      * @param intrf Pre-Initialized interface structure (pointer will be taken)
      */
     void setInterface(const BW_MidiRtInterface *intrf);
-
-    /**
-     * @brief Runs ticking in a sync with audio streaming. Use this together with onPcmRender hook to easily play MIDI.
-     * @param stream pointer to the output PCM stream
-     * @param length length of the buffer in bytes
-     * @return Count of recorded data in bytes
-     */
-    int playStream(uint8_t *stream, size_t length);
 
     /**
      * @brief Returns file format type of currently loaded file
@@ -912,11 +986,10 @@ public:
      */
     const std::vector<MIDI_MarkerEntry> &getMarkers();
 
-    /**
-     * @brief Is position of song at end
-     * @return true if end of song was reached
-     */
-    bool positionAtEnd();
+
+    /**********************************************************************************
+     *                                 Load music                                     *
+     **********************************************************************************/
 
     /**
      * @brief Load MIDI file from path
@@ -940,6 +1013,12 @@ public:
      */
     bool loadMIDI(FileAndMemReader &fr);
 
+
+
+    /**********************************************************************************
+     *                                 Input/Output                                   *
+     **********************************************************************************/
+
     /**
      * @brief Periodic tick handler.
      * @param s seconds since last call
@@ -947,6 +1026,14 @@ public:
      * @return desired number of seconds until next call
      */
     double Tick(double s, double granularity);
+
+    /**
+     * @brief Runs ticking in a sync with audio streaming. Use this together with onPcmRender hook to easily play MIDI.
+     * @param stream pointer to the output PCM stream
+     * @param length length of the buffer in bytes
+     * @return Count of recorded data in bytes
+     */
+    int playStream(uint8_t *stream, size_t length);
 
     /**
      * @brief Change current position to specified time position in seconds
@@ -986,6 +1073,12 @@ public:
     void    rewind();
 
     /**
+     * @brief Is position of song at end
+     * @return true if end of song was reached
+     */
+    bool positionAtEnd();
+
+    /**
      * @brief Get current tempor multiplier value
      * @return
      */
@@ -996,87 +1089,6 @@ public:
      * @param tempo Tempo multiplier: 1.0 - original tempo. >1 - faster, <1 - slower
      */
     void   setTempo(double tempo);
-
-
-private:
-    /**********************************************************************************
-     *                             Private file parser functions                      *
-     **********************************************************************************/
-
-#ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
-    /**
-     * @brief Load file as Id-software-Music-File (Wolfenstein)
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseIMF(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as Wacky Wheels KLM file
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseKLM(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as EA MUS
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseRSXX(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as Creative Music Format
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseCMF(FileAndMemReader &fr);
-#endif
-
-    /**
-     * @brief Load file as GMD/MUS files (ScummVM)
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseGMF(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as Standard MIDI file
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseSMF(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as RIFF MIDI
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseRMI(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as DMX MUS file (Doom)
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseMUS(FileAndMemReader &fr);
-
-    /**
-     * @brief Load file as HMI/HMP file for the HMI Sound Operating System
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseHMI(FileAndMemReader &fr);
-
-#ifndef BWMIDI_DISABLE_XMI_SUPPORT
-    /**
-     * @brief Load file as AIL eXtended MIdi
-     * @param fr Context with opened file
-     * @return true on successful load
-     */
-    bool parseXMI(FileAndMemReader &fr);
-#endif
-
 };
 
 #endif /* BW_MIDI_SEQUENCER_HHHHPPP */

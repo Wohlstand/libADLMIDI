@@ -29,6 +29,9 @@
 #include <cstring>
 #include <string>
 #include <assert.h>
+#ifndef _WIN32
+#   include <errno.h>
+#endif
 
 #include "../midi_sequencer.hpp"
 #include "common.hpp"

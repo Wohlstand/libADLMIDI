@@ -219,5 +219,19 @@ void BW_MidiSequencer::rewind()
     duratedNoteClear();
 }
 
+bool BW_MidiSequencer::positionAtEnd()
+{
+    return m_atEnd;
+}
+
+double BW_MidiSequencer::getTempoMultiplier()
+{
+    return m_tempoMultiplier;
+}
+
+void BW_MidiSequencer::setTempo(double tempo)
+{
+    m_tempoMultiplier = tempo;
+}
 
 #endif /* BW_MIDISEQ_IO_IMPL_HPP */

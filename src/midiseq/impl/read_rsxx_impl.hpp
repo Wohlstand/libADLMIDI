@@ -30,7 +30,6 @@
 
 #include <cstring>
 #include "../midi_sequencer.hpp"
-#include "common.hpp"
 
 
 bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)

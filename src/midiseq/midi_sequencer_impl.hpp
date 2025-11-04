@@ -43,6 +43,7 @@
 
 #include "impl/err_string_impl.hpp"
 #include "impl/durated_note_impl.hpp"
+#include "impl/loop_impl.hpp"
 #include "impl/databank_impl.hpp"
 
 #include "impl/miditrack_impl.hpp"
@@ -62,10 +63,10 @@
 
 #ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 // OPL2/OPL3 chip specific formats
-#include "impl/read_rsxx_impl.hpp"
 #include "impl/read_imf_impl.hpp"
-#include "impl/read_cmf_impl.hpp"
 #include "impl/read_klm_impl.hpp"
+#include "impl/read_rsxx_impl.hpp"
+#include "impl/read_cmf_impl.hpp"
 #endif
 
 
@@ -289,19 +290,3 @@ const std::vector<BW_MidiSequencer::MIDI_MarkerEntry> &BW_MidiSequencer::getMark
 {
     return m_musMarkers;
 }
-
-bool BW_MidiSequencer::positionAtEnd()
-{
-    return m_atEnd;
-}
-
-double BW_MidiSequencer::getTempoMultiplier()
-{
-    return m_tempoMultiplier;
-}
-
-void BW_MidiSequencer::setTempo(double tempo)
-{
-    m_tempoMultiplier = tempo;
-}
-
