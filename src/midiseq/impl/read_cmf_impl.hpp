@@ -61,6 +61,7 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     }
 
     m_format = Format_CMF;
+    m_smfFormat = 0;
 
     //unsigned version   = ReadLEint(HeaderBuf+4, 2);
     ins_start = readLEint(headerBuf + 6, 2);

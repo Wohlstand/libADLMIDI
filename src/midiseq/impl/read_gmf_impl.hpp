@@ -41,6 +41,7 @@ bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
 
     std::memset(&loopState, 0, sizeof(loopState));
 
+    m_smfFormat = 0;
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
