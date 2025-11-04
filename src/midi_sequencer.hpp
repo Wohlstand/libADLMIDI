@@ -129,39 +129,15 @@ private:
         char err[1001];
         size_t size;
 
-        ErrString() :
-            size(0)
-        {
-            err[0] = 0;
-        }
+        ErrString();
 
-        void clear()
-        {
-            err[0] = 0;
-            size = 0;
-        }
+        void clear();
+        void set(const char *str);
+        void append(const char *str);
+        void append(const char *str, size_t len);
 
-        void set(const char*str)
-        {
-            size = 0;
-            append(str);
-        }
-
-        void append(const char*str)
-        {
-            while(size < 1000 && *str)
-                err[size++] = *(str++);
-
-            err[size] = 0;
-        }
-
-        void append(const char*str, size_t len)
-        {
-            while(size < 1000 && len-- > 0)
-                err[size++] = *(str++);
-
-            err[size] = 0;
-        }
+        void setFmt(const char *fmt, ...);
+        void appendFmt(const char *fmt, ...);
 
         inline const char *c_str() const
         {
@@ -344,6 +320,9 @@ private:
 
     typedef std::list<MidiTrackRow> MidiTrackQueue;
 
+    /**
+     * @brief The print left by the Note-On event with a duration supplied. Once it expires, the Note-Off event should be sent.
+     */
     struct DuratedNote
     {
         int64_t ttl;
@@ -352,6 +331,9 @@ private:
         uint8_t velocity;
     };
 
+    /**
+     * @brief The per-track storage of active durated notes before they will expire.
+     */
     struct DuratedNotesCache
     {
         DuratedNote notes[128];
@@ -754,11 +736,12 @@ private:
     /**
      * @brief Parse one event from raw MIDI track stream
      * @param [_inout] ptr pointer to pointer to current position on the raw data track
-     * @param [_in] end address to end of raw track data, needed to validate position and size
-     * @param [_inout] status status of the track processing
+     * @param [_in] end Address to end of raw track data, needed to validate position and size
+     * @param [_inout] status Status of the track processing
+     * @param [_out] text_buffer Externally allocated buffer for text processing (special markers, etc.)
      * @return Parsed MIDI event entry
      */
-    MidiEvent parseEvent(FileAndMemReader &fr, const size_t end, int &status);
+    MidiEvent parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer);
 
     /**
      * @brief Process MIDI events on the current tick moment
