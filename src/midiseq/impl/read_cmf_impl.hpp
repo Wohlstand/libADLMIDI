@@ -33,11 +33,19 @@
 #include "../midi_sequencer.hpp"
 #include "common.hpp"
 
+#define CMF_OFFSET_VER_MAJOR    4
+#define CMF_OFFSET_VER_MINOR    5
+#define CMF_OFFSET_INS_START    6
+#define CMF_OFFSET_MUS_START    8
+#define CMF_OFFSET_TICKS_PER_Q  10
+#define CMF_OFFSET_TICKS_PER_S  12
+
 bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
 {
     const size_t headerSize = 14;
     char headerBuf[headerSize] = "";
-    size_t fsize = 0, deltaTicks = 192, totalGotten = 0, trackPos, trackLength;
+    size_t fsize = 0, ver_maj, ver_min, deltaTicks = 192, totalGotten = 0,
+           trackPos, trackLength, tempoNew;
     uint64_t ins_start, mus_start, ticks, ins_count;
     LoopPointParseState loopState;
 
@@ -63,11 +71,20 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     m_format = Format_CMF;
     m_smfFormat = 0;
 
-    //unsigned version   = ReadLEint(HeaderBuf+4, 2);
-    ins_start = readLEint(headerBuf + 6, 2);
-    mus_start = readLEint(headerBuf + 8, 2);
-    //unsigned deltas    = ReadLEint(HeaderBuf+10, 2);
-    ticks     = readLEint(headerBuf + 12, 2);
+    ver_maj = headerBuf[CMF_OFFSET_VER_MAJOR];
+    ver_min = headerBuf[CMF_OFFSET_VER_MINOR];
+
+    if(ver_maj != 0x01 || (ver_min != 0x01 && ver_min != 0x00))
+    {
+        m_errorString.setFmt("%s: Unsupported version of CMF: %u.%u\n", fr.fileName().c_str(), (unsigned)ver_maj, (unsigned)ver_min);
+        return false;
+    }
+
+    ins_start = readLEint(headerBuf + CMF_OFFSET_INS_START, 2);
+    mus_start = readLEint(headerBuf + CMF_OFFSET_MUS_START, 2);
+    //unsigned deltas    = readLEint(HeaderBuf + CMF_OFFSET_TICKS_PER_Q, 2);
+    ticks     = readLEint(headerBuf + CMF_OFFSET_TICKS_PER_S, 2);
+
     // Read title, author, remarks start offsets in file
     fsize = fr.read(headerBuf, 1, 6);
     if(fsize < 6)
@@ -79,15 +96,35 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
 
     //uint64_t notes_starts[3] = {readLEint(headerBuf + 0, 2), readLEint(headerBuf + 0, 4), readLEint(headerBuf + 0, 6)};
     fr.seek(16, FileAndMemReader::CUR); // Skip the channels-in-use table
-    fsize = fr.read(headerBuf, 1, 4);
-    if(fsize < 4)
+
+    if(ver_min == 0x00)
     {
-        fr.close();
-        m_errorString.set("Unexpected file ending on attempt to read CMF instruments block header!");
-        return false;
+        if(fr.read(headerBuf, 1, 1) != 1)
+        {
+            fr.close();
+            m_errorString.set("Unexpected file ending on attempt to read CMF instruments block header!");
+            return false;
+        }
+
+        ins_count = headerBuf[0];
+    }
+    else
+    {
+        if(!readUInt16LE(ins_count, fr))
+        {
+            fr.close();
+            m_errorString.set("Unexpected file ending on attempt to read CMF instruments block header!");
+            return false;
+        }
+
+        if(!readUInt16LE(tempoNew, fr))
+        {
+            fr.close();
+            m_errorString.set("Unexpected file ending on attempt to read CMF tempo value!");
+            return false;
+        }
     }
 
-    ins_count =  readLEint(headerBuf + 0, 2);
     fr.seek(static_cast<long>(ins_start), FileAndMemReader::SET);
 
     m_cmfInstruments.reserve(static_cast<size_t>(ins_count));

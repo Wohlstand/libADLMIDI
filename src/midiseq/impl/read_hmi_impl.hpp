@@ -31,6 +31,21 @@
 #include "../midi_sequencer.hpp"
 #include "common.hpp"
 
+#define HMI_OFFSET_DIVISION         0xD4
+#define HMI_OFFSET_TRACKS_COUNT     0xE4
+#define HMI_OFFSET_TRACK_DIR        0xE8
+
+#define HMI_OFFSET_TRACK_LEN            0x04
+#define HMI_OFFSET_TRACK_DATA_OFFSET    0x57
+#define HMI_OFFSET_TRACK_DESIGNATION    0x99
+
+#define HMI_SIZE_TRACK_DIR_HEAD     4
+
+#define HMI_MAX_DESIGNATIONS    8
+
+
+#define HMP_OFFSET_TRACK_DATA   12
+
 
 struct HMITrackDir
 {
@@ -113,7 +128,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         isHMP = false;
         readHmiVarLen = readVarLenEx; // Same as SMF!
 
-        fr.seek(0xD4, FileAndMemReader::SET);
+        fr.seek(HMI_OFFSET_DIVISION, FileAndMemReader::SET);
         if(!readUInt16LE(hmp_head.division, fr))
         {
             m_errorString.set("HMI/HMP: Failed to read division value!\n");
@@ -122,7 +137,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
         hmp_head.division <<= 2;
 
-        fr.seek(0xE4, FileAndMemReader::SET);
+        fr.seek(HMI_OFFSET_TRACKS_COUNT, FileAndMemReader::SET);
         if(!readUInt16LE(hmp_head.tracksCount, fr))
         {
             m_errorString.set("HMI: Failed to read tracks count!\n");
@@ -159,7 +174,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 return false;
             }
 
-            if(d.start > file_size - 0x99 - 4)
+            if(d.start > file_size - HMI_OFFSET_TRACK_DESIGNATION - 4)
             {
                 d.len = 0;
                 continue; // Track is incomplete
@@ -185,7 +200,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
             else
             {
-                fr.seek(track_dir + (tk * 4) + 4, FileAndMemReader::SET);
+                fr.seek(track_dir + (tk * HMI_SIZE_TRACK_DIR_HEAD) + HMI_OFFSET_TRACK_LEN, FileAndMemReader::SET);
                 if(!readUInt32LE(d.len, fr))
                 {
                     m_errorString.set("HMI: Failed to read track start offset!\n");
@@ -206,7 +221,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 d.end = d.start + d.len;
             }
 
-            fr.seek(d.start + 0x57, FileAndMemReader::SET);
+            fr.seek(d.start + HMI_OFFSET_TRACK_DATA_OFFSET, FileAndMemReader::SET);
             if(!readUInt32LE(d.offset, fr))
             {
                 m_errorString.set("HMI: Failed to read MIDI events offset!\n");
@@ -222,8 +237,8 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             d.len -= d.offset;
             totalGotten += d.len;
 
-            fr.seek(d.start + 0x99, FileAndMemReader::SET);
-            for(size_t j = 0; j < 8; ++j)
+            fr.seek(d.start + HMI_OFFSET_TRACK_DESIGNATION, FileAndMemReader::SET);
+            for(size_t j = 0; j < HMI_MAX_DESIGNATIONS; ++j)
             {
                 if(!readUInt16LE(d.designations[j], fr))
                 {
@@ -335,7 +350,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             fr.seek(tracks_offset, FileAndMemReader::SET);
             d.start = tracks_offset;
 
-            if(d.start > file_size - 12)
+            if(d.start > file_size - HMP_OFFSET_TRACK_DATA)
             {
                 d.len = 0;
                 break; // Track is incomplete
@@ -371,14 +386,14 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             if(file_size - d.start < d.len)
                 d.len = file_size - d.start;
 
-            if(d.len <= 12)
+            if(d.len <= HMP_OFFSET_TRACK_DATA)
             {
                 d.len = 0;
                 continue;
             }
 
-            d.offset = 12;
-            d.len -= 12; // Track header size!
+            d.offset = HMP_OFFSET_TRACK_DATA;
+            d.len -= HMP_OFFSET_TRACK_DATA; // Track header size!
 
             d.designations[0] = 0xA000;
             d.designations[1] = 0xA00A;

@@ -31,6 +31,20 @@
 #include "../midi_sequencer.hpp"
 #include "common.hpp"
 
+
+enum MUS_EventType
+{
+    MUS_NoteOFF     = 0,
+    MUS_NoteON      = 1,
+    MUS_PitchBend   = 2,
+    MUS_SystemEvent = 3,
+    MUS_Controller  = 4,
+    MUS_EndMeasure  = 5,
+    MUS_EndOfTrack  = 6,
+    MUS_Unused      = 7
+};
+
+
 bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 {
     const size_t headerSize = 16;
@@ -83,13 +97,13 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 
     if(mus_len < mus_lenSong + mus_offSong)
     {
-        m_errorString.set("MUS file is invalid: song length is longer than file size!\n");
+        m_errorString.setFmt("MUS file is invalid: song length (%ul) is longer than file size (%ul)!\n", (unsigned long)(mus_lenSong + mus_offSong), (unsigned long)(mus_len));
         return false;
     }
 
     if(mus_channels1 > 15)
     {
-        m_errorString.set("MUS file is invalid: more than 15 primary channels!\n");
+        m_errorString.setFmt("MUS file is invalid: more than 15 primary channels! (Actual value: %u)\n", mus_channels1);
         return false;
     }
 
@@ -193,7 +207,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 
         switch((mus_event >> 4) & 0x07)
         {
-        case 0: // Note off
+        case MUS_NoteOFF:
             fsize = fr.read(&bytes, 1, 1);
             if(fsize < 1)
             {
@@ -209,7 +223,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
             addEventToBank(evtPos, event);
             break;
 
-        case 1: // Note on
+        case MUS_NoteON:
             fsize = fr.read(&bytes, 1, 1);
             if(fsize < 1)
             {
@@ -239,7 +253,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
             addEventToBank(evtPos, event);
             break;
 
-        case 2: // Pitch bend
+        case MUS_PitchBend:
             fsize = fr.read(&bytes, 1, 1);
             if(fsize < 1)
             {
@@ -255,7 +269,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
             addEventToBank(evtPos, event);
             break;
 
-        case 3: // System event
+        case MUS_SystemEvent:
             fsize = fr.read(&bytes, 1, 1);
             if(fsize < 1)
             {
@@ -274,7 +288,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
             addEventToBank(evtPos, event);
             break;
 
-        case 4: // Controller
+        case MUS_Controller:
             fsize = fr.read(&bytes, 1, 2);
             if(fsize < 1)
             {
@@ -318,16 +332,16 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 
             addEventToBank(evtPos, event);
             break;
-        case 5: // End of measure
+        case MUS_EndMeasure:
             break;
 
-        case 6: // Track finished
+        case MUS_EndOfTrack:
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_ENDTRACK;
             addEventToBank(evtPos, event);
             break;
 
-        case 7: // Unused event;
+        case MUS_Unused:
             break;
         }
 
