@@ -25,10 +25,10 @@
 #include "adlmidi_opl3.hpp"
 #include "adlmidi_private.hpp"
 #include "adlmidi_cvt.hpp"
-#include "file_reader.hpp"
+#include "midiseq/file_reader.hpp"
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
 #   define BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
-#   include "midi_sequencer.hpp"
+#   include "midiseq/midi_sequencer.hpp"
 #endif
 #include "wopl/wopl_file.h"
 

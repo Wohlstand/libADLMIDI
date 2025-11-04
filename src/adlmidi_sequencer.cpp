@@ -27,7 +27,7 @@
 #define BW_MidiSequencer AdlMidiSequencer
 #define BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 // Inlucde MIDI sequencer class implementation
-#include "midi_sequencer_impl.hpp"
+#include "midiseq/midi_sequencer_impl.hpp"
 
 #include "adlmidi_midiplay.hpp"
 #include "adlmidi_opl3.hpp"

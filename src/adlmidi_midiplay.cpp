@@ -26,7 +26,7 @@
 #include "adlmidi_private.hpp"
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
 #   define BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
-#   include "midi_sequencer.hpp"
+#   include "midiseq/midi_sequencer.hpp"
 #endif
 
 // Minimum life time of percussion notes

@@ -508,6 +508,8 @@ file(GLOB libADLMIDI_HEADERS
     ${libADLMIDI_SOURCE_DIR}/include/*.h
     ${libADLMIDI_SOURCE_DIR}/src/*.h
     ${libADLMIDI_SOURCE_DIR}/src/*.hpp
+    ${libADLMIDI_SOURCE_DIR}/src/midiseq/*.h
+    ${libADLMIDI_SOURCE_DIR}/src/midiseq/*.hpp
     ${libADLMIDI_SOURCE_DIR}/src/wopl/*.h
     ${libADLMIDI_SOURCE_DIR}/src/structures/*.hpp
     ${libADLMIDI_SOURCE_DIR}/src/chips/*.h

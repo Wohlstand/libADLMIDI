@@ -27,7 +27,7 @@
 #include "chips/opl_chip_base.h"
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
 #   define BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
-#   include "midi_sequencer.hpp"
+#   include "midiseq/midi_sequencer.hpp"
 #endif
 #ifdef ENABLE_HW_OPL_DOS
 #   include "chips/dos_hw_opl.h"
