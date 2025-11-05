@@ -34,6 +34,16 @@
 #   define DEBUG_HMI_PARSE
 #   define DEBUG_TIME_CALCULATION
 #   include <inttypes.h>
+#   if !defined(__PRIPTR_PREFIX)
+#       if __WORDSIZE == 64
+#           define __PRIPTR_PREFIX	"l"
+#       else
+#           define __PRIPTR_PREFIX
+#       endif
+#   endif
+#   ifndef PRIuPTR
+#       define PRIuPTR __PRIPTR_PREFIX "u"
+#   endif
 #endif
 
 #include "impl/platform_impl.hpp"
