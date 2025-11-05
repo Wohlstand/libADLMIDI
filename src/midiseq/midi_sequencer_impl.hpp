@@ -102,7 +102,7 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_loopEndTime(-1.0),
     m_atEnd(false),
     m_loopCount(-1),
-    m_deviceMask(Device_OPL2|Device_OPL3), // FIXME: Implement external configure of this value!
+    m_deviceMask(Device_ANY),
     m_trackSolo(~static_cast<size_t>(0)),
     m_tempoMultiplier(1.0)
 {
@@ -226,6 +226,11 @@ void BW_MidiSequencer::setSongNum(int track)
 
         m_format = Format_XMIDI;
     }
+}
+
+void BW_MidiSequencer::setDeviceMask(uint32_t devMask)
+{
+    m_deviceMask = devMask;
 }
 
 int BW_MidiSequencer::getSongsCount()

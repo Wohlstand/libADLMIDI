@@ -941,6 +941,15 @@ public:
     void setSongNum(int track);
 
     /**
+     * @brief Set the device mask to allow tracks being played. Default value is Device_ANY.
+     * @param devMask A mask built from values of @{DeviceFilter} enumeration using OR operation
+     *
+     * Set it before starting playing the song or even before loading a file, otherwise it's possible
+     * that necessary controllers won't be set and music will play incorrectly.
+     */
+    void setDeviceMask(uint32_t devMask);
+
+    /**
      * @brief Retrive the number of songs in a currently opened file
      * @return Number of songs in the file. If 1 or less, means, the file has only one song inside.
      */
