@@ -696,6 +696,8 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                                     return false;
                                 }
 
+                                duration += 1;
+
                                 event.type = MidiEvent::T_NOTEON_DURATED;
                                 if(duration > 0xFFFFFF)
                                     duration = 0xFFFFFF; // Fit to 3 bytes (maximum 16777215 ticks duration)
