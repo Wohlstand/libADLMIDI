@@ -701,9 +701,9 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                                     duration = 0xFFFFFF; // Fit to 3 bytes (maximum 16777215 ticks duration)
 
                                 event.data_loc_size = 5;
-                                event.data_loc[2] = ((duration << 16) & 0xFF0000);
-                                event.data_loc[3] = ((duration << 8) & 0x00FF00);
-                                event.data_loc[4] = (duration & 0x0000FF);
+                                event.data_loc[2] = ((duration >> 16) & 0xFF);
+                                event.data_loc[3] = ((duration >> 8) & 0xFF);
+                                event.data_loc[4] = (duration & 0xFF);
                             }
                             else if(event.data_loc[1] == 0) // Note ON with zero velocity is Note OFF!
                                 event.type = MidiEvent::T_NOTEOFF;
