@@ -46,7 +46,7 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     char headerBuf[headerSize] = "";
     size_t fsize = 0, ver_maj, ver_min, deltaTicks = 192, totalGotten = 0,
            trackPos, trackLength, tempoNew;
-    uint64_t ins_start, mus_start, ticks, ins_count;
+    size_t ins_start, mus_start, ticks, ins_count;
     LoopPointParseState loopState;
 
     std::vector<TempoEvent> temposList;
