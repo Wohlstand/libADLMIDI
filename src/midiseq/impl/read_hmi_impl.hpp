@@ -283,9 +283,9 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             return false;
         }
 
-        if(hmp_head.tracksCount >= 32)
+        if(hmp_head.tracksCount > 32)
         {
-            m_errorString.set("HMP: File contains more than 32 tracks!\n");
+            m_errorString.setFmt("HMP: File contains more than 32 tracks (%u)!\n", (unsigned)hmp_head.tracksCount);
             return false;
         }
 
