@@ -727,7 +727,7 @@ private:
      * @param tracks_count Total number of tracks stored in the file
      * @return true if everything successfully processed, or false on any error
      */
-    bool buildSmfTrackData(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count);
+    bool smf_buildTracks(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count);
 
     /**
      * @brief Build data for the single track (without header)
@@ -735,8 +735,8 @@ private:
      * @param track_idx Inndex of currently parsing track (at 0)
      * @return true if everything successfully processed, or false on any error
      */
-    bool buildSmfTrack(FileAndMemReader &fr, const size_t track_idx, const size_t track_size,
-    std::vector<TempoEvent> &temposList, LoopPointParseState &loopState);
+    bool smf_buildOneTrack(FileAndMemReader &fr, const size_t track_idx, const size_t track_size,
+                           std::vector<TempoEvent> &temposList, LoopPointParseState &loopState);
 
     /**
      * @brief Parse one event from raw MIDI track stream
@@ -746,7 +746,7 @@ private:
      * @param [_out] text_buffer Externally allocated buffer for text processing (special markers, etc.)
      * @return Parsed MIDI event entry
      */
-    MidiEvent parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer);
+    MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer);
 
     /**
      * @brief Load file as Standard MIDI file

@@ -45,7 +45,7 @@ static const uint8_t s_midi_evtSizeCtrls[16] =
 };
 
 
-bool BW_MidiSequencer::buildSmfTrackData(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count)
+bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count)
 {
     // bool gotGlobalLoopStart = false,
     //      gotGlobalLoopEnd = false,
@@ -84,7 +84,7 @@ bool BW_MidiSequencer::buildSmfTrackData(FileAndMemReader &fr, const size_t trac
 
         trackLength = (size_t)readBEint(headBuf + 4, 4);
 
-        if(!buildSmfTrack(fr, tk, trackLength, temposList, loopState))
+        if(!smf_buildOneTrack(fr, tk, trackLength, temposList, loopState))
             return false; // Failed to parse track (error already written!)
     }
 
@@ -94,7 +94,7 @@ bool BW_MidiSequencer::buildSmfTrackData(FileAndMemReader &fr, const size_t trac
     return true;
 }
 
-bool BW_MidiSequencer::buildSmfTrack(FileAndMemReader &fr,
+bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
                                      const size_t track_idx,
                                      const size_t track_size,
                                      std::vector<TempoEvent> &temposList,
@@ -149,7 +149,7 @@ bool BW_MidiSequencer::buildSmfTrack(FileAndMemReader &fr,
 
     do
     {
-        event = parseEvent(fr, end, status, text_buffer);
+        event = smf_parseEvent(fr, end, status, text_buffer);
         if(!event.isValid)
         {
             int len = snprintf(error, 150, "buildTrackData: Fail to parse event in the track %lu.\n", (unsigned long)track_idx);
@@ -219,7 +219,7 @@ bool BW_MidiSequencer::buildSmfTrack(FileAndMemReader &fr,
 }
 
 
-BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer)
+BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer)
 {
     uint8_t byte, midCh, evType;
     size_t locSize;
@@ -750,7 +750,7 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     }
 
     // Build new MIDI events table
-    if(!buildSmfTrackData(fr, tracks_begin, trackCount))
+    if(!smf_buildTracks(fr, tracks_begin, trackCount))
     {
         m_errorString.set(fr.fileName().c_str());
         m_errorString.append(": MIDI data parsing error has occouped!\n");

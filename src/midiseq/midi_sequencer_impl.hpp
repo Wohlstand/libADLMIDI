@@ -30,16 +30,15 @@
 #include <assert.h>
 
 #if !defined(__DJGPP__) && !defined(NDEBUG)
-#define DEBUG_HMI_PARSE
-#define DEBUG_TIME_CALCULATION
-#include <inttypes.h>
+#   define DEBUG_HMI_PARSE
+#   define DEBUG_TIME_CALCULATION
+#   include <inttypes.h>
 #endif
 
 #include "impl/platform_impl.hpp"
 
 
 #include "impl/common.hpp"
-#include "impl/common_impl.hpp"
 
 #include "impl/err_string_impl.hpp"
 #include "impl/durated_note_impl.hpp"
@@ -63,10 +62,10 @@
 
 #ifdef BWMIDI_ENABLE_OPL_MUSIC_SUPPORT
 // OPL2/OPL3 chip specific formats
-#include "impl/read_imf_impl.hpp"
-#include "impl/read_klm_impl.hpp"
-#include "impl/read_rsxx_impl.hpp"
-#include "impl/read_cmf_impl.hpp"
+#   include "impl/read_imf_impl.hpp"
+#   include "impl/read_klm_impl.hpp"
+#   include "impl/read_rsxx_impl.hpp"
+#   include "impl/read_cmf_impl.hpp"
 #endif
 
 

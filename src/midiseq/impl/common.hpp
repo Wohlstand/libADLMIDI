@@ -37,7 +37,19 @@
  * @param nbytes Count of bytes to parse integer
  * @return Extracted unsigned integer
  */
-static uint64_t readBEint(const void *buffer, size_t nbytes);
+static uint64_t readBEint(const void *buffer, size_t nbytes)
+{
+    uint64_t result = 0;
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
+
+    for(size_t n = 0; n < nbytes; ++n)
+    {
+        result <<= 8;
+        result |= data[n];
+    }
+
+    return result;
+}
 
 /**
  * @brief Utility function to read Little-Endian integer from raw binary data
@@ -45,21 +57,89 @@ static uint64_t readBEint(const void *buffer, size_t nbytes);
  * @param nbytes Count of bytes to parse integer
  * @return Extracted unsigned integer
  */
-static uint64_t readLEint(const void *buffer, size_t nbytes);
+static uint64_t readLEint(const void *buffer, size_t nbytes)
+{
+    uint64_t result = 0;
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
 
-static uint16_t readLEint16(const void *buffer, size_t nbytes);
+    for(size_t n = 0; n < nbytes; ++n)
+        result += static_cast<uint64_t>(data[n] << (n * 8));
 
-static uint32_t readLEint32(const void *buffer, size_t nbytes);
+    return result;
+}
+
+static uint16_t readLEint16(const void *buffer, size_t nbytes)
+{
+    uint16_t result = 0;
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
+
+    for(size_t n = 0; n < nbytes; ++n)
+        result += static_cast<uint16_t>(data[n] << (n * 8));
+
+    return result;
+}
+
+static uint32_t readLEint32(const void *buffer, size_t nbytes)
+{
+    uint32_t result = 0;
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
+
+    for(size_t n = 0; n < nbytes; ++n)
+        result += static_cast<uint32_t>(data[n] << (n * 8));
+
+    return result;
+}
 
 #if __SIZEOF_POINTER__ != 4
-static bool readUInt32LE(size_t &out, FileAndMemReader &fr);
+static bool readUInt32LE(size_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[4];
+
+    if(fr.read(buf, 1, 4) != 4)
+        return false;
+
+    out = readLEint32(buf, 4);
+
+    return true;
+}
 #endif
 
-static bool readUInt32LE(uint32_t &out, FileAndMemReader &fr);
+static bool readUInt32LE(uint32_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[4];
 
-static bool readUInt16LE(size_t &out, FileAndMemReader &fr);
+    if(fr.read(buf, 1, 4) != 4)
+        return false;
 
-static bool readUInt16LE(uint16_t &out, FileAndMemReader &fr);
+    out = readLEint32(buf, 4);
+
+    return true;
+}
+
+static bool readUInt16LE(size_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[2];
+
+    if(fr.read(buf, 1, 2) != 2)
+        return false;
+
+    out = readLEint16(buf, 2);
+
+    return true;
+}
+
+static bool readUInt16LE(uint16_t &out, FileAndMemReader &fr)
+{
+    uint8_t buf[2];
+
+    if(fr.read(buf, 1, 2) != 2)
+        return false;
+
+    out = readLEint16(buf, 2);
+
+    return true;
+}
+
 
 #if 0
 /**
@@ -69,13 +149,91 @@ static bool readUInt16LE(uint16_t &out, FileAndMemReader &fr);
  * @param [_out] ok Reference to boolean which takes result of variable-length value parsing
  * @return Unsigned integer that conains parsed variable-length value
  */
-static uint64_t readVarLenEx(const uint8_t **ptr, const uint8_t *end, bool &ok);
+static uint64_t readVarLenEx(const uint8_t **ptr, const uint8_t *end, bool &ok)
+{
+    uint64_t result = 0;
+    ok = false;
+
+    for(;;)
+    {
+        if(*ptr >= end)
+            return 2;
+        unsigned char byte = *((*ptr)++);
+        result = (result << 7) + (byte & 0x7F);
+        if(!(byte & 0x80))
+            break;
+    }
+
+    ok = true;
+    return result;
+}
 #endif
 
-static uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok);
+static uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
+{
+    uint64_t result = 0;
+    uint8_t byte;
 
-static uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok);
+    ok = false;
 
-static bool strEqual(const uint8_t *in_str, size_t length, const char *needle);
+    for(;;)
+    {
+        if(fr.tell() >= end || fr.read(&byte, 1, 1) != 1)
+            return 2;
+
+        result = (result << 7) + (byte & 0x7F);
+
+        if((byte & 0x80) == 0)
+            break;
+    }
+
+    ok = true;
+
+    return result;
+}
+
+static uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
+{
+    uint64_t result = 0;
+    uint8_t byte;
+    int offset = 0;
+
+    ok = false;
+
+    for(;;)
+    {
+        if(fr.tell() >= end || fr.read(&byte, 1, 1) != 1)
+            return 2;
+
+        result |= (byte & 0x7F) << offset;
+        offset += 7;
+
+        if((byte & 0x80) != 0)
+            break;
+    }
+
+    ok = true;
+
+    return result;
+}
+
+static bool strEqual(const uint8_t *in_str, size_t length, const char *needle)
+{
+    const char *it_i = reinterpret_cast<const char *>(in_str), *it_n = needle;
+    size_t i = 0;
+
+    for( ; i < length && *it_n != 0; ++i, ++it_i, ++it_n)
+    {
+        if(*it_i <= 'Z' && *it_i >= 'A')
+        {
+            if(*it_i - ('Z' - 'z') != *it_n)
+                return false; // Mismatch!
+        }
+        else if(*it_i != *it_n)
+            return false; // Mismatch!
+    }
+
+    return i == length && *it_n == 0; // Length is same
+}
 
 #endif /* BW_MIDISEQ_COMMON_HPP */

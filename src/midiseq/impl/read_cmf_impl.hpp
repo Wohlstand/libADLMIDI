@@ -166,7 +166,7 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     buildSmfSetupReset(1);
 
     // Build new MIDI events table
-    if(!buildSmfTrack(fr, 0, trackLength, temposList, loopState))
+    if(!smf_buildOneTrack(fr, 0, trackLength, temposList, loopState))
     {
         m_errorString.set(fr.fileName().c_str());
         m_errorString.append(": MIDI data parsing error has occouped!\n");
