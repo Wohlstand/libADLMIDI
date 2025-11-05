@@ -35,6 +35,9 @@
 
 void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEvent &evt, int32_t &status)
 {
+    if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[track]) == 0)
+        return; // Ignore this track completely
+
     if(track == 0 && m_smfFormat < 2 && evt.type == MidiEvent::T_SPECIAL &&
        (evt.subtype == MidiEvent::ST_TEMPOCHANGE || evt.subtype == MidiEvent::ST_TIMESIGNATURE))
     {

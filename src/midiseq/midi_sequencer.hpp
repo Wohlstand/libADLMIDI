@@ -116,6 +116,33 @@ public:
         return m_dataBank.data() + b.offset;
     };
 
+    /**
+     * @brief Device types to filter incompatible MIDI tracks, primarily used by HMI/HMP and EMIDI. Can be comnined to enable more tracks.
+     */
+    enum DeviceFilter
+    {
+        Device_GeneralMidi      = 0x0001,
+        Device_OPL2             = 0x0002,
+        Device_OPL3             = 0x0004,
+        Device_MT32             = 0x0008,
+        Device_AWE32            = 0x0010,
+        Device_WaveBlaster      = 0x0020,
+        Device_ProAudioSpectrum = 0x0040,
+        Device_SoundMan16       = 0x0080,
+        Device_DIGI             = 0x0100, // Digital MIDI devices
+        Device_SoundScape       = 0x0200,
+        Device_WaveTable        = 0x0400,
+        Device_GravisUltrasound = 0x0800,
+        Device_PCSpeaker        = 0x1000,
+        Device_Callback         = 0x2000,
+        Device_SoundMasterII    = 0x4000,
+
+        Device_FM               = Device_OPL2|Device_OPL3|Device_ProAudioSpectrum|Device_SoundMan16,
+        Device_AdLib            = Device_OPL2,
+        Device_SoundBlaster     = Device_OPL2|Device_OPL3,
+        Device_ANY              = 0xFFFF
+    };
+
 private:
     /**********************************************************************************
      *                   Private structures and types definitions                     *
@@ -557,6 +584,9 @@ private:
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue> m_trackData;
 
+    //! Per-device filter of tracks
+    std::vector<uint32_t> m_trackDevices;
+
     //! Current count of MIDI tracks
     size_t m_tracksCount;
 
@@ -584,6 +614,9 @@ private:
 
     //! Set the number of loops limit. Lesser than 0 - loop infinite
     int     m_loopCount;
+
+    //! Current filter (by default "Allow everything", for some formats by default the "FM" is set)
+    uint32_t m_deviceMask;
 
 
     //! The XMI-specific list of raw songs, converted into SMF format

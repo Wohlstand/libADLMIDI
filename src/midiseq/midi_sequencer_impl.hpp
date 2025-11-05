@@ -102,6 +102,7 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_loopEndTime(-1.0),
     m_atEnd(false),
     m_loopCount(-1),
+    m_deviceMask(Device_OPL2|Device_OPL3), // FIXME: Implement external configure of this value!
     m_trackSolo(~static_cast<size_t>(0)),
     m_tempoMultiplier(1.0)
 {

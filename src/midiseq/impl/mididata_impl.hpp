@@ -54,6 +54,7 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_dataBank.clear();
     m_eventBank.clear();
     m_trackData.clear();
+    m_trackDevices.clear();
     m_trackDuratedNotes.clear();
 
     m_loop.reset();
@@ -72,6 +73,7 @@ void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
 {
     m_tracksCount = tracksCount;
     m_trackData.resize(m_tracksCount, MidiTrackQueue());
+    m_trackDevices.resize(m_tracksCount, Device_ANY);
     m_currentPosition.track.resize(m_tracksCount);
     m_trackDuratedNotes.resize(m_tracksCount);
     m_trackDisable.resize(m_tracksCount);

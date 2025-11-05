@@ -46,6 +46,21 @@
 
 #define HMP_OFFSET_TRACK_DATA   12
 
+enum HMIDriver
+{
+    HMI_DRIVER_SOUND_MASTER_II    = 0xA000,
+    HMI_DRIVER_MPU_401            = 0xA001,
+    HMI_DRIVER_FM                 = 0xA002,
+    HMI_DRIVER_OPL2               = 0xA002,
+    HMI_DRIVER_CALLBACK           = 0xA003,
+    HMI_DRIVER_MT_32              = 0xA004,
+    HMI_DRIVER_DIGI               = 0xA005,
+    HMI_DRIVER_INTERNAL_SPEAKER   = 0xA006,
+    HMI_DRIVER_WAVE_TABLE_SYNTH   = 0xA007,
+    HMI_DRIVER_AWE32              = 0xA008,
+    HMI_DRIVER_OPL3               = 0xA009,
+    HMI_DRIVER_GUS                = 0xA00A
+};
 
 struct HMITrackDir
 {
@@ -475,6 +490,57 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         printf("==Track %lu=(de-facto %lu)=============================\n", (unsigned long)tk, (unsigned long)tk_v);
         fflush(stdout);
 #endif
+
+        m_trackDevices[tk_v] = Device_ANY;
+
+        for(size_t d = 0; d < 5; ++d)
+        {
+            if(!hmp_head.trackDevice[tk_v][d])
+                break;
+
+            if(d == 0)
+                m_trackDevices[tk_v] = 0;
+
+            switch(hmp_head.trackDevice[tk_v][d])
+            {
+            case HMI_DRIVER_SOUND_MASTER_II:
+                m_trackDevices[tk_v] |= Device_SoundMasterII|Device_GeneralMidi;
+                break;
+            case HMI_DRIVER_MPU_401:
+                m_trackDevices[tk_v] |= Device_GeneralMidi;
+                break;
+            case HMI_DRIVER_OPL2:
+                m_trackDevices[tk_v] |= Device_OPL2;
+                break;
+            case HMI_DRIVER_CALLBACK:
+                m_trackDevices[tk_v] |= Device_Callback;
+                break;
+            case HMI_DRIVER_MT_32:
+                m_trackDevices[tk_v] |= Device_MT32;
+                break;
+            case HMI_DRIVER_DIGI:
+                m_trackDevices[tk_v] |= Device_DIGI;
+                break;
+            case HMI_DRIVER_INTERNAL_SPEAKER:
+                m_trackDevices[tk_v] |= Device_PCSpeaker;
+                break;
+            case HMI_DRIVER_WAVE_TABLE_SYNTH:
+                m_trackDevices[tk_v] |= Device_WaveTable;
+                break;
+            case HMI_DRIVER_AWE32:
+                m_trackDevices[tk_v] |= Device_AWE32;
+                break;
+            case HMI_DRIVER_OPL3:
+                m_trackDevices[tk_v] |= Device_OPL3;
+                break;
+            case HMI_DRIVER_GUS:
+                m_trackDevices[tk_v] |= Device_GravisUltrasound;
+                break;
+            default:
+                m_errorString.setFmt("HMI/HMP: Unsupported device type 0x%04X\n", (unsigned)hmp_head.trackDevice[tk][d]);
+                return false;
+            }
+        }
 
         // Time delay that follows the first event in the track
         abs_position = readHmiVarLen(fr, d.end, ok);
