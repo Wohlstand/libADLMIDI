@@ -29,6 +29,7 @@
 #include <cstdarg>
 #include <assert.h>
 
+// IWYU pragma: begin_exports
 #if !defined(__DJGPP__) && !defined(NDEBUG)
 #   define DEBUG_HMI_PARSE
 #   define DEBUG_TIME_CALCULATION
@@ -67,6 +68,7 @@
 #   include "impl/read_rsxx_impl.hpp"
 #   include "impl/read_cmf_impl.hpp"
 #endif
+// IWYU pragma: end_exports
 
 
 /**********************************************************************************
