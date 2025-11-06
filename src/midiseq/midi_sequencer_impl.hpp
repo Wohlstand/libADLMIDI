@@ -291,7 +291,7 @@ void BW_MidiSequencer::debugPrintDevices()
     if(m_deviceMaskAvailable == Device_ANY || !m_interface->onDebugMessage)
     {
         if(m_interface->onDebugMessage)
-            m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Device filters: <ANY>");
+            m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Available device names to filter tracks: <ANY>");
         return;
     }
 
