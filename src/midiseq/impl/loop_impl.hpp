@@ -51,6 +51,7 @@ BW_MidiSequencer::LoopState::LoopState() :
     temporaryBroken(false),
     loopsCount(-1),
     loopsLeft(0),
+    stackDepth(0),
     stackLevel(-1)
 {}
 
@@ -71,13 +72,13 @@ void BW_MidiSequencer::LoopState::fullReset()
     reset();
     invalidLoop = false;
     temporaryBroken = false;
-    stack.clear();
+    stackDepth = 0;
     stackLevel = -1;
 }
 
 bool BW_MidiSequencer::LoopState::isStackEnd()
 {
-    if(caughtStackEnd && (stackLevel >= 0) && (stackLevel < static_cast<int>(stack.size())))
+    if(caughtStackEnd && (stackLevel >= 0) && (stackLevel < static_cast<int>(stackDepth)))
     {
         const LoopStackEntry &e = stack[static_cast<size_t>(stackLevel)];
         if(e.infinity || (!e.infinity && e.loops > 0))
@@ -99,17 +100,17 @@ void BW_MidiSequencer::LoopState::stackDown(int count)
 
 BW_MidiSequencer::LoopStackEntry &BW_MidiSequencer::LoopState::getCurStack()
 {
-    if((stackLevel >= 0) && (stackLevel < static_cast<int>(stack.size())))
+    if((stackLevel >= 0) && (stackLevel < static_cast<int>(stackDepth)))
         return stack[static_cast<size_t>(stackLevel)];
 
-    if(stack.empty())
+    if(stackDepth == 0)
     {
         LoopStackEntry d;
         d.loops = 0;
         d.infinity = 0;
         d.start = 0;
         d.end = 0;
-        stack.push_back(d);
+        stack[stackDepth++] = d;
     }
 
     return stack[0];
@@ -195,14 +196,26 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
         }
 
         m_loop.stackUp();
-        if(m_loop.stackLevel >= static_cast<int>(m_loop.stack.size()))
+        if(m_loop.stackLevel >= static_cast<int>(m_loop.stackDepth))
         {
+            if(m_loop.stackDepth >= LoopState::stackDepthMax)
+            {
+                m_loop.invalidLoop = true;
+                if(m_interface->onDebugMessage)
+                {
+                    m_interface->onDebugMessage(
+                        m_interface->onDebugMessage_userData,
+                        "== Invalid loop detected! [Nested loops depth is overflown! (Maximum 127)] =="
+                    );
+                }
+            }
+
             LoopStackEntry e;
             e.loops = event.data_loc[0];
             e.infinity = (event.data_loc[0] == 0);
             e.start = abs_position;
             e.end = abs_position;
-            m_loop.stack.push_back(e);
+            m_loop.stack[m_loop.stackDepth++] = e;
         }
     }
     else if(!m_loop.invalidLoop &&

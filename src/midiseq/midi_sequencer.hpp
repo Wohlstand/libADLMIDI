@@ -495,10 +495,13 @@ private:
         //! how many loops left until finish the song
         int     loopsLeft;
 
+        static const size_t stackDepthMax = 127;
         //! Stack of nested loops
-        std::vector<LoopStackEntry> stack;
+        LoopStackEntry      stack[stackDepthMax];
+        //! Current size of the loop stack
+        size_t              stackDepth;
         //! Current level on the loop stack (<0 - out of loop, 0++ - the index in the loop stack)
-        int                         stackLevel;
+        int                 stackLevel;
 
         //! Constructor to initialize member variables
         LoopState();
@@ -827,6 +830,55 @@ private:
     /**********************************************************************************
      *                Parse HMI Sound Operating System specific MIDI File             *
      **********************************************************************************/
+    enum HMIDriver
+    {
+        HMI_DRIVER_SOUND_MASTER_II    = 0xA000,
+        HMI_DRIVER_MPU_401            = 0xA001,
+        HMI_DRIVER_FM                 = 0xA002,
+        HMI_DRIVER_OPL2               = 0xA002,
+        HMI_DRIVER_CALLBACK           = 0xA003,
+        HMI_DRIVER_MT_32              = 0xA004,
+        HMI_DRIVER_DIGI               = 0xA005,
+        HMI_DRIVER_INTERNAL_SPEAKER   = 0xA006,
+        HMI_DRIVER_WAVE_TABLE_SYNTH   = 0xA007,
+        HMI_DRIVER_AWE32              = 0xA008,
+        HMI_DRIVER_OPL3               = 0xA009,
+        HMI_DRIVER_GUS                = 0xA00A
+    };
+
+    struct HMITrackDir
+    {
+        size_t start;
+        size_t len;
+        size_t end;
+        size_t offset;
+        size_t midichan;
+        size_t devicesNum;
+        uint16_t devices[8];
+    };
+
+    typedef uint64_t (*HMIVarLenReadCB)(FileAndMemReader &fr, const size_t end, bool &ok);
+
+    struct HMPHeader
+    {
+        char magic[32];
+        size_t branch_offset; // 4 bytes
+        // 12 bytes of padding
+        size_t tracksCount; // 4 bytes
+        size_t tpqn; // 4 bytes
+        size_t division; // 4 bytes
+        size_t timeDuration; // 4 bytes
+        uint32_t priorities[16]; // 64 bytes
+        uint32_t trackDevice[32][5]; // 640 bytes
+        uint8_t controlInit[128]; // 128 bytes
+        // 8 bytes of the padding
+
+        bool isHMP;
+        // Helper function pointers
+        HMIVarLenReadCB fReadVarLen;
+    };
+
+    bool hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status);
     /**
      * @brief Load file as HMI/HMP file for the HMI Sound Operating System
      * @param fr Context with opened file

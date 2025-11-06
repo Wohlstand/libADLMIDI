@@ -311,6 +311,10 @@ bool MIDIplay::LoadMIDI(const void *data, size_t size)
         return false;
 
     MidiSequencer &seq = *m_sequencer;
+
+    // FIXME: Implement public libADLMIDI's API to choice this
+    seq.setDeviceMask(MidiSequencer::Device_OPL2|MidiSequencer::Device_OPL3);
+
     if(!seq.loadMIDI(file))
     {
         errorStringOut = seq.getErrorString();

@@ -133,14 +133,14 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
 
                 char x = data[0];
                 size_t slevel = static_cast<size_t>(m_loop.stackLevel + 1);
-                while(slevel >= m_loop.stack.size())
+                while(slevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
                 {
                     LoopStackEntry e;
                     e.loops = x;
                     e.infinity = (x == 0);
                     e.start = 0;
                     e.end = 0;
-                    m_loop.stack.push_back(e);
+                    m_loop.stack[m_loop.stackDepth++] = e;
                 }
 
                 LoopStackEntry &s = m_loop.stack[slevel];
