@@ -254,25 +254,45 @@ private:
             //! Sequencer specs
             ST_SEQUENCERSPEC = 0x7F, //size == len, dataBank
 
-            /* Non-standard, internal usage only */
+            /**************************************
+             * Non-standard, internal usage only, *
+             * their values larger than one byte, *
+             * so, no way that any raw MIDI event *
+             * would even collide with them.      *
+             **************************************/
+            //! [Non-Standard] Built-in song begin hook trigger
+            ST_SONG_BEGIN_HOOK = 0x101,
+
             //! [Non-Standard] Loop Start point
-            ST_LOOPSTART    = 0xE1,//size == 0 <CUSTOM>
+            ST_LOOPSTART    = 0x102,//size == 0 <CUSTOM>
             //! [Non-Standard] Loop End point
-            ST_LOOPEND      = 0xE2,//size == 0 <CUSTOM>
+            ST_LOOPEND      = 0x103,//size == 0 <CUSTOM>
             //! [Non-Standard] Raw OPL data
-            ST_RAWOPL       = 0xE3,//size == 0 <CUSTOM>
+            ST_RAWOPL       = 0x104,//size == 0 <CUSTOM>
 
-            //! [Non-Standard] Loop Start point with support of multi-loops
-            ST_LOOPSTACK_BEGIN = 0xE4,//size == 1 <CUSTOM>
-            //! [Non-Standard] Loop End point with support of multi-loops
-            ST_LOOPSTACK_END   = 0xE5,//size == 0 <CUSTOM>
-            //! [Non-Standard] Loop End point with support of multi-loops
-            ST_LOOPSTACK_BREAK = 0xE6,//size == 0 <CUSTOM>
-            //! [Non-Standard] Callback Trigger
-            ST_CALLBACK_TRIGGER = 0xE7,//size == 1 <CUSTOM>
+            //! [Non-Standard] Loop Start point at entire song with support of multi-loops
+            ST_LOOPSTACK_BEGIN = 0x105,//size == 1 <CUSTOM>
+            //! [Non-Standard] Loop End point at entire song with support of multi-loops
+            ST_LOOPSTACK_END   = 0x106,//size == 0 <CUSTOM>
+            //! [Non-Standard] Break the current loop at entire song and continue playback without loop
+            ST_LOOPSTACK_BREAK = 0x107,//size == 0 <CUSTOM>
 
-            //! Built-in hooks
-            ST_SONG_BEGIN_HOOK    = 0x101
+            //! [Non-Standard] Callback Trigger executed from XMI and HMI formats
+            ST_CALLBACK_TRIGGER = 0x108,//size == 1 <CUSTOM>
+
+            //! [Non-Standard] Loop Start point at individual track with support of multi-loops
+            ST_TRACK_LOOPSTACK_BEGIN    = 0x109,
+            //! [Non-Standard] Loop End point at individual track with support of multi-loops
+            ST_TRACK_LOOPSTACK_END      = 0x10A,
+            //! [Non-Standard] Break the current loop at individual track and continue playback without loop
+            ST_TRACK_LOOPSTACK_BREAK    = 0x10B,
+
+            ST_BRANCH_LOCATION          = 0x10C,
+            ST_BRANCH_TO                = 0x10D,
+            ST_TRACK_BRANCH_LOCATION    = 0x10E,
+            ST_TRACK_BRANCH_TO          = 0x10F,
+
+            ST_TYPE_LAST = ST_CALLBACK_TRIGGER
         };
 
         //! Main type of event
