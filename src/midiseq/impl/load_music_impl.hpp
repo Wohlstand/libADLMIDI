@@ -179,6 +179,8 @@ bool BW_MidiSequencer::loadMIDI(FileAndMemReader &fr)
     m_loop.fullReset();
     m_loop.caughtStart = true;
 
+    m_deviceMaskAvailable = Device_ANY;
+
     m_format = Format_MIDI;
     m_smfFormat = 0;
 

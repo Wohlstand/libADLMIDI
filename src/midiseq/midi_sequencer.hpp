@@ -117,11 +117,12 @@ public:
     };
 
     /**
-     * @brief Device types to filter incompatible MIDI tracks, primarily used by HMI/HMP and EMIDI. Can be comnined to enable more tracks.
+     * @brief Device types to filter incompatible MIDI tracks, primarily used by HMI/HMP and EMIDI.
+     * Can be combined to enable more tracks.
      */
     enum DeviceFilter
     {
-        Device_GeneralMidi      = 0x0001,
+        Device_GeneralMidi      = 0x0001, // MPU-401 counted as here
         Device_OPL2             = 0x0002,
         Device_OPL3             = 0x0004,
         Device_MT32             = 0x0008,
@@ -618,6 +619,9 @@ private:
     //! Current filter (by default "Allow everything", for some formats by default the "FM" is set)
     uint32_t m_deviceMask;
 
+    //! Complete mask that includes all supported devices by loaded files (if 0xFFFF, then file doesn't use track filtering)
+    uint32_t m_deviceMaskAvailable;
+
 
     //! The XMI-specific list of raw songs, converted into SMF format
     std::vector<std::vector<uint8_t > > m_rawSongsData;
@@ -944,10 +948,14 @@ public:
      * @brief Set the device mask to allow tracks being played. Default value is Device_ANY.
      * @param devMask A mask built from values of @{DeviceFilter} enumeration using OR operation
      *
-     * Set it before starting playing the song or even before loading a file, otherwise it's possible
-     * that necessary controllers won't be set and music will play incorrectly.
+     * Set it before loading the song file, otherwise excluded tracks will never appear in the final list.
      */
     void setDeviceMask(uint32_t devMask);
+
+    /**
+     * @brief If debug handler is installed, the list of supported device types by MIDI file will be printed
+     */
+    void debugPrintDevices();
 
     /**
      * @brief Retrive the number of songs in a currently opened file

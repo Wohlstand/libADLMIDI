@@ -103,6 +103,7 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_atEnd(false),
     m_loopCount(-1),
     m_deviceMask(Device_ANY),
+    m_deviceMaskAvailable(Device_ANY),
     m_trackSolo(~static_cast<size_t>(0)),
     m_tempoMultiplier(1.0)
 {
@@ -231,6 +232,77 @@ void BW_MidiSequencer::setSongNum(int track)
 void BW_MidiSequencer::setDeviceMask(uint32_t devMask)
 {
     m_deviceMask = devMask;
+}
+
+static void devmask2string(char *masks_list, size_t max_length, uint32_t mask)
+{
+    size_t masks_list_len = 0;
+    size_t line_len = 0;
+
+    if(mask == BW_MidiSequencer::Device_ANY)
+    {
+        snprintf(masks_list, max_length, "<ANY>");
+        return;
+    }
+
+    static const char *const masks[] =
+    {
+        "General MIDI",
+        "OPL2",
+        "OPL3",
+        "Roland MT-32",
+        "AWE32",
+        "WaveBlaster",
+        "ProAudio Spectrum",
+        "SoundMan16",
+        "Digital MIDI",
+        "Ensoniq SoundScape",
+        "WaveTable",
+        "Gravis Ultrasound",
+        "PC Speaker",
+        "Callback",
+        "Sound Master II",
+        NULL
+    };
+
+    masks_list[0] = 0;
+
+    for(size_t off = 0; masks[off]; ++off)
+    {
+        if(((mask >> off) & 0x01) != 0)
+        {
+            int out_len, new_len = strlen(masks[off]) + (line_len > 0 ? 2 : 4);
+
+            if(line_len + new_len >= 79)
+            {
+                masks_list_len += snprintf(masks_list + masks_list_len, max_length - masks_list_len, ",\n");
+                line_len = 0;
+            }
+
+            out_len = snprintf(masks_list + masks_list_len, max_length - masks_list_len, line_len > 0 ? ", %s" : "    %s", masks[off]);
+            line_len += out_len;
+            masks_list_len += out_len;
+        }
+    }
+}
+
+void BW_MidiSequencer::debugPrintDevices()
+{
+    if(m_deviceMaskAvailable == Device_ANY || !m_interface->onDebugMessage)
+    {
+        if(m_interface->onDebugMessage)
+            m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Device filters: <ANY>");
+        return;
+    }
+
+    const size_t masks_list_max = 200;
+    char masks_list[masks_list_max] = "";
+
+    devmask2string(masks_list, masks_list_max, m_deviceMaskAvailable);
+    m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Available device names to filter tracks:\n%s", masks_list);
+
+    devmask2string(masks_list, masks_list_max, m_deviceMask);
+    m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Requested filter by devices:\n%s", masks_list);
 }
 
 int BW_MidiSequencer::getSongsCount()

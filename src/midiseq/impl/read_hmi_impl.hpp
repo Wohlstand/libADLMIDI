@@ -495,16 +495,16 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
         for(size_t d = 0; d < 5; ++d)
         {
-            if(!hmp_head.trackDevice[tk_v][d])
+            if(!hmp_head.trackDevice[tk][d])
                 break;
 
             if(d == 0)
                 m_trackDevices[tk_v] = 0;
 
-            switch(hmp_head.trackDevice[tk_v][d])
+            switch(hmp_head.trackDevice[tk][d])
             {
             case HMI_DRIVER_SOUND_MASTER_II:
-                m_trackDevices[tk_v] |= Device_SoundMasterII|Device_GeneralMidi;
+                m_trackDevices[tk_v] |= Device_SoundMasterII;
                 break;
             case HMI_DRIVER_MPU_401:
                 m_trackDevices[tk_v] |= Device_GeneralMidi;
@@ -541,6 +541,17 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 return false;
             }
         }
+
+        if(m_trackDevices[tk_v] != Device_ANY)
+        {
+            if(m_deviceMaskAvailable == Device_ANY)
+                m_deviceMaskAvailable = m_trackDevices[tk_v];
+            else
+                m_deviceMaskAvailable |= m_trackDevices[tk_v];
+        }
+
+        if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[tk_v]) == 0)
+            continue; // Exclude this track completely
 
         // Time delay that follows the first event in the track
         abs_position = readHmiVarLen(fr, d.end, ok);
@@ -921,6 +932,8 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
         ++tk_v;
     }
+
+    debugPrintDevices();
 
     // Shrink tracks store if real number of tracks is smaller
     if(m_tracksCount != tk_v)
