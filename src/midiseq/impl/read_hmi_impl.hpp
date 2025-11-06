@@ -313,6 +313,8 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
                     event.data_loc[0] = event.data_loc[1];
+                    if(event.data_loc[0] == 0xFF)
+                        event.data_loc[0] = 0; // 0xFF is "infinite" too
                     event.data_loc_size = 1;
                     break;
                 case 111: // Global loop end
@@ -333,11 +335,13 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                     // event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
                     // event.data_loc[0] = event.data_loc[1];
                     // event.data_loc_size = 1;
+                    event.isValid = 0; // Skip this event for now
                     break;
                 case 117: // Local loop end (loop inside the same track)
                     // event.type = MidiEvent::T_SPECIAL;
                     // event.subtype = MidiEvent::ST_LOOPSTACK_END;
                     // event.data_loc_size = 0;
+                    event.isValid = 0; // Skip this event for now
                     break;
 
                 case 119:  // Callback Trigger
