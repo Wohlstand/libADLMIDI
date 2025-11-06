@@ -37,13 +37,13 @@
 
 #define HMI_OFFSET_TRACK_LEN            0x04
 #define HMI_OFFSET_TRACK_DATA_OFFSET    0x57
-#define HMI_OFFSET_TRACK_DESIGNATION    0x99
+#define HMI_OFFSET_TRACK_DEVICES        0x99
 
 #define HMI_SIZE_TRACK_DIR_HEAD     4
 
-#define HMI_MAX_DESIGNATIONS    8
+#define HMI_MAX_TRACK_DEVICES    8
 
-
+#define HMP_MAX_TRACK_DEVICES    5
 #define HMP_OFFSET_TRACK_DATA   12
 
 enum HMIDriver
@@ -69,7 +69,8 @@ struct HMITrackDir
     size_t end;
     size_t offset;
     size_t midichan;
-    uint16_t designations[8];
+    size_t devicesNum;
+    uint16_t devices[8];
 };
 
 struct HMPHeader
@@ -189,7 +190,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 return false;
             }
 
-            if(d.start > file_size - HMI_OFFSET_TRACK_DESIGNATION - 4)
+            if(d.start > file_size - HMI_OFFSET_TRACK_DEVICES - 4)
             {
                 d.len = 0;
                 continue; // Track is incomplete
@@ -252,10 +253,12 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             d.len -= d.offset;
             totalGotten += d.len;
 
-            fr.seek(d.start + HMI_OFFSET_TRACK_DESIGNATION, FileAndMemReader::SET);
-            for(size_t j = 0; j < HMI_MAX_DESIGNATIONS; ++j)
+            d.devicesNum = HMI_MAX_TRACK_DEVICES;
+
+            fr.seek(d.start + HMI_OFFSET_TRACK_DEVICES, FileAndMemReader::SET);
+            for(size_t j = 0; j < HMI_MAX_TRACK_DEVICES; ++j)
             {
-                if(!readUInt16LE(d.designations[j], fr))
+                if(!readUInt16LE(d.devices[j], fr))
                 {
                     m_errorString.set("HMI: Failed to read track destignation value!\n");
                     return false;
@@ -410,10 +413,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             d.offset = HMP_OFFSET_TRACK_DATA;
             d.len -= HMP_OFFSET_TRACK_DATA; // Track header size!
 
-            d.designations[0] = 0xA000;
-            d.designations[1] = 0xA00A;
-            d.designations[2] = 0xA002;
-            d.designations[3] = 0;
+            d.devicesNum = HMP_MAX_TRACK_DEVICES;
+
+            for(size_t j = 0; j < HMP_MAX_TRACK_DEVICES; ++j)
+                d.devices[j] = hmp_head.trackDevice[tk][j];
 
             totalGotten += d.len;
         }
@@ -493,15 +496,15 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
         m_trackDevices[tk_v] = Device_ANY;
 
-        for(size_t d = 0; d < 5; ++d)
+        for(size_t dev = 0; dev < d.devicesNum; ++dev)
         {
-            if(!hmp_head.trackDevice[tk][d])
+            if(!d.devices[dev])
                 break;
 
-            if(d == 0)
+            if(dev == 0)
                 m_trackDevices[tk_v] = 0;
 
-            switch(hmp_head.trackDevice[tk][d])
+            switch(d.devices[dev])
             {
             case HMI_DRIVER_SOUND_MASTER_II:
                 m_trackDevices[tk_v] |= Device_SoundMasterII;
@@ -537,7 +540,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 m_trackDevices[tk_v] |= Device_GravisUltrasound;
                 break;
             default:
-                m_errorString.setFmt("HMI/HMP: Unsupported device type 0x%04X\n", (unsigned)hmp_head.trackDevice[tk][d]);
+                m_errorString.setFmt("HMI/HMP: Unsupported device type 0x%04X\n", (unsigned)hmp_head.trackDevice[tk][dev]);
                 return false;
             }
         }
