@@ -287,12 +287,53 @@ private:
             //! [Non-Standard] Break the current loop at individual track and continue playback without loop
             ST_TRACK_LOOPSTACK_BREAK    = 0x10B,
 
+            //! Installs a new song-wide branch tag of ID marker at the location
             ST_BRANCH_LOCATION          = 0x10C,
+            //! Jump to the location of the song-wide by ID of the branch tag
             ST_BRANCH_TO                = 0x10D,
+
+            //! Installs a new track-local branch tag of ID marker at the location
             ST_TRACK_BRANCH_LOCATION    = 0x10E,
+            //! Jump to the location of the track-local by ID of the branch tag
             ST_TRACK_BRANCH_TO          = 0x10F,
 
-            ST_TYPE_LAST = ST_CALLBACK_TRIGGER
+            //! Lock the MIDI channel in the multi-song mapper from the stealing
+            ST_CHANNEL_LOCK             = 0x110,
+            //! Unlock the MIDI channel in the multi-song mapper
+            ST_CHANNEL_UNLOCK           = 0x111,
+
+            //! Enable restore state of selected controller on loop
+            ST_ENABLE_RESTORE_CC_ON_LOOP    = 0x112,
+            //! Enable calling of note-offs on loop
+            ST_ENABLE_NOTEOFF_ON_LOOP       = 0x113,
+            //! Enable restore state of selected patch program on loop
+            ST_ENABLE_RESTORE_PATCH_ON_LOOP = 0x114,
+            //! Enable restore state of selected pitch bend wheel on loop
+            ST_ENABLE_RESTORE_WHEEL_ON_LOOP = 0x115,
+            //! Enable restore state of selected note after-touch on loop
+            ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP = 0x116,
+            //! Enable restore state of selected channel after-touch/pressure on loop
+            ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP = 0x117,
+            //! Enable restore state of all alternated controllers on loop
+            ST_ENABLE_RESTORE_ALL_CC_ON_LOOP = 0x118,
+
+            //! Disable restore state of selected controller on loop
+            ST_DISABLE_RESTORE_CC_ON_LOOP    = 0x119,
+            //! Enable calling of note-offs on loop
+            ST_DISABLE_NOTEOFF_ON_LOOP       = 0x11A,
+            //! Enable restore state of selected patch program on loop
+            ST_DISABLE_RESTORE_PATCH_ON_LOOP = 0x11B,
+            //! Enable restore state of selected pitch bend wheel on loop
+            ST_DISABLE_RESTORE_WHEEL_ON_LOOP = 0x11C,
+            //! Enable restore state of selected note after-touch on loop
+            ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP = 0x11D,
+            //! Enable restore state of selected channel after-touch/pressure on loop
+            ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP = 0x11E,
+            //! Enable restore state of all alternated controllers on loop
+            ST_DISABLE_RESTORE_ALL_CC_ON_LOOP = 0x11F,
+
+            //! Tail of the enum, is not supposed to be used
+            ST_TYPE_LAST = ST_TRACK_BRANCH_TO
         };
 
         //! Main type of event

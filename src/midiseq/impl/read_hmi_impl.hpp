@@ -289,24 +289,107 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                 switch(event.data_loc[0])
                 {
                 case 103: // Enable controller restaration when branching and looping
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    switch(event.data_loc[1])
+                    {
+                    default:
+                        if(event.data_loc[1] > 102)
+                        {
+                            m_errorString.appendFmt("HMI/HMP: Unsupported value for the CC103 Enable state restoring on loop: %u", event.data_loc[1]);
+                            return false;
+                        }
+                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_CC_ON_LOOP;
+                        event.data_loc[0] = event.data_loc[1];
+                        event.data_loc_size = 1;
+                        break;
+                    case 103:
+                        event.subtype = MidiEvent::ST_ENABLE_NOTEOFF_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 104:
+                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_PATCH_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 105:
+                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_WHEEL_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 106:
+                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 107:
+                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 115:
+                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_ALL_CC_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    }
                     break;
+
                 case 104: // Disable controller restaration when branching and looping
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    switch(event.data_loc[1])
+                    {
+                    default:
+                        if(event.data_loc[1] > 102)
+                        {
+                            m_errorString.appendFmt("HMI/HMP: Unsupported value for the CC104 Disable state restoring on loop: %u", event.data_loc[1]);
+                            return false;
+                        }
+                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_CC_ON_LOOP;
+                        event.data_loc[0] = event.data_loc[1];
+                        event.data_loc_size = 1;
+                        break;
+                    case 103:
+                        event.subtype = MidiEvent::ST_DISABLE_NOTEOFF_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 104:
+                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_PATCH_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 105:
+                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_WHEEL_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 106:
+                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 107:
+                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    case 115:
+                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_ALL_CC_ON_LOOP;
+                        event.data_loc_size = 0;
+                        break;
+                    }
                     break;
 
                 case 106: // Lock the channel
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = event.data_loc[1] == 0 ? MidiEvent::ST_CHANNEL_UNLOCK : MidiEvent::ST_CHANNEL_LOCK;
+                    event.data_loc_size = 0;
                     break;
                 case 107: // Set the channel priority
                     event.isValid = 0; // Skip this event for now
                     break;
 
                 case 108: // Local branch location
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_TRACK_BRANCH_LOCATION;
+                    event.data_loc[0] = event.data_loc[1];
+                    event.data_loc_size = 1;
                     break;
                 case 109: // branch to local branch location
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_TRACK_BRANCH_TO;
+                    event.data_loc[0] = event.data_loc[1];
+                    event.data_loc_size = 1;
                     break;
 
                 case 110: // Global loop start
@@ -324,24 +407,30 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                     break;
 
                 case 113: // Global branch location
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_BRANCH_LOCATION;
+                    event.data_loc[0] = event.data_loc[1];
+                    event.data_loc_size = 1;
                     break;
                 case 114: // branch to global branch location
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_BRANCH_TO;
+                    event.data_loc[0] = event.data_loc[1];
+                    event.data_loc_size = 1;
                     break;
 
                 case 116: // Local loop start (look inside the same track)
-                    // event.type = MidiEvent::T_SPECIAL;
-                    // event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
-                    // event.data_loc[0] = event.data_loc[1];
-                    // event.data_loc_size = 1;
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN;
+                    event.data_loc[0] = event.data_loc[1];
+                    if(event.data_loc[0] == 0xFF)
+                        event.data_loc[0] = 0; // 0xFF is "infinite" too
+                    event.data_loc_size = 1;
                     break;
                 case 117: // Local loop end (loop inside the same track)
-                    // event.type = MidiEvent::T_SPECIAL;
-                    // event.subtype = MidiEvent::ST_LOOPSTACK_END;
-                    // event.data_loc_size = 0;
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
+                    event.data_loc_size = 0;
                     break;
 
                 case 119:  // Callback Trigger
