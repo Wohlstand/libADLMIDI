@@ -93,7 +93,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             return false;
         }
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("-- SysEx event\n");
         fflush(stdout);
 #endif
@@ -110,7 +110,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             return false;
         }
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("-- Special event 0x%02X\n", subType);
         fflush(stdout);
 #endif
@@ -165,7 +165,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             m_errorString.append("HMI/HMP: Failed to read event type!\n");
             return false;
         }
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("-- HMI-specific tricky event 0x%02X\n", subType);
         fflush(stdout);
 #endif
@@ -206,7 +206,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
     }
     else
     {
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("Byte=0x%02X (off=%ld = 0x%lX) : ", byte, fr.tell(), fr.tell());
 #endif
         // Any normal event (80..EF)
@@ -254,7 +254,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                 fr.read(event.data_loc, 1, locSize);
             event.data_loc_size = locSize;
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
             printf("-- Regular %u-byte event 0x%02X, chan=%u\n", (unsigned)locSize, evType, midCh);
             fflush(stdout);
 #endif
@@ -512,7 +512,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             return false;
         }
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("== Division: %lu\n", hmp_head.division);
         fflush(stdout);
 #endif
@@ -817,7 +817,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     m_trackData[0].push_back(evtPos);
     evtPos.clear();
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
     printf("==Tempo %g, Div %g=========================\n", m_tempo.value(), m_invDeltaTicks.value());
     fflush(stdout);
 #endif
@@ -834,7 +834,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         status = 0;
         fr.seek(d.start + d.offset, FileAndMemReader::SET);
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("==Track %lu=(de-facto %lu)=============================\n", (unsigned long)tk, (unsigned long)tk_v);
         fflush(stdout);
 #endif
@@ -955,7 +955,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
             if((evtPos.delay > 0) || (event.subtype == MidiEvent::ST_ENDTRACK))
             {
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
                 printf("- Delay %lu, Position %lu, stored events: %lu, time: %g seconds\n",
                         (unsigned long)evtPos.delay, abs_position, evtPos.events_end - evtPos.events_begin,
                         (abs_position * m_tempo).value());
@@ -979,7 +979,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
         } while((fr.tell() <= d.end) && (event.subtype != MidiEvent::ST_ENDTRACK));
 
-#ifdef DEBUG_HMI_PARSE
+#ifdef BWMIDI_DEBUG_HMI_PARSE
         printf("==Track %lu==END=========================\n", (unsigned long)tk_v);
         fflush(stdout);
 #endif

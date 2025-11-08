@@ -299,6 +299,10 @@ bool MIDIplay::LoadMIDI(const std::string &filename)
     if(!LoadMIDI_post())
         return false;
 
+#if defined(BWMIDI_ENABLE_DEBUG_SONG_DUMP) && !defined(__DJGPP__)
+    seq.debugDumpContents(filename + ".dump.txt");
+#endif
+
     return true;
 }
 

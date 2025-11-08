@@ -27,6 +27,19 @@
 #define BW_MIDISEQ_MIDIDATA_IMPL_HPP
 
 #include <cstring>
+#ifdef BWMIDI_DEBUG_TIME_CALCULATION
+#   include <inttypes.h>
+#   if !defined(__PRIPTR_PREFIX)
+#       if __WORDSIZE == 64
+#           define __PRIPTR_PREFIX	"l"
+#       else
+#           define __PRIPTR_PREFIX
+#       endif
+#   endif
+#   ifndef PRIuPTR
+#       define PRIuPTR __PRIPTR_PREFIX "u"
+#   endif
+#endif
 
 #include "../midi_sequencer.hpp"
 
@@ -116,7 +129,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
         if(track.empty())
             continue;//Empty track is useless!
 
-#ifdef DEBUG_TIME_CALCULATION
+#ifdef BWMIDI_DEBUG_TIME_CALCULATION
         std::fprintf(stdout, "\n============Track %" PRIuPTR "=============\n", tk);
         std::fflush(stdout);
 #endif
@@ -131,7 +144,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
 
         for(MidiTrackQueue::iterator it = track.begin(); it != track.end(); it++)
         {
-#ifdef DEBUG_TIME_CALCULATION
+#ifdef BWMIDI_DEBUG_TIME_CALCULATION
             bool tempoChanged = false;
 #endif
             MidiTrackRow &pos = *it;
@@ -179,7 +192,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
 
                         // Apply next tempo
                         currentTempo = points[j].tempo;
-#ifdef DEBUG_TIME_CALCULATION
+#ifdef BWMIDI_DEBUG_TIME_CALCULATION
                         tempoChanged = true;
 #endif
                     }
@@ -224,7 +237,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                     m_loopEndTime = pos.time;
             }
 
-#ifdef DEBUG_TIME_CALCULATION
+#ifdef BWMIDI_DEBUG_TIME_CALCULATION
             std::fprintf(stdout, "= %10" PRId64 " = %10f%s\n", pos.absPos, pos.time, tempoChanged ? " <----TEMPO CHANGED" : "");
             std::fflush(stdout);
 #endif

@@ -269,6 +269,10 @@ option(WITH_MUS2MID         "Build a MUS to MIDI converter" OFF)
 option(WITH_XMI2MID         "Build a XMI to MIDI converter" OFF)
 option(EXAMPLE_SDL2_AUDIO   "Build also a simple SDL2 demo MIDI player" OFF)
 
+option(DEBUG_SONG_DUMP      "Enable debug dumps of all events from the loaded song into .dump.txt text file" OFF)
+option(DEBUG_TRACE_HMI_LOAD "Enable detailed debug print for the HMI loading" OFF)
+option(DEBUG_TRACE_TIME_CALCULATION "Enable detailed debug print for the timeline building" OFF)
+
 if(WIN32)
     option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
 endif()
@@ -306,6 +310,18 @@ function(handle_options targetLib)
 
     if(NOT WITH_XMI_SUPPORT OR NOT WITH_MIDI_SEQUENCER)
         target_compile_definitions(${targetLib} PUBLIC BWMIDI_DISABLE_XMI_SUPPORT)
+    endif()
+
+    if(DEBUG_SONG_DUMP)
+        target_compile_definitions(${targetLib} PRIVATE BWMIDI_ENABLE_DEBUG_SONG_DUMP)
+    endif()
+
+    if(DEBUG_TRACE_HMI_LOAD AND NOT ADLMIDI_DOS)
+        target_compile_definitions(${targetLib} PRIVATE BWMIDI_DEBUG_HMI_PARSE)
+    endif()
+
+    if(DEBUG_TRACE_TIME_CALCULATION)
+        target_compile_definitions(${targetLib} PRIVATE BWMIDI_DEBUG_TIME_CALCULATION)
     endif()
 
     if(ADLMIDI_DOS)
