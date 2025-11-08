@@ -30,11 +30,14 @@
 #ifdef BWMIDI_DEBUG_TIME_CALCULATION
 #   include <inttypes.h>
 #   if !defined(__PRIPTR_PREFIX)
-#       if __WORDSIZE == 64
+#       if __SIZEOF_POINTER__ == 8
 #           define __PRIPTR_PREFIX	"l"
 #       else
 #           define __PRIPTR_PREFIX
 #       endif
+#   endif
+#   ifndef PRId64
+#       define PRId64 "lu"
 #   endif
 #   ifndef PRIuPTR
 #       define PRIuPTR __PRIPTR_PREFIX "u"
@@ -130,7 +133,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
             continue;//Empty track is useless!
 
 #ifdef BWMIDI_DEBUG_TIME_CALCULATION
-        std::fprintf(stdout, "\n============Track %" PRIuPTR "=============\n", tk);
+        std::fprintf(stdout, "\n============Track %u=============\n", (unsigned)tk);
         std::fflush(stdout);
 #endif
 
@@ -238,7 +241,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
             }
 
 #ifdef BWMIDI_DEBUG_TIME_CALCULATION
-            std::fprintf(stdout, "= %10" PRId64 " = %10f%s\n", pos.absPos, pos.time, tempoChanged ? " <----TEMPO CHANGED" : "");
+            std::fprintf(stdout, "= %10" PRId64 " = %10f%s\n", (unsigned long)pos.absPos, pos.time, tempoChanged ? " <----TEMPO CHANGED" : "");
             std::fflush(stdout);
 #endif
 
