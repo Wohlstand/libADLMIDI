@@ -30,16 +30,14 @@
 
 #include "../midi_sequencer.hpp"
 
-
-bool BW_MidiSequencer::duratedNoteInsert(size_t track, BW_MidiSequencer::DuratedNote *note)
+bool BW_MidiSequencer::duratedNoteAlloc(size_t track, DuratedNote **note)
 {
     DuratedNotesCache &cache = m_trackDuratedNotes[track];
 
     if(cache.notes_count >= 128)
         return false; // Can't insert delayed note off!
 
-    std::memcpy(cache.notes + cache.notes_count, note, sizeof(DuratedNote));
-    ++cache.notes_count;
+    *note = cache.notes + cache.notes_count++;
 
     return true;
 }

@@ -716,7 +716,7 @@ private:
      *                             Durated note                                       *
      **********************************************************************************/
 
-    bool duratedNoteInsert(size_t track, DuratedNote *note);
+    bool duratedNoteAlloc(size_t track, DuratedNote **note);
     void duratedNoteClear();
     void duratedNoteTick(size_t track, int64_t ticks);
     void duratedNotePop(size_t track, size_t i);

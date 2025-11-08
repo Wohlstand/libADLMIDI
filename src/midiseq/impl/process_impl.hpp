@@ -35,6 +35,13 @@
 
 void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEvent &evt, int32_t &status)
 {
+    size_t length, midCh, loopStackLevel;
+    const uint8_t *datau;
+    const char *data;
+    char loopsNum;
+    DuratedNote *note;
+    LoopStackEntry loopEntry, *loopEntryP;
+
     if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[track]) == 0)
         return; // Ignore this track completely
 
@@ -52,8 +59,10 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             return;
     }
 
-    if(m_interface->onEvent)
+    if(m_interface->onEvent && evt.type < 0x100 && evt.subtype < 0x100)
     {
+        // Only standard MIDI events will be reported, built-in events (>=0x100) will remain private
+
         if(evt.data_block.size > 0)
             m_interface->onEvent(m_interface->onEvent_userData,
                                  evt.type, evt.subtype, evt.channel,
@@ -64,107 +73,65 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                                  evt.data_loc, evt.data_loc_size);
     }
 
-    if(evt.type == MidiEvent::T_SYSEX || evt.type == MidiEvent::T_SYSEX2) // Handle SysEx
-    {
-        m_interface->rt_systemExclusive(m_interface->rtUserData, getData(evt.data_block), evt.data_block.size);
+    if(evt.type == MidiEvent::T_SYSCOMSNGSEL || evt.type == MidiEvent::T_SYSCOMSPOSPTR)
         return;
+
+    midCh = evt.channel;
+
+    if(evt.type < 0x10)
+    {
+        if(m_interface->rt_currentDevice)
+            midCh += m_interface->rt_currentDevice(m_interface->rtUserData, track);
+
+        status = evt.type;
     }
 
-    if(evt.type == MidiEvent::T_SPECIAL)
+    switch(evt.type)
     {
-        // Special event FF
-        uint_fast16_t  evtype = evt.subtype;
-        size_t length = evt.data_block.size > 0 ? evt.data_block.size : static_cast<size_t>(evt.data_loc_size);
-        const uint8_t *datau = evt.data_block.size > 0 ? getData(evt.data_block) : evt.data_loc;
-        const char *data(length ? reinterpret_cast<const char *>(datau) : "\0\0\0\0\0\0\0\0");
+    case MidiEvent::T_SYSEX:
+    case MidiEvent::T_SYSEX2: // Handle SysEx
+        if(m_interface->rt_systemExclusive)
+            m_interface->rt_systemExclusive(m_interface->rtUserData, getData(evt.data_block), evt.data_block.size);
+        return;
 
-        if(m_interface->rt_metaEvent) // Meta event hook
-            m_interface->rt_metaEvent(m_interface->rtUserData, evtype, reinterpret_cast<const uint8_t*>(data), length);
+    case MidiEvent::T_SPECIAL:
+    {
+        length = evt.data_block.size > 0 ? evt.data_block.size : static_cast<size_t>(evt.data_loc_size);
+        datau = evt.data_block.size > 0 ? getData(evt.data_block) : evt.data_loc;
+        data = (length ? reinterpret_cast<const char *>(datau) : "\0\0\0\0\0\0\0\0");
 
-        if(evtype == MidiEvent::ST_ENDTRACK) // End Of Track
+        if(m_interface->rt_metaEvent && evt.subtype < 0x100) // Meta event hook
+            m_interface->rt_metaEvent(m_interface->rtUserData, evt.subtype, reinterpret_cast<const uint8_t*>(data), length);
+
+        switch(evt.subtype)
         {
+        case MidiEvent::ST_ENDTRACK:
             status = -1;
             return;
-        }
-
-        if(evtype == MidiEvent::ST_TEMPOCHANGE) // Tempo change
-        {
+        case MidiEvent::ST_TEMPOCHANGE:
             m_tempo = m_invDeltaTicks * fraction<uint64_t>(readBEint(datau, length));
             return;
-        }
 
-        if(evtype == MidiEvent::ST_MARKER) // Meta event
-        {
-            // Do nothing! :-P
-            return;
-        }
-
-        if(evtype == MidiEvent::ST_DEVICESWITCH)
-        {
+        case MidiEvent::ST_DEVICESWITCH:
             if(m_interface->onDebugMessage)
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Switching another device: %.*s", length, data);
             if(m_interface->rt_deviceSwitch)
                 m_interface->rt_deviceSwitch(m_interface->rtUserData, track, data, length);
             return;
-        }
 
-        // Turn on Loop handling when loop is enabled
-        if(m_loopEnabled && !m_loop.invalidLoop)
-        {
-            if(evtype == MidiEvent::ST_LOOPSTART) // Special non-spec MIDI loop Start point
-            {
-                m_loop.caughtStart = true;
-                return;
-            }
+        case MidiEvent::ST_MARKER:
+        case MidiEvent::ST_TEXT:
+        case MidiEvent::ST_LYRICS:
+        case MidiEvent::ST_TIMESIGNATURE:
+        case MidiEvent::ST_SMPTEOFFSET:
+            // Do nothing! :-P
+            return;
 
-            if(evtype == MidiEvent::ST_LOOPEND) // Special non-spec MIDI loop End point
-            {
-                m_loop.caughtEnd = true;
-                return;
-            }
 
-            if(evtype == MidiEvent::ST_LOOPSTACK_BEGIN)
-            {
-                if(m_loop.skipStackStart)
-                {
-                    m_loop.skipStackStart = false;
-                    return;
-                }
+        // NON-STANDARD EVENTS (>= 0x100)
 
-                char x = data[0];
-                size_t slevel = static_cast<size_t>(m_loop.stackLevel + 1);
-                while(slevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
-                {
-                    LoopStackEntry e;
-                    e.loops = x;
-                    e.infinity = (x == 0);
-                    e.start = 0;
-                    e.end = 0;
-                    m_loop.stack[m_loop.stackDepth++] = e;
-                }
 
-                LoopStackEntry &s = m_loop.stack[slevel];
-                s.loops = static_cast<int>(x);
-                s.infinity = (x == 0);
-                m_loop.caughtStackStart = true;
-                return;
-            }
-
-            if(evtype == MidiEvent::ST_LOOPSTACK_END)
-            {
-                m_loop.caughtStackEnd = true;
-                return;
-            }
-
-            if(evtype == MidiEvent::ST_LOOPSTACK_BREAK)
-            {
-                m_loop.caughtStackBreak = true;
-                return;
-            }
-        }
-
-        if(evtype == MidiEvent::ST_CALLBACK_TRIGGER)
-        {
+        case MidiEvent::ST_CALLBACK_TRIGGER:
 #if 0 /* Print all callback triggers events */
             if(m_interface->onDebugMessage)
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Callback Trigger: %02X", evt.data[0]);
@@ -172,114 +139,121 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             if(m_triggerHandler)
                 m_triggerHandler(m_triggerUserData, static_cast<unsigned>(data[0]), track);
             return;
-        }
 
-        if(evtype == MidiEvent::ST_RAWOPL) // Special non-spec ADLMIDI special for IMF playback: Direct poke to AdLib
-        {
+        case MidiEvent::ST_RAWOPL:
             if(m_interface->rt_rawOPL)
                 m_interface->rt_rawOPL(m_interface->rtUserData, datau[0], datau[1]);
             return;
-        }
 
-        if(evtype == MidiEvent::ST_SONG_BEGIN_HOOK)
-        {
+
+        case MidiEvent::ST_SONG_BEGIN_HOOK:
             if(m_interface->onSongStart)
                 m_interface->onSongStart(m_interface->onSongStart_userData);
+            return;
+
+        case MidiEvent::ST_LOOPSTART:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+                m_loop.caughtStart = true;
+            return;
+
+        case MidiEvent::ST_LOOPEND:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+                m_loop.caughtEnd = true;
+            return;
+
+        case MidiEvent::ST_LOOPSTACK_BEGIN:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+            {
+                if(m_loop.skipStackStart)
+                {
+                    m_loop.skipStackStart = false;
+                    return;
+                }
+
+                loopsNum = data[0];
+                loopStackLevel = static_cast<size_t>(m_loop.stackLevel + 1);
+
+                while(loopStackLevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
+                {
+                    loopEntry.loops = loopsNum;
+                    loopEntry.infinity = (loopsNum == 0);
+                    loopEntry.start = 0;
+                    loopEntry.end = 0;
+                    m_loop.stack[m_loop.stackDepth++] = loopEntry;
+                }
+
+                loopEntryP = &m_loop.stack[loopStackLevel];
+                loopEntryP->loops = static_cast<int>(loopsNum);
+                loopEntryP->infinity = (loopsNum == 0);
+                m_loop.caughtStackStart = true;
+            }
+            return;
+        case MidiEvent::ST_LOOPSTACK_END:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+                m_loop.caughtStackEnd = true;
+            return;
+
+        case MidiEvent::ST_LOOPSTACK_BREAK:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+                m_loop.caughtStackBreak = true;
             return;
         }
 
         return;
     }
 
-    if(evt.type == MidiEvent::T_SYSCOMSNGSEL ||
-       evt.type == MidiEvent::T_SYSCOMSPOSPTR)
+    case MidiEvent::T_NOTEOFF: // Note off
+        if(evt.channel < 16 && m_channelDisable[evt.channel])
+            return; // Disabled channel
+
+        if(m_interface->rt_noteOff)
+            m_interface->rt_noteOff(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0]);
+
+        if(m_interface->rt_noteOffVel)
+            m_interface->rt_noteOffVel(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+
         return;
 
-    size_t midCh = evt.channel;
-    if(m_interface->rt_currentDevice)
-        midCh += m_interface->rt_currentDevice(m_interface->rtUserData, track);
-
-    status = evt.type;
-
-    switch(evt.type)
-    {
-    case MidiEvent::T_NOTEOFF: // Note off
-    {
-        if(midCh < 16 && m_channelDisable[midCh])
-            break; // Disabled channel
-        uint8_t note = evt.data_loc[0];
-        uint8_t vol = evt.data_loc[1];
-        if(m_interface->rt_noteOff)
-            m_interface->rt_noteOff(m_interface->rtUserData, static_cast<uint8_t>(midCh), note);
-        if(m_interface->rt_noteOffVel)
-            m_interface->rt_noteOffVel(m_interface->rtUserData, static_cast<uint8_t>(midCh), note, vol);
-        break;
-    }
-
-    case MidiEvent::T_NOTEON: // Note on
-    {
-        if(midCh < 16 && m_channelDisable[midCh])
-            break; // Disabled channel
-        uint8_t note = evt.data_loc[0];
-        uint8_t vol  = evt.data_loc[1];
-        m_interface->rt_noteOn(m_interface->rtUserData, static_cast<uint8_t>(midCh), note, vol);
-        break;
-    }
+    case MidiEvent::T_NOTEON:  // Note on
+        if(evt.channel < 16 && m_channelDisable[evt.channel])
+            return; // Disabled channel
+        m_interface->rt_noteOn(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+        return;
 
     case MidiEvent::T_NOTEON_DURATED: // Note on with duration
-    {
-        if(midCh < 16 && m_channelDisable[midCh])
-            break; // Disabled channel
-        DuratedNote note;
-        note.channel = evt.channel;
-        note.note = evt.data_loc[0];
-        note.velocity = evt.data_loc[1];
-        note.ttl = readBEint(evt.data_loc + 2, 3);
-        if(duratedNoteInsert(track, &note)) // Do call true Note ON only when note OFF is successfully added into the list!
-            m_interface->rt_noteOn(m_interface->rtUserData, static_cast<uint8_t>(midCh), note.note, note.velocity);
-        break;
-    }
+        if(duratedNoteAlloc(track, &note)) // Do call true Note ON only when note OFF is successfully added into the list!
+        {
+            note->channel = evt.channel;
+            note->note = evt.data_loc[0];
+            note->velocity = evt.data_loc[1];
+            note->ttl = readBEint(evt.data_loc + 2, 3);
+            m_interface->rt_noteOn(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+        }
+        return;
 
     case MidiEvent::T_NOTETOUCH: // Note touch
-    {
-        uint8_t note = evt.data_loc[0];
-        uint8_t vol =  evt.data_loc[1];
-        m_interface->rt_noteAfterTouch(m_interface->rtUserData, static_cast<uint8_t>(midCh), note, vol);
-        break;
-    }
+        m_interface->rt_noteAfterTouch(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+        return;
 
     case MidiEvent::T_CTRLCHANGE: // Controller change
-    {
-        uint8_t ctrlno = evt.data_loc[0];
-        uint8_t value =  evt.data_loc[1];
-        m_interface->rt_controllerChange(m_interface->rtUserData, static_cast<uint8_t>(midCh), ctrlno, value);
-        break;
-    }
+        m_interface->rt_controllerChange(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+        return;
 
     case MidiEvent::T_PATCHCHANGE: // Patch change
-    {
         m_interface->rt_patchChange(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0]);
-        break;
-    }
+        return;
 
     case MidiEvent::T_CHANAFTTOUCH: // Channel after-touch
-    {
-        uint8_t chanat = evt.data_loc[0];
-        m_interface->rt_channelAfterTouch(m_interface->rtUserData, static_cast<uint8_t>(midCh), chanat);
-        break;
-    }
+        m_interface->rt_channelAfterTouch(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0]);
+        return;
 
     case MidiEvent::T_WHEEL: // Wheel/pitch bend
-    {
-        uint8_t a = evt.data_loc[0];
-        uint8_t b = evt.data_loc[1];
-        m_interface->rt_pitchBend(m_interface->rtUserData, static_cast<uint8_t>(midCh), b, a);
-        break;
-    }
+        m_interface->rt_pitchBend(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[1], evt.data_loc[0]);
+        return;
 
     default:
-        break;
-    }//switch
+        return;
+    }
 }
 
 void BW_MidiSequencer::processDuratedNotes(size_t track, int32_t &status)
