@@ -231,7 +231,7 @@ enum HMISaveRestore
 };
 
 
-bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status)
+bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status)
 {
     uint8_t byte, midCh, evType, subType, skipSize;
     size_t locSize;
@@ -258,7 +258,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
     if(byte == MidiEvent::T_SYSEX || byte == MidiEvent::T_SYSEX2)
     {
-        length = hmp_head.fReadVarLen(fr, d.end, ok);
+        length = hmi_data.fReadVarLen(fr, d.end, ok);
         if(!ok || (fr.tell() + length > d.end))
         {
             m_errorString.append("HMI/HMP: Can't read SysEx event - Unexpected end of track data.\n");
@@ -293,7 +293,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             length = 0;
         }
         else
-            length = hmp_head.fReadVarLen(fr, d.end, ok);
+            length = hmi_data.fReadVarLen(fr, d.end, ok);
 
         if(!ok || (fr.tell() + length > d.end))
         {
@@ -532,9 +532,9 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
             if(evType == MidiEvent::T_NOTEON)
             {
-                if(!hmp_head.isHMP) // Turn into Note-ON with duration
+                if(!hmi_data.isHMP) // Turn into Note-ON with duration
                 {
-                    duration = hmp_head.fReadVarLen(fr, d.end, ok);
+                    duration = hmi_data.fReadVarLen(fr, d.end, ok);
                     if(!ok)
                     {
                         m_errorString.append("HMI/HMP: Can't read the duration of timed note.\n");
@@ -735,9 +735,8 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 {
     char readBuf[20];
-    size_t fsize, track_dir, tracks_offset, file_size,
-           totalGotten, abs_position, track_number;
-    HMPHeader hmp_head;
+    size_t fsize, file_size, totalGotten, abs_position;
+    HMIData hmi_data;
     bool ok = false;
     int status = 0;
     MidiTrackRow evtPos;
@@ -748,7 +747,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     std::vector<HMITrackDir> dir;
 
     std::memset(&loopState, 0, sizeof(loopState));
-    std::memset(&hmp_head, 0, sizeof(hmp_head));
+    std::memset(&hmi_data, 0, sizeof(hmi_data));
 
     file_size = fr.fileSize();
 
@@ -770,49 +769,49 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
     if(std::memcmp(readBuf, "HMI-MIDISONG061595", 19) == 0)
     {
-        hmp_head.isHMP = false;
-        hmp_head.fReadVarLen = readVarLenEx; // Same as SMF!
+        hmi_data.isHMP = false;
+        hmi_data.fReadVarLen = readVarLenEx; // Same as SMF!
 
         fr.seek(HMI_OFFSET_DIVISION, FileAndMemReader::SET);
-        if(!readUInt16LE(hmp_head.division, fr))
+        if(!readUInt16LE(hmi_data.division, fr))
         {
             m_errorString.set("HMI/HMP: Failed to read division value!\n");
             return false;
         }
 
-        hmp_head.division <<= 2;
+        hmi_data.division <<= 2;
 
         fr.seek(HMI_OFFSET_TRACKS_COUNT, FileAndMemReader::SET);
-        if(!readUInt16LE(hmp_head.tracksCount, fr))
+        if(!readUInt16LE(hmi_data.tracksCount, fr))
         {
             m_errorString.set("HMI: Failed to read tracks count!\n");
             return false;
         }
 
         fr.seek(2, FileAndMemReader::CUR);
-        if(!readUInt32LE(track_dir, fr))
+        if(!readUInt32LE(hmi_data.track_dir_offset, fr))
         {
             m_errorString.set("HMI: Failed to read track dir pointer!\n");
             return false;
         }
 
 #ifdef BWMIDI_DEBUG_HMI_PARSE
-        printf("== Division: %lu\n", hmp_head.division);
+        printf("== Division: %lu\n", hmi_data.division);
         fflush(stdout);
 #endif
 
-        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(hmp_head.division));
-        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(hmp_head.division));
+        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(hmi_data.division));
+        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(hmi_data.division));
 
-        dir.resize(hmp_head.tracksCount);
-        std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmp_head.tracksCount);
+        dir.resize(hmi_data.tracksCount);
+        std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
 
         // Read track sizes
-        for(size_t tk = 0; tk < hmp_head.tracksCount; ++tk)
+        for(size_t tk = 0; tk < hmi_data.tracksCount; ++tk)
         {
             HMITrackDir &d = dir[tk];
 
-            fr.seek(track_dir + (tk * 4), FileAndMemReader::SET);
+            fr.seek(hmi_data.track_dir_offset + (tk * 4), FileAndMemReader::SET);
             if(!readUInt32LE(d.start, fr))
             {
                 m_errorString.set("HMI: Failed to read track start offset!\n");
@@ -838,14 +837,14 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 continue; // Invalid track magic
             }
 
-            if(tk == hmp_head.tracksCount - 1)
+            if(tk == hmi_data.tracksCount - 1)
             {
                 d.len = file_size - d.start;
                 d.end = d.start + d.len;
             }
             else
             {
-                fr.seek(track_dir + (tk * HMI_SIZE_TRACK_DIR_HEAD) + HMI_OFFSET_TRACK_LEN, FileAndMemReader::SET);
+                fr.seek(hmi_data.track_dir_offset + (tk * HMI_SIZE_TRACK_DIR_HEAD) + HMI_OFFSET_TRACK_LEN, FileAndMemReader::SET);
                 if(!readUInt32LE(d.len, fr))
                 {
                     m_errorString.set("HMI: Failed to read track start offset!\n");
@@ -897,13 +896,30 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     }
     else if(std::memcmp(readBuf, "HMIMIDIP", 8) == 0)
     {
-        hmp_head.isHMP = true;
-        hmp_head.fReadVarLen = readHMPVarLenEx; // Has different format!
+        /********************************************************************************
+         *                         HMP header specification                             *
+         *                                                                              *
+         * 32 bytes         - Magic number                                              *
+         * 4 bytes          - Offset to branches list (32-bit little endian)            *
+         * 12 bytes         - Padding                                                   *
+         * 4 bytes          - Total tracks in the song (32-bit little endian)           *
+         * 4 bytes          - Ticks per Quote number (32-bit little endian)             *
+         * 4 bytes          - Division factor (32-bit little endian)                    *
+         * 4 bytes          - Time duration (aproximal) (32-bit little endian)          *
+         * 16 x 4 bytes     - Array of initial channel priorities (32-bit LE)           *
+         * 32 x 5 x 4 bytes - Two-dimensional array of device IDs (5 maximum) per track *
+         *                    (Array of 32-bit little endian values)                    *
+         * 128 bytes        - MIDI controller initializers (1 byte per CC)              *
+         * 8 bytes          - Padding                                                   *
+         ********************************************************************************/
+
+        hmi_data.isHMP = true;
+        hmi_data.fReadVarLen = readHMPVarLenEx; // Has different format!
 
         if(readBuf[8] == 0)
-            tracks_offset = 0x308;
+            hmi_data.tracks_offset = 0x308;
         else if(std::memcmp(readBuf + 8, "013195", 6) == 0)
-            tracks_offset = 0x388;
+            hmi_data.tracks_offset = 0x388;
         else
         {
             m_errorString.set("HMP: Unknown version of the HMIMIDIP!\n");
@@ -914,7 +930,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         fr.seek(0x20, FileAndMemReader::SET);
 
         // File length value
-        if(!readUInt32LE(hmp_head.branch_offset, fr))
+        if(!readUInt32LE(hmi_data.branch_offset, fr))
         {
             m_errorString.set("HMP: Failed to read file length field value!\n");
             return false;
@@ -924,32 +940,32 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         fr.seek(12, FileAndMemReader::CUR);
 
         // Tracks count value
-        if(!readUInt32LE(hmp_head.tracksCount, fr))
+        if(!readUInt32LE(hmi_data.tracksCount, fr))
         {
             m_errorString.set("HMP: Failed to read tracks count!\n");
             return false;
         }
 
-        if(hmp_head.tracksCount > 32)
+        if(hmi_data.tracksCount > 32)
         {
-            m_errorString.setFmt("HMP: File contains more than 32 tracks (%u)!\n", (unsigned)hmp_head.tracksCount);
+            m_errorString.setFmt("HMP: File contains more than 32 tracks (%u)!\n", (unsigned)hmi_data.tracksCount);
             return false;
         }
 
-        if(!readUInt32LE(hmp_head.tpqn, fr))
+        if(!readUInt32LE(hmi_data.tpqn, fr))
         {
             m_errorString.set("HMP: Failed to read TPQN value!\n");
             return false;
         }
 
         // Beats per minute
-        if(!readUInt32LE(hmp_head.division, fr))
+        if(!readUInt32LE(hmi_data.division, fr))
         {
             m_errorString.set("HMP: Failed to read division value!\n");
             return false;
         }
 
-        if(!readUInt32LE(hmp_head.timeDuration, fr))
+        if(!readUInt32LE(hmi_data.timeDuration, fr))
         {
             m_errorString.set("HMP: Failed to read time duration value!\n");
             return false;
@@ -957,7 +973,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
         for(size_t i = 0; i < 16; ++i)
         {
-            if(!readUInt32LE(hmp_head.priorities[i], fr))
+            if(!readUInt32LE(hmi_data.priorities[i], fr))
             {
                 m_errorString.set("HMP: Failed to read one of channel priorities values!\n");
                 return false;
@@ -968,7 +984,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         {
             for(size_t j = 0; j < 5; ++j)
             {
-                if(!readUInt32LE(hmp_head.trackDevice[i][j], fr))
+                if(!readUInt32LE(hmi_data.trackDevice[i][j], fr))
                 {
                     m_errorString.set("HMP: Failed to read one of track device map values!\n");
                     return false;
@@ -976,7 +992,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
         }
 
-        if(!fr.read(hmp_head.controlInit, 1, 128))
+        if(!fr.read(hmi_data.controlInit, 1, 128))
         {
             m_errorString.set("HMP: Failed to read one of control init bytes!\n");
             return false;
@@ -984,18 +1000,18 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
 
 
-        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(hmp_head.division));
-        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(hmp_head.division));
+        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(hmi_data.division));
+        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(hmi_data.division));
 
-        dir.resize(hmp_head.tracksCount);
-        std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmp_head.tracksCount);
+        dir.resize(hmi_data.tracksCount);
+        std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
 
-        for(size_t tk = 0; tk < hmp_head.tracksCount; ++tk)
+        for(size_t tk = 0; tk < hmi_data.tracksCount; ++tk)
         {
             HMITrackDir &d = dir[tk];
 
-            fr.seek(tracks_offset, FileAndMemReader::SET);
-            d.start = tracks_offset;
+            fr.seek(hmi_data.tracks_offset, FileAndMemReader::SET);
+            d.start = hmi_data.tracks_offset;
 
             if(d.start > file_size - HMP_OFFSET_TRACK_DATA)
             {
@@ -1003,13 +1019,13 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 break; // Track is incomplete
             }
 
-            if(!readUInt32LE(track_number, fr))
+            if(!readUInt32LE(hmi_data.current_track, fr))
             {
                 m_errorString.set("HMP: Failed to read track number value!\n");
                 return false;
             }
 
-            if(track_number != tk)
+            if(hmi_data.current_track != tk)
             {
                 m_errorString.set("HMP: Captured track number value is not matching!\n");
                 return false;
@@ -1027,7 +1043,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 return false;
             }
 
-            tracks_offset += d.len;
+            hmi_data.tracks_offset += d.len;
             d.end = d.start + d.len;
 
             if(file_size - d.start < d.len)
@@ -1045,7 +1061,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             d.devicesNum = HMP_MAX_TRACK_DEVICES;
 
             for(size_t j = 0; j < HMP_MAX_TRACK_DEVICES; ++j)
-                d.devices[j] = hmp_head.trackDevice[tk][j];
+                d.devices[j] = hmi_data.trackDevice[tk][j];
 
             totalGotten += d.len;
         }
@@ -1064,7 +1080,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     }
 
 
-    buildSmfSetupReset(hmp_head.tracksCount);
+    buildSmfSetupReset(hmi_data.tracksCount);
 
     m_loopFormat = Loop_HMI;
 
@@ -1080,7 +1096,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     event.type = MidiEvent::T_SPECIAL;
     event.subtype = MidiEvent::ST_TEMPOCHANGE;
     event.data_loc_size = 3;
-    if(hmp_head.isHMP)
+    if(hmi_data.isHMP)
     {
         event.data_loc[0] = 0x0F;
         event.data_loc[1] = 0x42;
@@ -1108,7 +1124,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
     size_t tk_v = 0;
 
-    for(size_t tk = 0; tk < hmp_head.tracksCount; ++tk)
+    for(size_t tk = 0; tk < hmi_data.tracksCount; ++tk)
     {
         const HMITrackDir &d = dir[tk];
 
@@ -1169,7 +1185,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 m_trackDevices[tk_v] |= Device_GravisUltrasound;
                 break;
             default:
-                m_errorString.setFmt("HMI/HMP: Unsupported device type 0x%04X\n", (unsigned)hmp_head.trackDevice[tk][dev]);
+                m_errorString.setFmt("HMI/HMP: Unsupported device type 0x%04X\n", (unsigned)hmi_data.trackDevice[tk][dev]);
                 return false;
             }
         }
@@ -1186,7 +1202,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             continue; // Exclude this track completely
 
         // Time delay that follows the first event in the track
-        abs_position = hmp_head.fReadVarLen(fr, d.end, ok);
+        abs_position = hmi_data.fReadVarLen(fr, d.end, ok);
         if(!ok)
         {
             m_errorString.set("HMI/HMP: Failed to read first event's delay\n");
@@ -1195,7 +1211,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
         do
         {
-            if(!hmi_parseEvent(hmp_head, d, fr, event, status))
+            if(!hmi_parseEvent(hmi_data, d, fr, event, status))
                 return false; // Error value already written
 
             if(event.isValid)
@@ -1214,7 +1230,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         analyseLoopEvent(loopState, event, abs_position);
                 }
 
-                evtPos.delay = hmp_head.fReadVarLen(fr, d.end, ok);
+                evtPos.delay = hmi_data.fReadVarLen(fr, d.end, ok);
                 if(!ok)
                 {
                     /* End of track has been reached! However, there is no EOT event presented */

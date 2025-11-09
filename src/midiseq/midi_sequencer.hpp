@@ -926,26 +926,38 @@ private:
 
     typedef uint64_t (*HMIVarLenReadCB)(FileAndMemReader &fr, const size_t end, bool &ok);
 
-    struct HMPHeader
+    struct HMIData
     {
         char magic[32];
-        size_t branch_offset; // 4 bytes
-        // 12 bytes of padding
-        size_t tracksCount; // 4 bytes
-        size_t tpqn; // 4 bytes
-        size_t division; // 4 bytes
-        size_t timeDuration; // 4 bytes
-        uint32_t priorities[16]; // 64 bytes
-        uint32_t trackDevice[32][5]; // 640 bytes
-        uint8_t controlInit[128]; // 128 bytes
-        // 8 bytes of the padding
+        size_t branch_offset;
+        size_t tracksCount;
+        size_t tpqn;
+        size_t division;
+        size_t timeDuration;
+        uint32_t priorities[16];
+        uint32_t trackDevice[32][5];
+        uint8_t controlInit[128];
+
+        size_t track_dir_offset;
+        size_t tracks_offset;
+        size_t current_track;
 
         bool isHMP;
         // Helper function pointers
         HMIVarLenReadCB fReadVarLen;
     };
 
-    bool hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status);
+    /**
+     * @brief Parse single event for the HMI/HMP music file
+     * @param hmi_data Header data of the HMI/HMP file
+     * @param d Directory entry of current track
+     * @param fr File/Memory read context
+     * @param event [inout] MIDI event entry
+     * @param status [inout] MIDI status value
+     * @return true on success, false on any parse error ocurred
+     */
+    bool hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status);
+
     /**
      * @brief Load file as HMI/HMP file for the HMI Sound Operating System
      * @param fr Context with opened file
