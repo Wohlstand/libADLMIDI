@@ -31,6 +31,16 @@
 
 #include "../file_reader.hpp"
 
+#if !defined(__SIZEOF_POINTER__) // Workaround for MSVC
+#   if defined(_WIN32)
+#       if defined(_WIN64)
+#           define __SIZEOF_POINTER__ 8
+#       else
+#           define __SIZEOF_POINTER__ 4
+#       endif
+#   endif
+#endif
+
 /**
  * @brief Utility function to read Big-Endian integer from raw binary data
  * @param buffer Pointer to raw binary buffer
