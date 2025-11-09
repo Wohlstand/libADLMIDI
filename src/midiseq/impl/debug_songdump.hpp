@@ -65,6 +65,22 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
         return "SysComSongPosPtr";
     case BW_MidiSequencer::MidiEvent::T_SYSEX2:
         return "SysEx2";
+    case BW_MidiSequencer::MidiEvent::T_0xFE:
+        switch(subType)
+        {
+        case BW_MidiSequencer::MidiEvent::ST_0x10:
+            return "FE-HMI-0x10";
+        case BW_MidiSequencer::MidiEvent::ST_0x12:
+            return "FE-HMI-0x12";
+        case BW_MidiSequencer::MidiEvent::ST_0x13:
+            return "FE-HMI-0x13";
+        case BW_MidiSequencer::MidiEvent::ST_0x14:
+            return "FE-HMI-0x14";
+        case BW_MidiSequencer::MidiEvent::ST_0x15:
+            return "FE-HMI-0x15";
+        default:
+            return "FE-HMI-UNK";
+        }
     case BW_MidiSequencer::MidiEvent::T_SPECIAL:
         switch(subType)
         {
@@ -242,21 +258,26 @@ bool BW_MidiSequencer::debugDumpContents(const std::string &outFile)
             {
                 MidiEvent &e = m_eventBank[i];
 
-                fprintf(out, "-CH=%02u [%02X] %s -- %u:",
+                fprintf(out, "-CH=%02u [%02X] %s -- ",
                         (unsigned)e.channel,
                         (unsigned)e.type,
                         evtName((BW_MidiSequencer::MidiEvent::Types)e.type,
-                                (BW_MidiSequencer::MidiEvent::SubTypes)e.subtype),
-                        e.data_block.size ? (unsigned)e.data_block.size : (unsigned)e.data_loc_size
+                                (BW_MidiSequencer::MidiEvent::SubTypes)e.subtype)
                         );
+
+                if(e.data_loc_size)
+                {
+                    fprintf(out, "; loc[%u]: ", (unsigned)e.data_loc_size);
+                    for(size_t j = 0; j < e.data_loc_size; ++j)
+                        fprintf(out, " %02X", e.data_loc[j]);
+                }
 
                 if(e.data_block.size > 0)
                 {
+                    fprintf(out, "; block[%u]: ", (unsigned)e.data_block.size);
                     for(size_t j = e.data_block.offset; j < e.data_block.offset + e.data_block.size; ++j)
                         fprintf(out, " %02X", m_dataBank[j]);
                 }
-                else for(size_t j = 0; j < e.data_loc_size; ++j)
-                    fprintf(out, " %02X", e.data_loc[j]);
 
                 fprintf(out, "\r\n");
             }

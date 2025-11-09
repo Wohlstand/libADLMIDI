@@ -157,9 +157,8 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             return false;
         }
     }
-    else if(byte == 0xFE) // Unknown but valid HMI events to skip
+    else if(byte == BW_MidiSequencer::MidiEvent::T_0xFE) // Unknown but valid HMI events to skip
     {
-        event.isValid = 0;
         if(fr.read(&subType, 1, 1) != 1)
         {
             m_errorString.append("HMI/HMP: Failed to read event type!\n");
@@ -170,20 +169,34 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
         fflush(stdout);
 #endif
 
+        event.type = byte;
+        event.subtype = subType;
+
         switch(subType)
         {
-        case 0x13:
-        case 0x15:
-            fr.seek(6, FileAndMemReader::CUR); // Skip 6 bytes
+        case BW_MidiSequencer::MidiEvent::ST_0x13:
+        case BW_MidiSequencer::MidiEvent::ST_0x15:
+            event.data_loc_size = 0;
+            insertDataToBank(event, m_dataBank, fr, 6);
             break;
 
-        case 0x12:
-        case 0x14:
-            fr.seek(2, FileAndMemReader::CUR); // Skip 2 bytes
+        case BW_MidiSequencer::MidiEvent::ST_0x12:
+        case BW_MidiSequencer::MidiEvent::ST_0x14:
+            event.data_loc_size = 2;
+            if(fr.read(event.data_loc, 1, 2) != 2)
+            {
+                m_errorString.append("HMI/HMP: Failed to read unknown event value!\n");
+                return false;
+            }
             break;
 
-        case 0x10:
-            fr.seek(2, FileAndMemReader::CUR); // Skip 2 bytes
+        case BW_MidiSequencer::MidiEvent::ST_0x10:
+            event.data_loc_size = 2;
+            if(fr.read(event.data_loc, 1, 2) != 2)
+            {
+                m_errorString.append("HMI/HMP: Failed to read unknown event value!\n");
+                return false;
+            }
 
             if(fr.read(&skipSize, 1, 1) != 1)
             {
@@ -191,7 +204,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                 return false;
             }
 
-            fr.seek(skipSize + 4, FileAndMemReader::CUR); // Skip bytes of gotten length
+            insertDataToBank(event, m_dataBank, fr, skipSize + 4);
             break;
 
         default:

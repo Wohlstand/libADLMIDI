@@ -212,6 +212,8 @@ private:
             T_SPECIAL       = 0xFF,
 
             // Non-Standard
+            T_0xFE          = 0xFE,
+
             //! Note-On with duration time (HMI and XMI only)
             T_NOTEON_DURATED  = 0x109 //size = 5
         };
@@ -260,6 +262,15 @@ private:
              * so, no way that any raw MIDI event *
              * would even collide with them.      *
              **************************************/
+            ST_0x10 = 0x10,
+            ST_0x12 = 0x12,
+            ST_0x13 = 0x13,
+            ST_0x14 = 0x14,
+            ST_0x15 = 0x15,
+
+            //! [Non-Standard] Identifier of the unknown event, used for the dumper only
+            ST_UNKNOWN = 0x100,
+
             //! [Non-Standard] Built-in song begin hook trigger
             ST_SONG_BEGIN_HOOK = 0x101,
 
