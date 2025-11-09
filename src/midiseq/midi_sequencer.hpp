@@ -262,13 +262,14 @@ private:
              * so, no way that any raw MIDI event *
              * would even collide with them.      *
              **************************************/
-            ST_0x10 = 0x10,
-            ST_0x11 = 0x11,
-            ST_0x12 = 0x12,
-            ST_0x13 = 0x13,
-            ST_0x14 = 0x14,
-            ST_0x15 = 0x15,
-            ST_0x16 = 0x16,
+            // HMI specific sub-types for 0xFE event
+            ST_0x10 = 0x10, // HMI 2 bytes, 1 byte length, lenght + 4 bytes
+            ST_0x11 = 0x11, // HMI 6 bytes
+            ST_0x12 = 0x12, // HMI 2 bytes
+            ST_0x13 = 0x13, // HMI 6 bytes
+            ST_0x14 = 0x14, // HMI 2 bytes
+            ST_0x15 = 0x15, // HMI 6 bytes
+            ST_0x16 = 0x16, // HMI 2 bytes
 
             //! [Non-Standard] Identifier of the unknown event, used for the dumper only
             ST_UNKNOWN = 0x100,

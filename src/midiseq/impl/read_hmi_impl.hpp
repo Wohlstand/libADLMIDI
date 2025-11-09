@@ -157,7 +157,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             return false;
         }
     }
-    else if(byte == BW_MidiSequencer::MidiEvent::T_0xFE) // Unknown but valid HMI events to skip
+    else if(byte == BW_MidiSequencer::MidiEvent::T_0xFE) // Special HMI-specific events
     {
         if(fr.read(&subType, 1, 1) != 1)
         {
@@ -174,39 +174,124 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
         switch(subType)
         {
-        case BW_MidiSequencer::MidiEvent::ST_0x11:
-        case BW_MidiSequencer::MidiEvent::ST_0x13:
-        case BW_MidiSequencer::MidiEvent::ST_0x15:
-            event.data_loc_size = 0;
-            insertDataToBank(event, m_dataBank, fr, 6);
-            break;
-
-        case BW_MidiSequencer::MidiEvent::ST_0x12:
-        case BW_MidiSequencer::MidiEvent::ST_0x14:
-        case BW_MidiSequencer::MidiEvent::ST_0x16:
+        case BW_MidiSequencer::MidiEvent::ST_0x10: // 2 bytes, 1 byte, len(prev byte) + 4 bytes
+            // Install the branch point, local or global
             event.data_loc_size = 2;
+
             if(fr.read(event.data_loc, 1, 2) != 2)
             {
-                m_errorString.append("HMI/HMP: Failed to read unknown event value!\n");
+                m_errorString.append("HMI/HMP: Failed to read branch location value!\n");
                 return false;
             }
-            break;
 
-        case BW_MidiSequencer::MidiEvent::ST_0x10:
-            event.data_loc_size = 2;
-            if(fr.read(event.data_loc, 1, 2) != 2)
+            if((event.data_loc[0] & 0x80) != 0) // Installs a global branch
             {
-                m_errorString.append("HMI/HMP: Failed to read unknown event value!\n");
-                return false;
+                event.type = MidiEvent::T_SPECIAL;
+                event.subtype = MidiEvent::ST_BRANCH_LOCATION;
+                event.data_loc[0] &= 0x7F; // Filter the highest bit
+                event.data_loc_size = 2;
+            }
+            else
+            {
+                event.type = MidiEvent::T_SPECIAL;
+                event.subtype = MidiEvent::ST_TRACK_BRANCH_LOCATION;
+                event.data_loc_size = 2;
             }
 
             if(fr.read(&skipSize, 1, 1) != 1)
             {
-                m_errorString.append("HMI/HMP: Failed to read unknown event length!\n");
+                m_errorString.append("HMI/HMP: Failed to read branch location event length!\n");
+                return false;
+            }
+            // Unknown data, possibly offset
+            insertDataToBank(event, m_dataBank, fr, skipSize + 4);
+            break;
+
+        case BW_MidiSequencer::MidiEvent::ST_0x11: // 6 bytes
+            // Jump to local branch
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_TRACK_BRANCH_TO;
+            event.data_loc[0] = event.data_loc[1];
+            event.data_loc_size = 2;
+
+            if(fr.read(event.data_loc, 1, 2) != 2)
+            {
+                m_errorString.append("HMI/HMP: Failed to read jump to local branch data!\n");
                 return false;
             }
 
-            insertDataToBank(event, m_dataBank, fr, skipSize + 4);
+            // Unknown data, possibly offset
+            insertDataToBank(event, m_dataBank, fr, 4);
+            break;
+
+        case BW_MidiSequencer::MidiEvent::ST_0x12: // 2 bytes
+            // Begin local in-track loop
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN;
+            event.data_loc_size = 2;
+
+            if(fr.read(event.data_loc, 1, 2) != 2)
+            {
+                m_errorString.append("HMI/HMP: Failed to read local loop start data!\n");
+                return false;
+            }
+
+            if(event.data_loc[0] == 0xFF)
+                event.data_loc[0] = 0; // 0xFF is "infinite" too
+            else
+                ++event.data_loc[0]; // Increase by 1
+
+            break;
+
+        case BW_MidiSequencer::MidiEvent::ST_0x13: // 6 bytes
+            // End local loop
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
+            event.data_loc_size = 0;
+            // Unknown data, possibly offset
+            insertDataToBank(event, m_dataBank, fr, 6);
+            break;
+
+
+        case BW_MidiSequencer::MidiEvent::ST_0x14: // 2 bytes
+            // Begin global loop
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
+            event.data_loc_size = 2;
+
+            if(fr.read(event.data_loc, 1, 2) != 2)
+            {
+                m_errorString.append("HMI/HMP: Failed to read global loop start data!\n");
+                return false;
+            }
+
+            if(event.data_loc[0] == 0xFF)
+                event.data_loc[0] = 0; // 0xFF is "infinite" too
+            else
+                ++event.data_loc[0]; // Increase by 1
+
+            break;
+
+        case BW_MidiSequencer::MidiEvent::ST_0x15: // 6 bytes
+            // End global loop
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_LOOPSTACK_END;
+            event.data_loc_size = 0;
+            // Unknown data, possibly offset
+            insertDataToBank(event, m_dataBank, fr, 6);
+            break;
+
+        case BW_MidiSequencer::MidiEvent::ST_0x16: // 2 bytes
+            // Jump to global branch
+            event.type = MidiEvent::T_SPECIAL;
+            event.subtype = MidiEvent::ST_BRANCH_TO;
+            event.data_loc_size = 2;
+
+            if(fr.read(event.data_loc, 1, 2) != 2)
+            {
+                m_errorString.append("HMI/HMP: Failed to read unknown event value!\n");
+                return false;
+            }
             break;
 
         default:

@@ -38,7 +38,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     size_t length, midCh, loopStackLevel;
     const uint8_t *datau;
     const char *data;
-    char loopsNum;
+    int loopsNum;
     DuratedNote *note;
     LoopStackEntry loopEntry, *loopEntryP;
 
@@ -170,7 +170,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     return;
                 }
 
-                loopsNum = data[0];
+                loopsNum = datau[0];
                 loopStackLevel = static_cast<size_t>(m_loop.stackLevel + 1);
 
                 while(loopStackLevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
