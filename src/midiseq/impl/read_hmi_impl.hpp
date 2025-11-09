@@ -174,6 +174,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
         switch(subType)
         {
+        case BW_MidiSequencer::MidiEvent::ST_0x11:
         case BW_MidiSequencer::MidiEvent::ST_0x13:
         case BW_MidiSequencer::MidiEvent::ST_0x15:
             event.data_loc_size = 0;
@@ -390,7 +391,10 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                     event.data_loc_size = 0;
                     break;
                 case 107: // Set the channel priority
-                    event.isValid = 0; // Skip this event for now
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_CHANNEL_PRIORITY;
+                    event.data_loc[0] = event.data_loc[1];
+                    event.data_loc_size = 1;
                     break;
 
                 case 108: // Local branch location

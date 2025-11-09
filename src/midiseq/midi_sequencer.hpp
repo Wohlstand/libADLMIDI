@@ -263,6 +263,7 @@ private:
              * would even collide with them.      *
              **************************************/
             ST_0x10 = 0x10,
+            ST_0x11 = 0x11,
             ST_0x12 = 0x12,
             ST_0x13 = 0x13,
             ST_0x14 = 0x14,
@@ -343,6 +344,9 @@ private:
             ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP = 0x11E,
             //! Enable restore state of all alternated controllers on loop
             ST_DISABLE_RESTORE_ALL_CC_ON_LOOP = 0x11F,
+
+            //! Set the priority of MIDI channel for the stealing algorithm
+            ST_CHANNEL_PRIORITY = 0x120,
 
             //! Tail of the enum, is not supposed to be used
             ST_TYPE_LAST = ST_TRACK_BRANCH_TO

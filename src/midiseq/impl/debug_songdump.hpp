@@ -70,6 +70,8 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
         {
         case BW_MidiSequencer::MidiEvent::ST_0x10:
             return "FE-HMI-0x10";
+        case BW_MidiSequencer::MidiEvent::ST_0x11:
+            return "FE-HMI-0x11";
         case BW_MidiSequencer::MidiEvent::ST_0x12:
             return "FE-HMI-0x12";
         case BW_MidiSequencer::MidiEvent::ST_0x13:
@@ -190,6 +192,9 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
             return "XX-DS-OnLoop-ChanAfterTouch";
         case BW_MidiSequencer::MidiEvent::ST_DISABLE_RESTORE_ALL_CC_ON_LOOP:
             return "XX-DS-OnLoop-RestoreAllCC";
+
+        case BW_MidiSequencer::MidiEvent::ST_CHANNEL_PRIORITY:
+            return "XX-ChanPriority";
         }
     }
 }
