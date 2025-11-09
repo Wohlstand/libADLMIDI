@@ -182,6 +182,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
         case BW_MidiSequencer::MidiEvent::ST_0x12:
         case BW_MidiSequencer::MidiEvent::ST_0x14:
+        case BW_MidiSequencer::MidiEvent::ST_0x16:
             event.data_loc_size = 2;
             if(fr.read(event.data_loc, 1, 2) != 2)
             {

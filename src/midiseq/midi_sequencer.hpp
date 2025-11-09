@@ -267,6 +267,7 @@ private:
             ST_0x13 = 0x13,
             ST_0x14 = 0x14,
             ST_0x15 = 0x15,
+            ST_0x16 = 0x16,
 
             //! [Non-Standard] Identifier of the unknown event, used for the dumper only
             ST_UNKNOWN = 0x100,

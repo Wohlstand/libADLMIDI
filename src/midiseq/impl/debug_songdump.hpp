@@ -78,6 +78,8 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
             return "FE-HMI-0x14";
         case BW_MidiSequencer::MidiEvent::ST_0x15:
             return "FE-HMI-0x15";
+        case BW_MidiSequencer::MidiEvent::ST_0x16:
+            return "FE-HMI-0x16";
         default:
             return "FE-HMI-UNK";
         }
