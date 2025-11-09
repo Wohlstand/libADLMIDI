@@ -708,6 +708,9 @@ private:
     //! The state of the loop
     LoopState m_loop;
 
+    //! Per-track loop state
+    std::vector<LoopState> m_trackLoop;
+
     //! Whether the nth track has playback disabled
     std::vector<bool> m_trackDisable;
     //! Index of solo track, or max for disabled

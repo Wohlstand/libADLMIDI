@@ -41,6 +41,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     int loopsNum;
     DuratedNote *note;
     LoopStackEntry *loopEntryP;
+    LoopState *loop;
 
     if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[track]) == 0)
         return; // Ignore this track completely
@@ -188,6 +189,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                 m_loop.caughtStackStart = true;
             }
             return;
+
         case MidiEvent::ST_LOOPSTACK_END:
             if(m_loopEnabled && !m_loop.invalidLoop)
                 m_loop.caughtStackEnd = true;
@@ -196,6 +198,47 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         case MidiEvent::ST_LOOPSTACK_BREAK:
             if(m_loopEnabled && !m_loop.invalidLoop)
                 m_loop.caughtStackBreak = true;
+            return;
+
+        case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
+            loop = &m_trackLoop[track];
+            if(m_loopEnabled && !loop->invalidLoop)
+            {
+                if(loop->skipStackStart)
+                {
+                    loop->skipStackStart = false;
+                    return;
+                }
+
+                loopsNum = datau[0];
+                loopStackLevel = static_cast<size_t>(loop->stackLevel + 1);
+
+                while(loopStackLevel >= loop->stackDepth && loop->stackDepth < LoopState::stackDepthMax - 1)
+                {
+                    loopEntryP = &loop->stack[loop->stackDepth++];
+                    loopEntryP->loops = loopsNum;
+                    loopEntryP->infinity = (loopsNum == 0);
+                    loopEntryP->start = 0;
+                    loopEntryP->end = 0;
+                }
+
+                loopEntryP = &loop->stack[loopStackLevel];
+                loopEntryP->loops = static_cast<int>(loopsNum);
+                loopEntryP->infinity = (loopsNum == 0);
+                loop->caughtStackStart = true;
+            }
+            return;
+
+        case MidiEvent::ST_TRACK_LOOPSTACK_END:
+            loop = &m_trackLoop[track];
+            if(m_loopEnabled && !loop->invalidLoop)
+                loop->caughtStackEnd = true;
+            return;
+
+        case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
+            loop = &m_trackLoop[track];
+            if(m_loopEnabled && !loop->invalidLoop)
+                loop->caughtStackBreak = true;
             return;
         }
 
@@ -309,6 +352,10 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
+        LoopState &trackLoop = m_trackLoop[tk];
+        unsigned caughLocalLoopStackStart = 0;
+        unsigned caughLocalLoopStackEnds = 0;
+        unsigned caughLocalLoopStackBreaks = 0;
 
         // Process note-OFFs
         processDuratedNotes(tk, track.lastHandledEvent);
@@ -359,6 +406,28 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                     m_loop.caughtStackBreak = false;
                 }
 
+                if(trackLoop.caughtStackStart)
+                {
+                    caughLocalLoopStackStart++;
+                    trackLoop.caughtStackStart = false;
+                }
+
+                if(trackLoop.caughtStackBreak)
+                {
+                    caughLocalLoopStackBreaks++;
+                    trackLoop.caughtStackBreak = false;
+                }
+
+                if(trackLoop.isStackEnd())
+                {
+                    if(trackLoop.caughtStackEnd)
+                    {
+                        trackLoop.caughtStackEnd = false;
+                        caughLocalLoopStackEnds++;
+                    }
+                    break; // Stop event handling on catching loopEnd event!
+                }
+
                 if(m_loop.caughtEnd || m_loop.isStackEnd())
                 {
                     if(m_loop.caughtStackEnd)
@@ -381,6 +450,72 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
             {
                 track.delay += track.pos->delay;
                 track.pos++;
+            }
+
+            // Process local loop
+            if(caughLocalLoopStackStart > 0)
+            {
+                while(caughLocalLoopStackStart > 0)
+                {
+                    trackLoop.stackUp();
+                    LoopStackEntry &s = trackLoop.getCurStack();
+                    s.startPosition.track.clear();
+                    s.startPosition.track.push_back(rowBeginPosition.track[tk]);
+                    s.startPosition.absTimePosition = rowBeginPosition.absTimePosition;
+                    s.startPosition.wait = rowBeginPosition.wait;
+                    s.startPosition.began = rowBeginPosition.began;
+                    caughLocalLoopStackStart--;
+                }
+                return true;
+            }
+
+            if(caughLocalLoopStackBreaks > 0)
+            {
+                while(caughLocalLoopStackBreaks > 0)
+                {
+                    LoopStackEntry &s = trackLoop.getCurStack();
+                    s.loops = 0;
+                    s.infinity = false;
+                    // Quit the loop
+                    trackLoop.stackDown();
+                    caughLocalLoopStackBreaks--;
+                }
+            }
+
+            if(caughLocalLoopStackEnds > 0)
+            {
+                while(caughLocalLoopStackEnds > 0)
+                {
+                    LoopStackEntry &s = trackLoop.getCurStack();
+                    if(s.infinity)
+                    {
+                        m_currentPosition.track[tk] = s.startPosition.track[0];
+                        trackLoop.skipStackStart = true;
+                        return true;
+                    }
+                    else
+                    if(s.loops >= 0)
+                    {
+                        s.loops--;
+                        if(s.loops > 0)
+                        {
+                            m_currentPosition.track[tk] = s.startPosition.track[0];
+                            trackLoop.skipStackStart = true;
+                            return true;
+                        }
+                        else
+                        {
+                            // Quit the loop
+                            trackLoop.stackDown();
+                        }
+                    }
+                    else
+                    {
+                        // Quit the loop
+                        trackLoop.stackDown();
+                    }
+                    caughLocalLoopStackEnds--;
+                }
             }
 
             if(doLoopJump)

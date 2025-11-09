@@ -213,6 +213,13 @@ void BW_MidiSequencer::rewind()
     m_loop.reset();
     m_loop.caughtStart  = true;
     m_loop.temporaryBroken = false;
+
+    for(size_t tk = 0; tk < m_tracksCount; ++tk)
+    {
+        m_trackLoop[tk].reset();
+        m_trackLoop[tk].temporaryBroken = false;
+    }
+
     m_time.reset();
 
     // Clear any hanging timed notes

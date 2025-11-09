@@ -71,6 +71,7 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_eventBank.clear();
     m_trackData.clear();
     m_trackDevices.clear();
+    m_trackLoop.clear();
     m_trackDuratedNotes.clear();
 
     m_loop.reset();
@@ -80,6 +81,12 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_currentPosition.track.clear();
 
     buildSmfResizeTracks(m_tracksCount);
+
+    for(size_t tk = 0; tk < m_tracksCount; ++tk)
+    {
+        m_trackLoop[tk].reset();
+        m_trackLoop[tk].invalidLoop = false;
+    }
 
     std::memset(m_trackDuratedNotes.data(), 0, sizeof(DuratedNotesCache) * trackCount);
     std::memset(m_channelDisable, 0, sizeof(m_channelDisable));
@@ -93,6 +100,7 @@ void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
     m_currentPosition.track.resize(m_tracksCount);
     m_trackDuratedNotes.resize(m_tracksCount);
     m_trackDisable.resize(m_tracksCount);
+    m_trackLoop.resize(m_tracksCount);
 }
 
 
