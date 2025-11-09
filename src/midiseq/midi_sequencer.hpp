@@ -524,6 +524,7 @@ private:
         bool gotLoopEnd;
         bool gotStackLoopStart;
         bool gotLoopEventsInThisRow;
+        bool gotLoopStackEventsInThisRow;
     };
 
     /**

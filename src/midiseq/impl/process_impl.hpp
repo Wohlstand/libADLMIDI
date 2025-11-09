@@ -489,6 +489,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                 m_currentPosition = s.startPosition;
                 m_loop.skipStackStart = true;
 
+                // Do all notes off on loop
                 for(uint8_t i = 0; i < 16; i++)
                     m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
 
@@ -503,6 +504,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                     m_currentPosition = s.startPosition;
                     m_loop.skipStackStart = true;
 
+                    // Do all notes off on loop
                     for(uint8_t i = 0; i < 16; i++)
                         m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
 
@@ -530,6 +532,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
         if(m_interface->onloopEnd) // Loop End hook
             m_interface->onloopEnd(m_interface->onloopEnd_userData);
 
+        // Do all notes off on loop
         for(uint8_t i = 0; i < 16; i++)
             m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
 

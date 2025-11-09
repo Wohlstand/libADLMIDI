@@ -217,6 +217,9 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
             e.end = abs_position;
             m_loop.stack[m_loop.stackDepth++] = e;
         }
+
+        // In this row we got loop event, register this!
+        loopState.gotLoopStackEventsInThisRow = true;
     }
     else if(!m_loop.invalidLoop &&
         ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
@@ -241,6 +244,9 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
             m_loop.getCurStack().end = abs_position;
             m_loop.stackDown();
         }
+
+        // In this row we got loop event, register this!
+        loopState.gotLoopStackEventsInThisRow = true;
     }
 }
 
