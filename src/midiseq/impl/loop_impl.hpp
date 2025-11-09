@@ -147,7 +147,7 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
          * - starts together with loopEnd
          * - appears more than one time in same MIDI file
          */
-        if(loopState.gotLoopStart || loopState.gotLoopEventsInThisRow)
+        if(loopState.gotLoopStart || (loopState.gotLoopEventsInThisRow & GLOBAL_LOOP) != 0)
             m_loop.invalidLoop = true;
         else
         {
@@ -155,7 +155,7 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
             loopState.loopStartTicks = abs_position;
         }
         // In this row we got loop event, register this!
-        loopState.gotLoopEventsInThisRow = true;
+        loopState.gotLoopEventsInThisRow |= GLOBAL_LOOP;
     }
     else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPEND))
     {
@@ -165,7 +165,7 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
          * - starts together with loopStart
          * - appars more than one time in same MIDI file
          */
-        if(loopState.gotLoopEnd || loopState.gotLoopEventsInThisRow)
+        if(loopState.gotLoopEnd || (loopState.gotLoopEventsInThisRow & GLOBAL_LOOP) != 0)
         {
             m_loop.invalidLoop = true;
             if(m_interface->onDebugMessage)
@@ -184,7 +184,7 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
             loopState.loopEndTicks = abs_position;
         }
         // In this row we got loop event, register this!
-        loopState.gotLoopEventsInThisRow = true;
+        loopState.gotLoopEventsInThisRow |= GLOBAL_LOOP;
     }
     else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN))
     {
@@ -219,7 +219,7 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
         }
 
         // In this row we got loop event, register this!
-        loopState.gotLoopEventsInThisRow = true;
+        loopState.gotLoopEventsInThisRow |= GLOBAL_LOOPSTACK;
     }
     else if(!m_loop.invalidLoop &&
         ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
@@ -246,7 +246,7 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
         }
 
         // In this row we got loop event, register this!
-        loopState.gotLoopEventsInThisRow = true;
+        loopState.gotLoopEventsInThisRow |= GLOBAL_LOOPSTACK;
     }
 }
 

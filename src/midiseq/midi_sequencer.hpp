@@ -500,6 +500,12 @@ private:
         }
     };
 
+    enum LoopTypes
+    {
+        GLOBAL_LOOP = 0x01,
+        GLOBAL_LOOPSTACK = 0x02
+    };
+
     struct LoopPointParseState
     {
         //! Tick position of loop start tag
@@ -511,7 +517,7 @@ private:
         bool gotLoopStart;
         bool gotLoopEnd;
         bool gotStackLoopStart;
-        bool gotLoopEventsInThisRow;
+        unsigned gotLoopEventsInThisRow;
     };
 
     /**

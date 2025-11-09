@@ -197,14 +197,14 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
         }
 #endif
 
-        if((evtPos.delay > 0) || loopState.gotLoopEventsInThisRow || (event.subtype == MidiEvent::ST_ENDTRACK))
+        if((evtPos.delay > 0) || loopState.gotLoopEventsInThisRow > 0 || (event.subtype == MidiEvent::ST_ENDTRACK))
         {
             evtPos.absPos = abs_position;
             abs_position += evtPos.delay;
             evtPos.sortEvents(m_eventBank, noteStates);
             m_trackData[track_idx].push_back(evtPos);
             evtPos.clear();
-            loopState.gotLoopEventsInThisRow = false;
+            loopState.gotLoopEventsInThisRow = 0;
         }
     }
     while((fr.tell() <= end) && (event.subtype != MidiEvent::ST_ENDTRACK));
