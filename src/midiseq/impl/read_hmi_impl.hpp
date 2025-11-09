@@ -1253,8 +1253,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
 #endif
 
-            if((evtPos.delay > 0) || (event.subtype == MidiEvent::ST_ENDTRACK) ||
-                loopState.gotLoopEventsInThisRow || loopState.gotLoopStackEventsInThisRow)
+            if((evtPos.delay > 0) || loopState.gotLoopEventsInThisRow || (event.subtype == MidiEvent::ST_ENDTRACK))
             {
 #ifdef BWMIDI_DEBUG_HMI_PARSE
                 printf("- Delay %lu, Position %lu, stored events: %lu, time: %g seconds\n",
@@ -1268,7 +1267,6 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 m_trackData[tk_v].push_back(evtPos);
                 evtPos.clear();
                 loopState.gotLoopEventsInThisRow = false;
-                loopState.gotLoopStackEventsInThisRow = false;
             }
 
             if(status < 0 && evtPos.events_begin != evtPos.events_end) // Last row in the track
@@ -1278,7 +1276,6 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 m_trackData[tk_v].push_back(evtPos);
                 evtPos.clear();
                 loopState.gotLoopEventsInThisRow = false;
-                loopState.gotLoopStackEventsInThisRow = false;
             }
         } while((fr.tell() <= d.end) && (event.subtype != MidiEvent::ST_ENDTRACK));
 
