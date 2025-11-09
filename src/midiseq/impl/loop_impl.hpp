@@ -138,12 +138,85 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
     }
 }
 
-void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position)
+void BW_MidiSequencer::setLoopStackStart(LoopPointParseState &loopState, LoopState *dstLoop, const MidiEvent &event, uint64_t abs_position, unsigned int type)
 {
     LoopStackEntry *loopEntryP;
 
-    if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
+    if(!dstLoop)
+        return; // Nothing to do!
+
+    if(!loopState.gotStackLoopStart)
     {
+        if(!loopState.gotLoopStart)
+            loopState.loopStartTicks = abs_position;
+        loopState.gotStackLoopStart = true;
+    }
+
+    dstLoop->stackUp();
+    if(dstLoop->stackLevel >= static_cast<int>(dstLoop->stackDepth))
+    {
+        if(dstLoop->stackDepth >= LoopState::stackDepthMax)
+        {
+            dstLoop->invalidLoop = true;
+            if(m_interface->onDebugMessage)
+            {
+                m_interface->onDebugMessage(
+                    m_interface->onDebugMessage_userData,
+                    "== Invalid loop detected! [Nested loops depth is overflown! (Maximum 127)] =="
+                );
+            }
+        }
+        else
+        {
+            loopEntryP = &dstLoop->stack[dstLoop->stackDepth++];
+            loopEntryP->loops = event.data_loc[0];
+            loopEntryP->infinity = (event.data_loc[0] == 0);
+            loopEntryP->start = abs_position;
+            loopEntryP->end = abs_position;
+        }
+    }
+
+    // In this row we got loop event, register this!
+    loopState.gotLoopEventsInThisRow |= type;
+}
+
+void BW_MidiSequencer::setLoopStackEnd(LoopPointParseState &loopState, LoopState *dstLoop, uint64_t abs_position, unsigned int type)
+{
+    if(!dstLoop)
+        return; // Nothing to do!
+
+    if(dstLoop->stackLevel <= -1)
+    {
+        dstLoop->invalidLoop = true; // Caught loop end without of loop start!
+        if(m_interface->onDebugMessage)
+        {
+            m_interface->onDebugMessage(
+                m_interface->onDebugMessage_userData,
+                "== Invalid loop detected! [Caught loop end without of loop start] =="
+            );
+        }
+    }
+    else
+    {
+        if(loopState.loopEndTicks < abs_position)
+            loopState.loopEndTicks = abs_position;
+
+        dstLoop->getCurStack().end = abs_position;
+        dstLoop->stackDown();
+    }
+
+    // In this row we got loop event, register this!
+    loopState.gotLoopEventsInThisRow |= type;
+}
+
+void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position, LoopState *trackLoop)
+{
+    if(m_loop.invalidLoop)
+        return; // Nothing to do
+
+    switch(event.subtype)
+    {
+    case MidiEvent::ST_LOOPSTART: // Global loop start
         /*
          * loopStart is invalid when:
          * - starts together with loopEnd
@@ -158,9 +231,9 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
         }
         // In this row we got loop event, register this!
         loopState.gotLoopEventsInThisRow |= GLOBAL_LOOP;
-    }
-    else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPEND))
-    {
+        break;
+
+    case MidiEvent::ST_LOOPEND: // Global loop end
         /*
          * loopEnd is invalid when:
          * - starts before loopStart
@@ -185,71 +258,31 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
             loopState.gotLoopEnd = true;
             loopState.loopEndTicks = abs_position;
         }
+
         // In this row we got loop event, register this!
         loopState.gotLoopEventsInThisRow |= GLOBAL_LOOP;
-    }
-    else if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN))
-    {
-        if(!loopState.gotStackLoopStart)
-        {
-            if(!loopState.gotLoopStart)
-                loopState.loopStartTicks = abs_position;
-            loopState.gotStackLoopStart = true;
-        }
+        break;
 
-        m_loop.stackUp();
-        if(m_loop.stackLevel >= static_cast<int>(m_loop.stackDepth))
-        {
-            if(m_loop.stackDepth >= LoopState::stackDepthMax)
-            {
-                m_loop.invalidLoop = true;
-                if(m_interface->onDebugMessage)
-                {
-                    m_interface->onDebugMessage(
-                        m_interface->onDebugMessage_userData,
-                        "== Invalid loop detected! [Nested loops depth is overflown! (Maximum 127)] =="
-                    );
-                }
-            }
-            else
-            {
-                loopEntryP = &m_loop.stack[m_loop.stackDepth++];
-                loopEntryP->loops = event.data_loc[0];
-                loopEntryP->infinity = (event.data_loc[0] == 0);
-                loopEntryP->start = abs_position;
-                loopEntryP->end = abs_position;
-            }
-        }
+    case MidiEvent::ST_LOOPSTACK_BEGIN:
+        setLoopStackStart(loopState, &m_loop, event, abs_position, GLOBAL_LOOPSTACK);
+        break;
 
-        // In this row we got loop event, register this!
-        loopState.gotLoopEventsInThisRow |= GLOBAL_LOOPSTACK;
-    }
-    else if(!m_loop.invalidLoop &&
-        ((event.subtype == MidiEvent::ST_LOOPSTACK_END) ||
-         (event.subtype == MidiEvent::ST_LOOPSTACK_BREAK))
-    )
-    {
-        if(m_loop.stackLevel <= -1)
-        {
-            m_loop.invalidLoop = true; // Caught loop end without of loop start!
-            if(m_interface->onDebugMessage)
-            {
-                m_interface->onDebugMessage(
-                    m_interface->onDebugMessage_userData,
-                    "== Invalid loop detected! [Caught loop end without of loop start] =="
-                );
-            }
-        }
-        else
-        {
-            if(loopState.loopEndTicks < abs_position)
-                loopState.loopEndTicks = abs_position;
-            m_loop.getCurStack().end = abs_position;
-            m_loop.stackDown();
-        }
+    case MidiEvent::ST_LOOPSTACK_END:
+    case MidiEvent::ST_LOOPSTACK_BREAK:
+        setLoopStackEnd(loopState, &m_loop, abs_position, GLOBAL_LOOPSTACK);
+        break;
 
-        // In this row we got loop event, register this!
-        loopState.gotLoopEventsInThisRow |= GLOBAL_LOOPSTACK;
+    case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
+        setLoopStackStart(loopState, trackLoop, event, abs_position, LOCAL_LOOPSTACK);
+        break;
+
+    case MidiEvent::ST_TRACK_LOOPSTACK_END:
+    case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
+        setLoopStackEnd(loopState, trackLoop, abs_position, LOCAL_LOOPSTACK);
+        break;
+
+    default:
+        break;
     }
 }
 

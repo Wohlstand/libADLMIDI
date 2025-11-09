@@ -503,7 +503,8 @@ private:
     enum LoopTypes
     {
         GLOBAL_LOOP = 0x01,
-        GLOBAL_LOOPSTACK = 0x02
+        GLOBAL_LOOPSTACK = 0x02,
+        LOCAL_LOOPSTACK = 0x03
     };
 
     struct LoopPointParseState
@@ -517,6 +518,9 @@ private:
         bool gotLoopStart;
         bool gotLoopEnd;
         bool gotStackLoopStart;
+        //! Was the local loop start even got? (Must be reset on next track start!)
+        bool gotTrackStackLoopStart;
+        //! Got any loop events in currently processing row? (Must be reset after flushing the events row!)
         unsigned gotLoopEventsInThisRow;
     };
 
@@ -745,12 +749,31 @@ private:
     void installLoop(LoopPointParseState &loopState);
 
     /**
-     * @brief During the parse, inspects the loop event and according to the current loop state, installs the necessary properties
+     * @brief Sets the global or local loop stack begin state
+     * @param loopState Loop state for the currently parsing music file
+     * @param dstLoop Target loop state (global or track-local)
+     * @param event Event that contains input data
+     * @param abs_position Absolute position
+     * @param type Type of loop to track
+     */
+    void setLoopStackStart(LoopPointParseState &loopState, LoopState *dstLoop, const MidiEvent &event, uint64_t abs_position, unsigned type);
+
+    /**
+     * @brief Sets the global or local loop stack end state
+     * @param loopState Loop state for the currently parsing music file
+     * @param dstLoop Target loop state (global or track-local)
+     * @param abs_position Absolute position
+     * @param type Type of loop to track
+     */
+    void setLoopStackEnd(LoopPointParseState &loopState, LoopState *dstLoop, uint64_t abs_position, unsigned type);
+
+    /**
+     * @brief During the parse, inspects the trackLoop event and according to the current trackLoop state, installs the necessary properties
      * @param loopState Loop state for the currently parsing music file
      * @param event An event entry that was been proceeded just now
      * @param abs_position Current in-track absolute position
      */
-    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position);
+    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position, LoopState *trackLoop = NULL);
 
 
 
