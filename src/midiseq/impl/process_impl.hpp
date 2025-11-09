@@ -40,7 +40,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     const char *data;
     int loopsNum;
     DuratedNote *note;
-    LoopStackEntry loopEntry, *loopEntryP;
+    LoopStackEntry *loopEntryP;
 
     if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[track]) == 0)
         return; // Ignore this track completely
@@ -175,11 +175,11 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
 
                 while(loopStackLevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
                 {
-                    loopEntry.loops = loopsNum;
-                    loopEntry.infinity = (loopsNum == 0);
-                    loopEntry.start = 0;
-                    loopEntry.end = 0;
-                    m_loop.stack[m_loop.stackDepth++] = loopEntry;
+                    loopEntryP = &m_loop.stack[m_loop.stackDepth++];
+                    loopEntryP->loops = loopsNum;
+                    loopEntryP->infinity = (loopsNum == 0);
+                    loopEntryP->start = 0;
+                    loopEntryP->end = 0;
                 }
 
                 loopEntryP = &m_loop.stack[loopStackLevel];

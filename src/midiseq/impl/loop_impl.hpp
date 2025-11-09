@@ -140,6 +140,8 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
 
 void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position)
 {
+    LoopStackEntry *loopEntryP;
+
     if(!m_loop.invalidLoop && (event.subtype == MidiEvent::ST_LOOPSTART))
     {
         /*
@@ -209,13 +211,14 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
                     );
                 }
             }
-
-            LoopStackEntry e;
-            e.loops = event.data_loc[0];
-            e.infinity = (event.data_loc[0] == 0);
-            e.start = abs_position;
-            e.end = abs_position;
-            m_loop.stack[m_loop.stackDepth++] = e;
+            else
+            {
+                loopEntryP = &m_loop.stack[m_loop.stackDepth++];
+                loopEntryP->loops = event.data_loc[0];
+                loopEntryP->infinity = (event.data_loc[0] == 0);
+                loopEntryP->start = abs_position;
+                loopEntryP->end = abs_position;
+            }
         }
 
         // In this row we got loop event, register this!
