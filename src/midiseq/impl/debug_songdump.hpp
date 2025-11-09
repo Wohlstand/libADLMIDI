@@ -65,26 +65,6 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
         return "SysComSongPosPtr";
     case BW_MidiSequencer::MidiEvent::T_SYSEX2:
         return "SysEx2";
-    case BW_MidiSequencer::MidiEvent::T_0xFE:
-        switch(subType)
-        {
-        case BW_MidiSequencer::MidiEvent::ST_0x10:
-            return "FE-HMI-0x10";
-        case BW_MidiSequencer::MidiEvent::ST_0x11:
-            return "FE-HMI-0x11";
-        case BW_MidiSequencer::MidiEvent::ST_0x12:
-            return "FE-HMI-0x12";
-        case BW_MidiSequencer::MidiEvent::ST_0x13:
-            return "FE-HMI-0x13";
-        case BW_MidiSequencer::MidiEvent::ST_0x14:
-            return "FE-HMI-0x14";
-        case BW_MidiSequencer::MidiEvent::ST_0x15:
-            return "FE-HMI-0x15";
-        case BW_MidiSequencer::MidiEvent::ST_0x16:
-            return "FE-HMI-0x16";
-        default:
-            return "FE-HMI-UNK";
-        }
     case BW_MidiSequencer::MidiEvent::T_SPECIAL:
         switch(subType)
         {

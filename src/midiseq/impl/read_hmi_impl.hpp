@@ -58,6 +58,178 @@ static const uint8_t s_hmi_evtSizeCtrl[16] =
     0, 1, 2, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
+/**
+ * @brief HMI-specific meta-event that is placed instead of special controllers like loop points and branches
+ */
+enum HMIEventTypes
+{
+    S_HMI_SPECIAL = 0xFE
+};
+
+/**
+ * @brief Sub-types for HMI-specific meta-events
+ */
+enum HMIEventSubTypes
+{
+    //! Place the tag of the track-local or song-global branch with ID attached
+    ST_HMI_NEW_BRANCH           = 0x10,
+    /****************************************************************************
+     * Data format for the new branch event:                                    *
+     * = Has dynamic size, minimum size is 7 bytes =                            *
+     ****************************************************************************
+     * - 2 bytes:                                                               *
+     *   - [x]yyy yyyy zzzz zzzz - 16-bit little-endian number                  *
+     *     HMI SOS' Internal branch ID value built with next parts              *
+     *     x = 0 - local branch, 1 - global branch                              *
+     *     y = ID of the branch                                                 *
+     *     z = 0 is normal branch, 1 a branch spawned by the loop start point   *
+     * - 1 byte:                                                                *
+     *   - The "N" value of length of extra data                                *
+     * - N bytes                                                                *
+     *   - Extra data                                                           *
+     * - 4 bytes                                                                *
+     *   - Tail of extra data (Possibly a track offset of this event)           *
+     ****************************************************************************/
+
+    //! Jump to track-local branch of ID
+    ST_HMI_JUMP_TO_LOC_BRANCH   = 0x11,
+    /****************************************************************************
+     * Data format for the jump to track-local branch of ID event:              *
+     * = Totally always 6 bytes =                                               *
+     ****************************************************************************
+     * - 2 bytes:                                                               *
+     *   - [x]yyy yyyy zzzz zzzz - 16-bit little-endian number                  *
+     *     HMI SOS' Internal branch ID value built with next parts              *
+     *     x = 0 - local branch, 1 - global branch                              *
+     *     y = ID of the branch                                                 *
+     *     z = 0 is normal branch, 1 a branch spawned by the loop start point   *
+     * - 4 bytes                                                                *
+     *   - Extra data (Possibly a track offset of this event)                   *
+     ****************************************************************************/
+
+    //! Track-local Loop start point
+    ST_HMI_TRACK_LOOP_START     = 0x12,
+    /****************************************************************************
+     * Track-local loop start point                                             *
+     * = Totally always 2 bytes =                                               *
+     ****************************************************************************
+     * - 1 byte:                                                                *
+     *   - Number of loops without 1 (12 means 13 loops, 0xFF means infinite)   *
+     * - 1 byte:                                                                *
+     *   - Duplicate of previous byte                                           *
+     ****************************************************************************/
+
+    //! Track local loop end point
+    ST_HMI_TRACK_LOOP_END       = 0x13,
+    /****************************************************************************
+     * Track-local loop end point                                               *
+     * = Totally always 6 bytes =                                               *
+     ****************************************************************************
+     * - 2 bytes:                                                               *
+     *   - The ID of the branch spawned by the related loop start event         *
+     * - 4 byte:                                                                *
+     *   - Extra data (Possibly a track offset of this event)                   *
+     ****************************************************************************/
+
+    //! Soong-global loop start point
+    ST_HMI_GLOB_LOOP_START      = 0x14,
+    /****************************************************************************
+     * Song-global loop start point                                             *
+     * = Totally always 2 bytes =                                               *
+     ****************************************************************************
+     * - 1 byte:                                                                *
+     *   - Number of loops without 1 (12 means 13 loops, 0xFF means infinite)   *
+     * - 1 byte:                                                                *
+     *   - Duplicate of previous byte                                           *
+     ****************************************************************************/
+
+    //! Soong-global loop end point
+    ST_HMI_GLOB_LOOP_END        = 0x15,
+    /****************************************************************************
+     * Song-global loop end point                                               *
+     * = Totally always 6 bytes =                                               *
+     ****************************************************************************
+     * - 2 bytes:                                                               *
+     *   - The ID of the branch spawned by the related loop start event         *
+     * - 4 byte:                                                                *
+     *   - Extra data (Possibly a track offset of this event)                   *
+     ****************************************************************************/
+
+    //! Jump to song-global branch of ID
+    ST_HMI_JUMP_TO_GLOB_BRANCH  = 0x16
+    /****************************************************************************
+     * Data format for the jump to song-global branch of ID event:              *
+     * = Totally always 2 bytes =                                               *
+     ****************************************************************************
+     * - 2 bytes:                                                               *
+     *   - [x]yyy yyyy zzzz zzzz - 16-bit little-endian number                  *
+     *     HMI SOS' Internal branch ID value built with next parts              *
+     *     x = 0 - local branch, 1 - global branch                              *
+     *     y = ID of the branch                                                 *
+     *     z = 0 is normal branch, 1 a branch spawned by the loop start point   *
+     ****************************************************************************/
+};
+
+/**
+ * @brief The HMI/HMP specific MIDI controllers
+ */
+enum HMIController
+{
+    //! Enable controller restaration when branching and looping
+    HMI_CC_RESTORE_ENABLE       = 103,
+    //! Disable controller restaration when branching and looping
+    HMI_CC_RESTORE_DISABLE      = 104,
+
+    //! Lock/unlock the channel from stealing
+    HMI_CC_LOCK_CHANNEL         = 106,
+    //! Set the channel priority
+    HMI_CC_SET_CH_PRIORITY      = 107,
+
+    //! Sets the location of local branch of ID
+    HMI_CC_SET_LOCAL_BRANCH     = 108,
+    //! Jump to local branch location of ID
+    HMI_CC_JUMP_TO_LOC_BRANCH   = 109,
+
+    //! Global loop start point
+    HMI_CC_GLOB_LOOP_START      = 110,
+    //! Global loop end
+    HMI_CC_GLOB_LOOP_END        = 111,
+
+    //! Sets the location of global branch of ID
+    HMI_CC_SET_GLOBAL_BRANCH    = 113,
+    //! Jump to global branch location of ID
+    HMI_CC_JUMP_TO_GLOB_BRANCH  = 114,
+
+    //! Local loop start point (loop inside the same track)
+    HMI_CC_LOCAL_LOOP_START     = 116,
+    //! Local loop end point (loop inside the same track)
+    HMI_CC_LOCAL_LOOP_END       = 117,
+
+    //! Callback Trigger
+    HMI_CC_CALLBACK_TRIGGER     = 119
+};
+
+/**
+ * @brief Sub-type of the on-loop state restore setup event
+ */
+enum HMISaveRestore
+{
+    //! Restore CC of ID on loop
+    HMI_ONLOOP_RESTORE_CC       = 102,
+    //! Execute note offs on loop
+    HMI_ONLOOP_NOTEOFFS         = 103,
+    //! Restore patch program on loop
+    HMI_ONLOOP_RESTORE_PATCH    = 104,
+    //! Restore pitch bend state on loop
+    HMI_ONLOOP_RESTORE_WHEEL    = 105,
+    //! Restore Note After-Touch state on loop
+    HMI_ONLOOP_RESTORE_NOTEATT  = 106,
+    //! Restore Channel After-Touch on loop
+    HMI_ONLOOP_RESTORE_CHANATT  = 107,
+    //! Restore all CC controllers state on loop
+    HMI_ONLOOP_RESTORE_ALL_CC   = 115
+};
+
 
 bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status)
 {
@@ -157,7 +329,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             return false;
         }
     }
-    else if(byte == BW_MidiSequencer::MidiEvent::T_0xFE) // Special HMI-specific events
+    else if(byte == S_HMI_SPECIAL) // Special HMI-specific events
     {
         if(fr.read(&subType, 1, 1) != 1)
         {
@@ -174,7 +346,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
         switch(subType)
         {
-        case BW_MidiSequencer::MidiEvent::ST_0x10: // 2 bytes, 1 byte, len(prev byte) + 4 bytes
+        case ST_HMI_NEW_BRANCH: // 2 bytes, 1 byte, len(prev byte) + 4 bytes
             // Install the branch point, local or global
             event.data_loc_size = 2;
 
@@ -207,11 +379,10 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             insertDataToBank(event, m_dataBank, fr, skipSize + 4);
             break;
 
-        case BW_MidiSequencer::MidiEvent::ST_0x11: // 6 bytes
+        case ST_HMI_JUMP_TO_LOC_BRANCH: // 6 bytes
             // Jump to local branch
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_TRACK_BRANCH_TO;
-            event.data_loc[0] = event.data_loc[1];
             event.data_loc_size = 2;
 
             if(fr.read(event.data_loc, 1, 2) != 2)
@@ -224,7 +395,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             insertDataToBank(event, m_dataBank, fr, 4);
             break;
 
-        case BW_MidiSequencer::MidiEvent::ST_0x12: // 2 bytes
+        case ST_HMI_TRACK_LOOP_START: // 2 bytes
             // Begin local in-track loop
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN;
@@ -243,7 +414,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
             break;
 
-        case BW_MidiSequencer::MidiEvent::ST_0x13: // 6 bytes
+        case ST_HMI_TRACK_LOOP_END: // 6 bytes
             // End local loop
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
@@ -253,7 +424,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             break;
 
 
-        case BW_MidiSequencer::MidiEvent::ST_0x14: // 2 bytes
+        case ST_HMI_GLOB_LOOP_START: // 2 bytes
             // Begin global loop
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
@@ -272,7 +443,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
 
             break;
 
-        case BW_MidiSequencer::MidiEvent::ST_0x15: // 6 bytes
+        case ST_HMI_GLOB_LOOP_END: // 6 bytes
             // End global loop
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_LOOPSTACK_END;
@@ -281,7 +452,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             insertDataToBank(event, m_dataBank, fr, 6);
             break;
 
-        case BW_MidiSequencer::MidiEvent::ST_0x16: // 2 bytes
+        case ST_HMI_JUMP_TO_GLOB_BRANCH: // 2 bytes
             // Jump to global branch
             event.type = MidiEvent::T_SPECIAL;
             event.subtype = MidiEvent::ST_BRANCH_TO;
@@ -388,12 +559,12 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
             {
                 switch(event.data_loc[0])
                 {
-                case 103: // Enable controller restaration when branching and looping
+                case HMI_CC_RESTORE_ENABLE:
                     event.type = MidiEvent::T_SPECIAL;
                     switch(event.data_loc[1])
                     {
                     default:
-                        if(event.data_loc[1] > 102)
+                        if(event.data_loc[1] > HMI_ONLOOP_RESTORE_CC)
                         {
                             m_errorString.appendFmt("HMI/HMP: Unsupported value for the CC103 Enable state restoring on loop: %u", event.data_loc[1]);
                             return false;
@@ -402,39 +573,39 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                         event.data_loc[0] = event.data_loc[1];
                         event.data_loc_size = 1;
                         break;
-                    case 103:
+                    case HMI_ONLOOP_NOTEOFFS:
                         event.subtype = MidiEvent::ST_ENABLE_NOTEOFF_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 104:
+                    case HMI_ONLOOP_RESTORE_PATCH:
                         event.subtype = MidiEvent::ST_ENABLE_RESTORE_PATCH_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 105:
+                    case HMI_ONLOOP_RESTORE_WHEEL:
                         event.subtype = MidiEvent::ST_ENABLE_RESTORE_WHEEL_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 106:
+                    case HMI_ONLOOP_RESTORE_NOTEATT:
                         event.subtype = MidiEvent::ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 107:
+                    case HMI_ONLOOP_RESTORE_CHANATT:
                         event.subtype = MidiEvent::ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 115:
+                    case HMI_ONLOOP_RESTORE_ALL_CC:
                         event.subtype = MidiEvent::ST_ENABLE_RESTORE_ALL_CC_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
                     }
                     break;
 
-                case 104: // Disable controller restaration when branching and looping
+                case HMI_CC_RESTORE_DISABLE:
                     event.type = MidiEvent::T_SPECIAL;
                     switch(event.data_loc[1])
                     {
                     default:
-                        if(event.data_loc[1] > 102)
+                        if(event.data_loc[1] > HMI_ONLOOP_RESTORE_CC)
                         {
                             m_errorString.appendFmt("HMI/HMP: Unsupported value for the CC104 Disable state restoring on loop: %u", event.data_loc[1]);
                             return false;
@@ -443,59 +614,63 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                         event.data_loc[0] = event.data_loc[1];
                         event.data_loc_size = 1;
                         break;
-                    case 103:
+                    case HMI_ONLOOP_NOTEOFFS:
                         event.subtype = MidiEvent::ST_DISABLE_NOTEOFF_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 104:
+                    case HMI_ONLOOP_RESTORE_PATCH:
                         event.subtype = MidiEvent::ST_DISABLE_RESTORE_PATCH_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 105:
+                    case HMI_ONLOOP_RESTORE_WHEEL:
                         event.subtype = MidiEvent::ST_DISABLE_RESTORE_WHEEL_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 106:
+                    case HMI_ONLOOP_RESTORE_NOTEATT:
                         event.subtype = MidiEvent::ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 107:
+                    case HMI_ONLOOP_RESTORE_CHANATT:
                         event.subtype = MidiEvent::ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
-                    case 115:
+                    case HMI_ONLOOP_RESTORE_ALL_CC:
                         event.subtype = MidiEvent::ST_DISABLE_RESTORE_ALL_CC_ON_LOOP;
                         event.data_loc_size = 0;
                         break;
                     }
                     break;
 
-                case 106: // Lock the channel
+                case HMI_CC_LOCK_CHANNEL:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = event.data_loc[1] == 0 ? MidiEvent::ST_CHANNEL_UNLOCK : MidiEvent::ST_CHANNEL_LOCK;
                     event.data_loc_size = 0;
                     break;
-                case 107: // Set the channel priority
+
+                case HMI_CC_SET_CH_PRIORITY:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_CHANNEL_PRIORITY;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
-                case 108: // Local branch location
+
+                case HMI_CC_SET_LOCAL_BRANCH:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_BRANCH_LOCATION;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
-                case 109: // branch to local branch location
+
+                case HMI_CC_JUMP_TO_LOC_BRANCH:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_BRANCH_TO;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
-                case 110: // Global loop start
+
+                case HMI_CC_GLOB_LOOP_START:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
                     event.data_loc[0] = event.data_loc[1];
@@ -503,26 +678,30 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                         event.data_loc[0] = 0; // 0xFF is "infinite" too
                     event.data_loc_size = 1;
                     break;
-                case 111: // Global loop end
+
+                case HMI_CC_GLOB_LOOP_END:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_LOOPSTACK_END;
                     event.data_loc_size = 0;
                     break;
 
-                case 113: // Global branch location
+
+                case HMI_CC_SET_GLOBAL_BRANCH:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_BRANCH_LOCATION;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
-                case 114: // branch to global branch location
+
+                case HMI_CC_JUMP_TO_GLOB_BRANCH:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_BRANCH_TO;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
-                case 116: // Local loop start (look inside the same track)
+
+                case HMI_CC_LOCAL_LOOP_START:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN;
                     event.data_loc[0] = event.data_loc[1];
@@ -530,13 +709,15 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMPHeader &hmp_head, const HMITrackD
                         event.data_loc[0] = 0; // 0xFF is "infinite" too
                     event.data_loc_size = 1;
                     break;
-                case 117: // Local loop end (loop inside the same track)
+
+                case HMI_CC_LOCAL_LOOP_END:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
                     event.data_loc_size = 0;
                     break;
 
-                case 119:  // Callback Trigger
+
+                case HMI_CC_CALLBACK_TRIGGER:
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_CALLBACK_TRIGGER;
                     event.data_loc[0] = event.data_loc[1];
