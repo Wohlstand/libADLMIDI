@@ -1759,7 +1759,7 @@ void MIDIplay::panic()
     for(uint8_t chan = 0; chan < m_midiChannels.size(); chan++)
     {
         for(uint8_t note = 0; note < 128; note++)
-            realTime_NoteOff(chan, note);
+            noteOff(chan, note, true);
     }
 }
 

@@ -189,6 +189,7 @@ To build that example you will need to have installed SDL2 library.
  * Added support for HMI and HMP files!
  * Added support for in-track (local) loops.
  * Optimized work with chip instruments.
+ * On attempt to switch the bank will always trigger the panic.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.

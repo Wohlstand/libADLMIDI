@@ -111,6 +111,9 @@ bool MIDIplay::LoadBank(FileAndMemReader &fr)
         }
     }
 
+    // Kill all notes before switching the bank
+    realTime_panic();
+
     Synth &synth = *m_synth;
 
     synth.setEmbeddedBank(m_setup.bankId);

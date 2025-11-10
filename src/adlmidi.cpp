@@ -218,6 +218,9 @@ ADLMIDI_EXPORT int adl_setBank(ADL_MIDIPlayer *device, int bank)
         return -1;
     }
 
+    // Kill all notes before switching the bank
+    play->realTime_panic();
+
     Synth &synth = *play->m_synth;
     play->m_setup.bankId = static_cast<uint32_t>(bankno);
     synth.setEmbeddedBank(play->m_setup.bankId);
