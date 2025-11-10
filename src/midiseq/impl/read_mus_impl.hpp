@@ -125,8 +125,9 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 
     buildSmfSetupReset(1);
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(0x101));
-    m_tempo         = m_invDeltaTicks * fraction<uint64_t>(0x101) * 2; // MUS has the fixed tempo
+    m_invDeltaTicks.nom = 1;
+    m_invDeltaTicks.denom = static_cast<uint64_t>(0x101);
+    tempo_mul(&m_tempo, &m_invDeltaTicks, 0x101 * 2); // MUS has the fixed tempo
 
     for(int i = 0; i < 16; ++i)
     {

@@ -54,8 +54,10 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
 
     buildSmfSetupReset(trackCount);
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
-    m_tempo = fraction<uint64_t>(1, static_cast<uint64_t>(deltaTicks) * 2);
+    m_invDeltaTicks.nom = 1;
+    m_invDeltaTicks.denom = 1000000l * deltaTicks;
+    m_tempo.nom = 1;
+    m_tempo.denom = deltaTicks * 2;
 
     fr.seek(0, FileAndMemReader::SET);
     if(fr.read(imfRaw, 1, 2) != 2)

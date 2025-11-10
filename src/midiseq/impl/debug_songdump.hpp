@@ -30,6 +30,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cerrno>
+#include <cmath>
 
 #include "../midi_sequencer.hpp"
 

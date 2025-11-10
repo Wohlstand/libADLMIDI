@@ -33,6 +33,7 @@
 #include "impl/platform_impl.hpp"
 
 #include "impl/common.hpp"
+#include "impl/tempo_fraction.hpp"
 
 #include "impl/err_string_impl.hpp"
 #include "impl/durated_note_impl.hpp"
@@ -95,7 +96,13 @@ BW_MidiSequencer::BW_MidiSequencer() :
 {
     m_loop.reset();
     m_loop.invalidLoop = false;
+
     m_time.init();
+
+    m_tempo.nom = 0;
+    m_tempo.denom = 1;
+    m_invDeltaTicks.nom = 0;
+    m_invDeltaTicks.denom = 1;
 }
 
 BW_MidiSequencer::~BW_MidiSequencer()

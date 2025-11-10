@@ -59,8 +59,11 @@ bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
 
     fr.seek(7 - static_cast<long>(headerSize), FileAndMemReader::CUR);
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
-    m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks) * 2);
+    m_invDeltaTicks.nom = 1;
+    m_invDeltaTicks.denom = 1000000l * deltaTicks;
+    m_tempo.nom = 1;
+    m_tempo.denom = deltaTicks * 2;
+
     // static const unsigned char EndTag[4] = {0xFF, 0x2F, 0x00, 0x00};
     totalGotten = 0;
 

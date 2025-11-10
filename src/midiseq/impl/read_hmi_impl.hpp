@@ -742,6 +742,9 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     MidiTrackRow evtPos;
     LoopPointParseState loopState;
     MidiEvent event;
+#ifdef BWMIDI_DEBUG_HMI_PARSE
+    Tempo_t t;
+#endif
 
     std::vector<TempoEvent> temposList;
     std::vector<HMITrackDir> dir;
@@ -800,8 +803,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         fflush(stdout);
 #endif
 
-        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(hmi_data.division));
-        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(hmi_data.division));
+        m_invDeltaTicks.nom = 1;
+        m_invDeltaTicks.denom = 1000000l * hmi_data.division;
+        m_tempo.nom = 1;
+        m_tempo.denom = hmi_data.division;
 
         dir.resize(hmi_data.tracksCount);
         std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
@@ -999,9 +1004,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         }
 
 
-
-        m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(hmi_data.division));
-        m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(hmi_data.division));
+        m_invDeltaTicks.nom = 1;
+        m_invDeltaTicks.denom = 1000000l * hmi_data.division;
+        m_tempo.nom = 1;
+        m_tempo.denom = hmi_data.division;
 
         dir.resize(hmi_data.tracksCount);
         std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
@@ -1118,7 +1124,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     evtPos.clear();
 
 #ifdef BWMIDI_DEBUG_HMI_PARSE
-    printf("==Tempo %g, Div %g=========================\n", m_tempo.value(), m_invDeltaTicks.value());
+    printf("==Tempo %g, Div %g=========================\n", tempo_get(&m_tempo), tempo_get(&m_invDeltaTicks));
     fflush(stdout);
 #endif
 
@@ -1257,9 +1263,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             if((evtPos.delay > 0) || loopState.gotLoopEventsInThisRow > 0  || (event.subtype == MidiEvent::ST_ENDTRACK))
             {
 #ifdef BWMIDI_DEBUG_HMI_PARSE
+                tempo_mul(&t, &m_tempo, abs_position);
                 printf("- Delay %lu, Position %lu, stored events: %lu, time: %g seconds\n",
                         (unsigned long)evtPos.delay, abs_position, evtPos.events_end - evtPos.events_begin,
-                        (abs_position * m_tempo).value());
+                        tempo_get(&t));
                 fflush(stdout);
 #endif
 

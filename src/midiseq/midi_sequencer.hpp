@@ -29,7 +29,6 @@
 #include <list>
 #include <vector>
 
-#include "fraction.hpp"
 #include "file_reader.hpp"
 #include "midi_sequencer.h"
 
@@ -171,6 +170,15 @@ private:
         {
             return err;
         }
+    };
+
+    /**
+     * @brief Tempo value as a fraction
+     */
+    struct Tempo_t
+    {
+        uint64_t nom;
+        uint64_t denom;
     };
 
     /**
@@ -408,7 +416,7 @@ private:
     struct TempoChangePoint
     {
         uint64_t absPos;
-        fraction<uint64_t> tempo;
+        Tempo_t tempo;
     };
     //P.S. I declared it here instead of local in-function because C++98 can't process templates with locally-declared structures
 
@@ -724,9 +732,9 @@ private:
     std::vector<MIDI_MarkerEntry> m_musMarkers;
 
     //! Time of one tick
-    fraction<uint64_t> m_invDeltaTicks;
+    Tempo_t m_invDeltaTicks;
     //! Current tempo
-    fraction<uint64_t> m_tempo;
+    Tempo_t m_tempo;
     //! Is song at end
     bool    m_atEnd;
 
@@ -762,6 +770,31 @@ private:
     ErrString m_errorString;
     //! Sequencer's time processor
     SequencerTime m_time;
+
+    /**********************************************************************************
+     *                             Tempo fraction                                     *
+     **********************************************************************************/
+    /**
+     * @brief Convert fraction into double
+     * @param tempo Tempo fraction value
+     * @return Double value converted from the fraction
+     */
+    static inline double tempo_get(Tempo_t *tempo) { return tempo->nom / (double)tempo->denom; }
+
+    /**
+     * @brief Multiple tempo fraction by integer
+     * @param out Product output
+     * @param val1 Tempo fraction multiplier
+     * @param val2 Integer multiplier
+     */
+    static void tempo_mul(Tempo_t *out, const Tempo_t *val1, uint64_t val2);
+
+    /**
+     * @brief Optimize the tempo fraction
+     * @param tempo Tempo fraction to optimize
+     */
+    static void tempo_optimize(Tempo_t *tempo);
+
 
     /**********************************************************************************
      *                             Durated note                                       *

@@ -144,8 +144,10 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     fr.seeku(mus_start, FileAndMemReader::SET);
     deltaTicks = (size_t)ticks;
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
-    m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks));
+    m_invDeltaTicks.nom = 1;
+    m_invDeltaTicks.denom = 1000000l * deltaTicks;
+    m_tempo.nom = 1;
+    m_tempo.denom = deltaTicks;
 
     totalGotten = 0;
 

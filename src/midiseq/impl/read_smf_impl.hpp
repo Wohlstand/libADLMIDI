@@ -707,8 +707,10 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     if(smfFormat > 2)
         smfFormat = 1;
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(deltaTicks));
-    m_tempo         = fraction<uint64_t>(1,            static_cast<uint64_t>(deltaTicks) * 2);
+    m_invDeltaTicks.nom = 1;
+    m_invDeltaTicks.denom = 1000000l * deltaTicks;
+    m_tempo.nom = 1;
+    m_tempo.denom = deltaTicks * 2;
 
     size_t totalGotten = 0;
     size_t tracks_begin = fr.tell();

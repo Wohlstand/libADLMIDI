@@ -111,7 +111,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             status = -1;
             return;
         case MidiEvent::ST_TEMPOCHANGE:
-            m_tempo = m_invDeltaTicks * fraction<uint64_t>(readBEint(datau, length));
+            tempo_mul(&m_tempo, &m_invDeltaTicks, readBEint(datau, length));
             return;
 
         case MidiEvent::ST_DEVICESWITCH:
@@ -488,6 +488,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     const size_t        trackCount = m_currentPosition.track.size();
     const Position      rowBeginPosition(m_currentPosition);
     LoopRuntimeState    loopState, loopStateLoc;
+    Tempo_t t;
 
     std::memset(&loopState, 0, sizeof(loopState));
 
@@ -620,12 +621,12 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
         duratedNoteTick(tk, shortestDelay);
     }
 
-    fraction<uint64_t> t = shortestDelay * m_tempo;
+    tempo_mul(&t, &m_tempo, shortestDelay);
 
 #ifdef ENABLE_BEGIN_SILENCE_SKIPPING
     if(m_currentPosition.began)
 #endif
-        m_currentPosition.wait += t.value();
+        m_currentPosition.wait += tempo_get(&t);
 
     if(loopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
         m_loopBeginPosition = rowBeginPosition;

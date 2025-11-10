@@ -71,8 +71,10 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
     buildSmfSetupReset(1);
 
-    m_invDeltaTicks = fraction<uint64_t>(1, 1000000l * static_cast<uint64_t>(tempo));
-    m_tempo         = fraction<uint64_t>(1, static_cast<uint64_t>(tempo) * 2);
+    m_invDeltaTicks.nom = 1;
+    m_invDeltaTicks.denom = 1000000l * tempo;
+    m_tempo.nom = 1;
+    m_tempo.denom = tempo * 2;
 
     uint64_t ins_count = 0;
 
