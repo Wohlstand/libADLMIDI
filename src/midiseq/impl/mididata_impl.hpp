@@ -219,7 +219,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                     tailTempo = &points.back();
                     postDelay = pos.absPos - tailTempo->absPos;
                     tempo_mul(&t, currentTempo, postDelay);
-                    posPrev->timeDelay += tempo_get(&t);;
+                    posPrev->timeDelay += tempo_get(&t);
 
                     // Store Common time delay
                     posPrev->time = time;
