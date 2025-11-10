@@ -111,20 +111,36 @@ void BW_MidiSequencer::initTracksBegin(size_t track)
 
 
 void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
-                                          uint64_t loopStartTicks,
-                                          uint64_t loopEndTicks)
+                                     uint64_t loopStartTicks,
+                                     uint64_t loopEndTicks)
 {
-    const size_t    trackCount = m_trackData.size();
+    TempoChangePoint firstPoint, tempoMarker, *tailTempo;
+    MidiTrackRow fakePos, *posPrev;
+    Position rowPosition, rowBeginPosition;
+    MIDI_MarkerEntry marker;
+    fraction<uint64_t> t, currentTempo;
+
+    uint64_t shortestDelay = 0, midDelay = 0, postDelay = 0;
+    size_t tempo_change_index, tk, i, j;
+    unsigned caughLoopStart = 0;
+    bool shortestDelayNotFound = true, scanDone = false;
+    double time = 0.0;
+
+    std::vector<TempoChangePoint> points;
+
+
     /********************************************************************************/
     // Calculate time basing on collected tempo events
     /********************************************************************************/
-    for(size_t tk = 0; tk < trackCount; ++tk)
+    for(tk = 0; tk < m_tracksCount; ++tk)
     {
-        fraction<uint64_t> currentTempo = m_tempo;
-        double  time = 0.0;
+        time = 0.0;
+        currentTempo = m_tempo;
         // uint64_t abs_position = 0;
-        size_t tempo_change_index = 0;
+        tempo_change_index = 0;
+
         MidiTrackQueue &track = m_trackData[tk];
+
         if(track.empty())
             continue;//Empty track is useless!
 
@@ -133,8 +149,10 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
         std::fflush(stdout);
 #endif
 
-        MidiTrackRow fakePos, *posPrev = &(*(track.begin()));//First element
-        if(posPrev->absPos > 0) // If doesn't begins with zero!
+        posPrev = &(*(track.begin()));//First element
+
+        // If doesn't begins with zero, add a fake one!
+        if(posPrev->absPos > 0)
         {
             fakePos.absPos = 0;
             fakePos.delay = posPrev->absPos;
@@ -156,15 +174,15 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                 if(tempos[tempo_change_index].absPosition <= pos.absPos)
                 {
                     // Stop points: begin point and tempo change points are before end point
-                    std::vector<TempoChangePoint> points;
-                    fraction<uint64_t> t;
-                    TempoChangePoint firstPoint = {posPrev->absPos, currentTempo};
+                    points.clear();
+
+                    firstPoint.absPos = posPrev->absPos;
+                    firstPoint.tempo = currentTempo;
                     points.push_back(firstPoint);
 
                     // Collect tempo change points between previous and current events
                     do
                     {
-                        TempoChangePoint tempoMarker;
                         const TempoEvent &tempoPoint = tempos[tempo_change_index];
                         tempoMarker.absPos = tempoPoint.absPosition;
                         tempoMarker.tempo = m_invDeltaTicks * fraction<uint64_t>(tempoPoint.tempo);
@@ -178,11 +196,11 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                     time -= posPrev->timeDelay;
                     posPrev->timeDelay = 0.0;
 
-                    for(size_t i = 0, j = 1; j < points.size(); i++, j++)
+                    for(i = 0, j = 1; j < points.size(); i++, j++)
                     {
                         /* If one or more tempo events are appears between of two events,
                          * calculate delays between each tempo point, begin and end */
-                        uint64_t midDelay = 0;
+
                         // Delay between points
                         midDelay  = points[j].absPos - points[i].absPos;
                         // Time delay between points
@@ -195,9 +213,10 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                         tempoChanged = true;
 #endif
                     }
+
                     // Then calculate time between last tempo change point and end point
-                    TempoChangePoint tailTempo = points.back();
-                    uint64_t postDelay = pos.absPos - tailTempo.absPos;
+                    tailTempo = &points.back();
+                    postDelay = pos.absPos - tailTempo->absPos;
                     t = postDelay * currentTempo;
                     posPrev->timeDelay += t.value();
 
@@ -207,18 +226,17 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                 }
             }
 
-            fraction<uint64_t> t = pos.delay * currentTempo;
+            t = pos.delay * currentTempo;
             pos.timeDelay = t.value();
             pos.time = time;
             time += pos.timeDelay;
 
             // Capture markers after time value calculation
-            for(size_t i = pos.events_begin; i < pos.events_end; ++i)
+            for(i = pos.events_begin; i < pos.events_end; ++i)
             {
                 MidiEvent &e = m_eventBank[i];
                 if((e.type == MidiEvent::T_SPECIAL) && (e.subtype == MidiEvent::ST_MARKER))
                 {
-                    MIDI_MarkerEntry marker;
                     marker.label = e.data_block;
                     marker.pos_ticks = pos.absPos;
                     marker.pos_time = pos.time;
@@ -264,20 +282,20 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
     /********************************************************************************/
     // Find and set proper loop points
     /********************************************************************************/
-    if(!m_loop.invalidLoop && !m_currentPosition.track.empty())
+    if(!m_loop.invalidLoop)
     {
-        unsigned caughLoopStart = 0;
-        bool scanDone = false;
-        const size_t  trackCount = m_currentPosition.track.size();
-        Position rowPosition(m_currentPosition);
+        caughLoopStart = 0;
+        scanDone = false;
+        rowPosition = m_currentPosition;
 
         while(!scanDone)
         {
-            const Position      rowBeginPosition(rowPosition);
+            rowBeginPosition = rowPosition;
 
-            for(size_t tk = 0; tk < trackCount; ++tk)
+            for(tk = 0; tk < m_tracksCount; ++tk)
             {
                 Position::TrackInfo &track = rowPosition.track[tk];
+
                 if((track.lastHandledEvent >= 0) && (track.delay <= 0))
                 {
                     // Check is an end of track has been reached
@@ -287,7 +305,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                         continue;
                     }
 
-                    for(size_t i = track.pos->events_begin; i < track.pos->events_end; ++i)
+                    for(i = track.pos->events_begin; i < track.pos->events_end; ++i)
                     {
                         const MidiEvent &evt = m_eventBank[i];
                         if(evt.type == MidiEvent::T_SPECIAL && evt.subtype == MidiEvent::ST_LOOPSTART)
@@ -307,10 +325,10 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
             }
 
             // Find a shortest delay from all track
-            uint64_t shortestDelay = 0;
-            bool     shortestDelayNotFound = true;
+            shortestDelay = 0;
+            shortestDelayNotFound = true;
 
-            for(size_t tk = 0; tk < trackCount; ++tk)
+            for(tk = 0; tk < m_tracksCount; ++tk)
             {
                 Position::TrackInfo &track = rowPosition.track[tk];
                 if((track.lastHandledEvent >= 0) && (shortestDelayNotFound || track.delay < shortestDelay))
@@ -321,7 +339,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
             }
 
             // Schedule the next playevent to be processed after that delay
-            for(size_t tk = 0; tk < trackCount; ++tk)
+            for(tk = 0; tk < m_tracksCount; ++tk)
                 rowPosition.track[tk].delay -= shortestDelay;
 
             if(caughLoopStart > 0)
@@ -335,127 +353,6 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                 break;
         }
     }
-
-    /********************************************************************************/
-    // Resolve "hell of all times" of too short drum notes:
-    // move too short percussion note-offs far far away as possible
-    /********************************************************************************/
-// OLD DEAD CODE NO LONGER NEEDED
-#if 0 // Use this to record WAVEs for comparison before/after implementing of this
-    if(m_format == Format_MIDI) // Percussion fix is needed for MIDI only, not for IMF/RSXX or CMF
-    {
-        //! Minimal real time in seconds
-#define DRUM_NOTE_MIN_TIME  0.03
-        //! Minimal ticks count
-#define DRUM_NOTE_MIN_TICKS 15
-        struct NoteState
-        {
-            double       delay;
-            uint64_t     delayTicks;
-            bool         isOn;
-            char         ___pad[7];
-        } drNotes[255];
-        size_t banks[16];
-
-        for(size_t tk = 0; tk < trackCount; ++tk)
-        {
-            std::memset(drNotes, 0, sizeof(drNotes));
-            std::memset(banks, 0, sizeof(banks));
-            MidiTrackQueue &track = m_trackData[tk];
-            if(track.empty())
-                continue; // Empty track is useless!
-
-            for(MidiTrackQueue::iterator it = track.begin(); it != track.end(); it++)
-            {
-                MidiTrackRow &pos = *it;
-
-                for(ssize_t e = 0; e < (ssize_t)pos.events.size(); e++)
-                {
-                    MidiEvent *et = &pos.events[(size_t)e];
-
-                    /* Set MSB/LSB bank */
-                    if(et->type == MidiEvent::T_CTRLCHANGE)
-                    {
-                        uint8_t ctrlno = et->data[0];
-                        uint8_t value =  et->data[1];
-                        switch(ctrlno)
-                        {
-                        case 0: // Set bank msb (GM bank)
-                            banks[et->channel] = (value << 8) | (banks[et->channel] & 0x00FF);
-                            break;
-                        case 32: // Set bank lsb (XG bank)
-                            banks[et->channel] = (banks[et->channel] & 0xFF00) | (value & 0x00FF);
-                            break;
-                        default:
-                            break;
-                        }
-                        continue;
-                    }
-
-                    bool percussion = (et->channel == 9) ||
-                                      banks[et->channel] == 0x7E00 || // XG SFX1/SFX2 channel (16128 signed decimal)
-                                      banks[et->channel] == 0x7F00;   // XG Percussion channel (16256 signed decimal)
-                    if(!percussion)
-                        continue;
-
-                    if(et->type == MidiEvent::T_NOTEON)
-                    {
-                        uint8_t     note = et->data[0] & 0x7F;
-                        NoteState   &ns = drNotes[note];
-                        ns.isOn = true;
-                        ns.delay = 0.0;
-                        ns.delayTicks = 0;
-                    }
-                    else if(et->type == MidiEvent::T_NOTEOFF)
-                    {
-                        uint8_t note = et->data[0] & 0x7F;
-                        NoteState &ns = drNotes[note];
-                        if(ns.isOn)
-                        {
-                            ns.isOn = false;
-                            if(ns.delayTicks < DRUM_NOTE_MIN_TICKS || ns.delay < DRUM_NOTE_MIN_TIME) // If note is too short
-                            {
-                                //Move it into next event position if that possible
-                                for(MidiTrackQueue::iterator itNext = it;
-                                    itNext != track.end();
-                                    itNext++)
-                                {
-                                    MidiTrackRow &posN = *itNext;
-                                    if(ns.delayTicks > DRUM_NOTE_MIN_TICKS && ns.delay > DRUM_NOTE_MIN_TIME)
-                                    {
-                                        // Put note-off into begin of next event list
-                                        posN.events.insert(posN.events.begin(), pos.events[(size_t)e]);
-                                        // Renive this event from a current row
-                                        pos.events.erase(pos.events.begin() + (int)e);
-                                        e--;
-                                        break;
-                                    }
-                                    ns.delay += posN.timeDelay;
-                                    ns.delayTicks += posN.delay;
-                                }
-                            }
-                            ns.delay = 0.0;
-                            ns.delayTicks = 0;
-                        }
-                    }
-                }
-
-                //Append time delays to sustaining notes
-                for(size_t no = 0; no < 128; no++)
-                {
-                    NoteState &ns = drNotes[no];
-                    if(ns.isOn)
-                    {
-                        ns.delay        += pos.timeDelay;
-                        ns.delayTicks   += pos.delay;
-                    }
-                }
-            }
-        }
-#undef DRUM_NOTE_MIN_TIME
-#undef DRUM_NOTE_MIN_TICKS
-    }
-#endif
 }
 
 #endif /* BW_MIDISEQ_READ_SMF_IMPL_HPP */
