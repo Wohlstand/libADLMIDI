@@ -186,6 +186,9 @@ To build that example you will need to have installed SDL2 library.
 # Changelog
 ## 1.5.2   dev
  * Fixed the random stuck problem in the DOS version of the ADLMIDI player.
+ * Added support for HMI and HMP files!
+ * Added support for in-track (local) loops.
+ * Optimized work with chip instruments.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.

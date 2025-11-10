@@ -207,20 +207,22 @@ public:
             {
                 //! Destination chip channel
                 uint16_t chip_chan;
-                //! ins, inde to adl[]
-                OplTimbre op;
-                //! Is this voice must be detunable?
-                bool    pseudo4op;
+                //! Instrument entry
+                const OplTimbre *op;
+                //! Should we play the second 2-op voice?
+                bool pseudo4op;
 
                 void assign(const Phys &oth)
                 {
                     op = oth.op;
                     pseudo4op = oth.pseudo4op;
                 }
+
                 bool operator==(const Phys &oth) const
                 {
                     return (op == oth.op) && (pseudo4op == oth.pseudo4op);
                 }
+
                 bool operator!=(const Phys &oth) const
                 {
                     return !operator==(oth);

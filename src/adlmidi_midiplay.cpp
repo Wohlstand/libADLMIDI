@@ -469,16 +469,16 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 #ifndef __WATCOMC__
     MIDIchannel::NoteInfo::Phys voices[MIDIchannel::NoteInfo::MaxNumPhysChans] =
     {
-        {0, ains->op[0], false},
-        {0, (!is_2op) ? ains->op[1] : ains->op[0], pseudo_4op}
+        {0, &ains->op[0], false},
+        {0, (!is_2op) ? &ains->op[1] : &ains->op[0], pseudo_4op}
     };
 #else /* Unfortunately, Watcom can't brace-initialize structure that incluses structure fields */
     MIDIchannel::NoteInfo::Phys voices[MIDIchannel::NoteInfo::MaxNumPhysChans];
     voices[0].chip_chan = 0;
-    voices[0].op = ains->op[0];
+    voices[0].op = &ains->op[0];
     voices[0].pseudo4op = false;
     voices[1].chip_chan = 0;
-    voices[1].op = (!is_2op) ? ains->op[1] : ains->op[0];
+    voices[1].op = (!is_2op) ? &ains->op[1] : &ains->op[0];
     voices[1].pseudo4op = pseudo_4op;
 #endif /* __WATCOMC__ */
 
@@ -514,8 +514,8 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         return false;
     }
 
-    // Allocate AdLib channel (the physical sound channel for the note)
-    int32_t adlchannel[MIDIchannel::NoteInfo::MaxNumPhysChans] = { -1, -1 };
+    // Allocate chip channel (the physical sound channel for the note)
+    int32_t chipChannel[MIDIchannel::NoteInfo::MaxNumPhysChans] = { -1, -1 };
 
     for(uint32_t ccount = 0; ccount < MIDIchannel::NoteInfo::MaxNumPhysChans; ++ccount)
     {
@@ -526,7 +526,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         {
             if(voices[0] == voices[1])
                 break; // No secondary channel
-            if(adlchannel[0] == -1)
+            if(chipChannel[0] == -1)
                 break; // No secondary if primary failed
         }
         else if(!m_setup.enableAutoArpeggio &&
@@ -535,8 +535,8 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         {
             if(killSecondVoicesIfOverflow(c))
             {
-                adlchannel[0] = c;
-                adlchannel[1] = -1;
+                chipChannel[0] = c;
+                chipChannel[1] = -1;
                 voices[1] = voices[0];
                 break;
             }
@@ -544,7 +544,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
         for(size_t a = 0; a < (size_t)synth.m_numChannels; ++a)
         {
-            if(ccount == 1 && static_cast<int32_t>(a) == adlchannel[0]) continue;
+            if(ccount == 1 && static_cast<int32_t>(a) == chipChannel[0]) continue;
             // ^ Don't use the same channel for primary&secondary
 
             if(is_2op || pseudo_4op)
@@ -596,7 +596,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
                 else
                 {
                     // The secondary must be played on a specific channel.
-                    if(a != static_cast<uint32_t>(adlchannel[0]) + 3)
+                    if(a != static_cast<uint32_t>(chipChannel[0]) + 3)
                         continue;
                 }
             }
@@ -619,17 +619,17 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         }
 
         prepareChipChannelForNewNote(static_cast<size_t>(c), voices[ccount]);
-        adlchannel[ccount] = c;
+        chipChannel[ccount] = c;
     }
 
-    if(adlchannel[0] < 0 && adlchannel[1] < 0)
+    if(chipChannel[0] < 0 && chipChannel[1] < 0)
     {
         // The note could not be played, at all.
         return false;
     }
 
     //if(hooks.onDebugMessage)
-    //    hooks.onDebugMessage(hooks.onDebugMessage_userData, "i1=%d:%d, i2=%d:%d", i[0],adlchannel[0], i[1],adlchannel[1]);
+    //    hooks.onDebugMessage(hooks.onDebugMessage_userData, "i1=%d:%d, i2=%d:%d", i[0],chipChannel[0], i[1],chipChannel[1]);
 
     if(midiChan.softPedal) // Apply Soft Pedal level reducing
         velocity = static_cast<uint8_t>(std::floor(static_cast<float>(velocity) * 0.8f));
@@ -678,10 +678,10 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
     for(unsigned ccount = 0; ccount < MIDIchannel::NoteInfo::MaxNumPhysChans; ++ccount)
     {
-        int32_t c = adlchannel[ccount];
+        int32_t c = chipChannel[ccount];
         if(c < 0)
             continue;
-        uint16_t chipChan = static_cast<uint16_t>(adlchannel[ccount]);
+        uint16_t chipChan = static_cast<uint16_t>(chipChannel[ccount]);
         MIDIchannel::NoteInfo::Phys* p = ni.phys_ensure_find_or_create(chipChan);
         p->assign(voices[ccount]);
     }
@@ -690,7 +690,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
     for(unsigned ccount = 0; ccount < MIDIchannel::NoteInfo::MaxNumPhysChans; ++ccount)
     {
-        int32_t c = adlchannel[ccount];
+        int32_t c = chipChannel[ccount];
         if(c < 0)
             continue;
         m_chipChannels[c].recent_ins = voices[ccount];
@@ -1259,6 +1259,7 @@ void MIDIplay::noteUpdate(size_t midCh,
         if(props_mask & Upd_Patch)
         {
             synth.setPatch(c, ins.op);
+
             AdlChannel::users_iterator i = m_chipChannels[c].find_or_create_user(my_loc);
             if(!i.is_end())    // inserts if necessary
             {
@@ -1371,7 +1372,7 @@ void MIDIplay::noteUpdate(size_t midCh,
             {
                 MIDIchannel &chan = m_midiChannels[midCh];
                 double midibend = chan.bend * chan.bendsense;
-                double bend = midibend + ins.op.noteOffset;
+                double bend = midibend + ins.op->noteOffset;
                 double phase = 0.0;
                 uint8_t vibrato = std::max(chan.vibrato, chan.aftertouch);
 

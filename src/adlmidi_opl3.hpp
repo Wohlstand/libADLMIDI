@@ -65,7 +65,8 @@ public:
 
 private:
     //! Cached patch data, needed by Touch()
-    std::vector<OplTimbre>    m_insCache;
+    std::vector<const OplTimbre*> m_insCache;
+    std::vector<bool> m_insCacheModified;
     //! Value written to B0, cached, needed by NoteOff.
     /*! Contains Key on/off state, octave block and frequency number values
      */
@@ -347,7 +348,7 @@ public:
      * @param c Channel of chip (Emulated chip choosing by next formula: [c = ch + (chipId * 23)])
      * @param instrument Instrument data to set into the chip channel
      */
-    void setPatch(size_t c, const OplTimbre &instrument);
+    void setPatch(size_t c, const OplTimbre *instrument);
 
     /**
      * @brief Set panpot position

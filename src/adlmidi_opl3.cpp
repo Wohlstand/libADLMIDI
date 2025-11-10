@@ -1022,6 +1022,10 @@ void OPL3::setEmbeddedBank(uint32_t bank)
         }
     }
 
+    // Reset caches once bank is changed
+    adl_fill_vector<const OplTimbre*>(m_insCache, &c_defaultInsCache);
+    adl_fill_vector<bool>(m_insCacheModified, false);
+
 #else
     ADL_UNUSED(bank);
 #endif
@@ -1066,6 +1070,7 @@ void OPL3::noteOff(size_t c)
 void OPL3::noteOn(size_t c1, size_t c2, double tone)
 {
     size_t chip = c1 / NUM_OF_CHANNELS, cc1 = c1 % NUM_OF_CHANNELS, cc2 = c2 % NUM_OF_CHANNELS;
+    size_t chan2 = c2 < m_insCache.size() ? c2 : 0;
     uint32_t octave = 0, ftone = 0, mul_offset = 0;
     // Hertz range: 0..131071
     double hertz;
@@ -1122,8 +1127,9 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
 
     ftone = octave + static_cast<uint32_t>(hertz /*+ 0.5*/);
     uint32_t chn = m_musicMode == MODE_CMF ? g_channelsMapPan[cc1] : g_channelsMap[cc1];
-    const OplTimbre &patch1 = m_insCache[c1];
-    const OplTimbre &patch2 = m_insCache[c2 < m_insCache.size() ? c2 : 0];
+
+    const OplTimbre &patch1 = *m_insCache[c1];
+    const OplTimbre &patch2 = *m_insCache[chan2];
 
     if(cc1 < OPL3_CHANNELS_RHYTHM_BASE)
     {
@@ -1148,20 +1154,27 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
         {
             if(op_addr[op] == 0xFFF)
                 continue;
+
+            size_t modIdx = op > 1 ? chan2 : c1;
+
             if(mul_offset > 0)
             {
                 uint32_t dt  = ops[op] & 0xF0;
                 uint32_t mul = ops[op] & 0x0F;
+
                 if((mul + mul_offset) > 0x0F)
                 {
                     mul_offset = 0;
                     mul = 0x0F;
                 }
+
                 writeRegI(chip, 0x20 + op_addr[op],  (dt | (mul + mul_offset)) & 0xFF);
+                m_insCacheModified[modIdx] = true;
             }
-            else
+            else if(m_insCacheModified[modIdx])
             {
                 writeRegI(chip, 0x20 + op_addr[op],  ops[op] & 0xFF);
+                m_insCacheModified[modIdx] = false;
             }
         }
     }
@@ -1175,8 +1188,8 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
 
     if(m_rhythmMode && cc1 >= OPL3_CHANNELS_RHYTHM_BASE)
     {
-        m_regBD[chip ] |= (0x10 >> (cc1 - OPL3_CHANNELS_RHYTHM_BASE));
-        writeRegI(chip , 0x0BD, m_regBD[chip ]);
+        m_regBD[chip] |= (0x10 >> (cc1 - OPL3_CHANNELS_RHYTHM_BASE));
+        writeRegI(chip, 0x0BD, m_regBD[chip]);
         //x |= 0x800; // for test
     }
 }
@@ -1196,7 +1209,7 @@ void OPL3::touchNote(size_t c,
                      bool isDrum)
 {
     size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
-    const OplTimbre &adli = m_insCache[c];
+    const OplTimbre &adli = *m_insCache[c];
     size_t cmf_offset = ((m_musicMode == MODE_CMF) && cc >= OPL3_CHANNELS_RHYTHM_BASE) ? 10 : 0;
     uint16_t o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
     uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
@@ -1356,12 +1369,12 @@ void OPL3::touchNote(size_t c,
         if(m_channelCategory[c] == ChanCat_4op_First)
         {
             i0 = &adli;
-            i1 = &m_insCache[c + 3];
+            i1 = m_insCache[c + 3];
             mode = 2; // 4-op xx-xx ops 1&2
         }
         else
         {
-            i0 = &m_insCache[c - 3];
+            i0 = m_insCache[c - 3];
             i1 = &adli;
             mode = 6; // 4-op xx-xx ops 3&4
         }
@@ -1531,17 +1544,25 @@ void OPL3::touchNote(size_t c,
     //   63 + chanvol * (instrvol / 63.0 - 1)
 }
 
-void OPL3::setPatch(size_t c, const OplTimbre &instrument)
+void OPL3::setPatch(size_t c, const OplTimbre *instrument)
 {
-    size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS;
+    size_t chip = c / NUM_OF_CHANNELS, cc = c % NUM_OF_CHANNELS, cmf_offset;
+    uint32_t x, y;
+    uint16_t o1, o2, fbconn_reg = 0x00;
     static const uint8_t data[4] = {0x20, 0x60, 0x80, 0xE0};
-    m_insCache[c] = instrument;
-    size_t cmf_offset = ((m_musicMode == MODE_CMF) && (cc >= OPL3_CHANNELS_RHYTHM_BASE)) ? 10 : 0;
-    uint16_t o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
-    uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
-    unsigned x = instrument.modulator_E862, y = instrument.carrier_E862;
     uint8_t fbconn = 0;
-    uint16_t fbconn_reg = 0x00;
+
+    if(m_insCache[c] == instrument)
+        return; // Already up to date!
+
+    m_insCache[c] = instrument;
+    m_insCacheModified[c] = false;
+
+    cmf_offset = ((m_musicMode == MODE_CMF) && (cc >= OPL3_CHANNELS_RHYTHM_BASE)) ? 10 : 0;
+    o1 = g_operatorsMap[cc * 2 + 0 + cmf_offset];
+    o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
+    x = instrument->modulator_E862, y = instrument->carrier_E862;
+    fbconn_reg = 0x00;
 
     for(size_t a = 0; a < 4; ++a, x >>= 8, y >>= 8)
     {
@@ -1553,7 +1574,7 @@ void OPL3::setPatch(size_t c, const OplTimbre &instrument)
 
     if(g_channelsMapFBConn[cc] != 0xFFF)
     {
-        fbconn |= instrument.feedconn;
+        fbconn |= instrument->feedconn;
         fbconn_reg = 0xC0 + g_channelsMapFBConn[cc];
     }
 
@@ -1585,7 +1606,7 @@ void OPL3::setPan(size_t c, uint8_t value)
         {
             writePan(chip, g_channelsMapPan[cc], value);
             m_regC0[c] = OPL_PANNING_BOTH;
-            writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | OPL_PANNING_BOTH);
+            writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c]->feedconn | OPL_PANNING_BOTH);
         }
         else
         {
@@ -1595,7 +1616,7 @@ void OPL3::setPan(size_t c, uint8_t value)
             if(value >= 64 - 16) panning |= OPL_PANNING_RIGHT;
             m_regC0[c] = panning;
             writePan(chip, g_channelsMapPan[cc], 64);
-            writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c].feedconn | panning);
+            writeRegI(chip, 0xC0 + g_channelsMapPan[cc], m_insCache[c]->feedconn | panning);
 #ifndef ENABLE_HW_OPL_DOS
         }
 #endif
@@ -1629,6 +1650,8 @@ void OPL3::silenceAll() // Silence all OPL channels.
             writeRegI(chip, 0x40 + o2, 0x3F);
             writeRegI(chip, 0x80 + o1, 0xFF);
         }
+
+        m_insCacheModified[c] = true;
     }
 }
 
@@ -1843,6 +1866,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     if(rebuild_needed)
     {
         m_insCache.clear();
+        m_insCacheModified.clear();
         m_keyBlockFNumCache.clear();
         m_regBD.clear();
         m_regC0.clear();
@@ -1854,7 +1878,8 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
         if(!m_chips.empty())
             silenceAll(); // Ensure no junk will be played after bank change
 
-        adl_fill_vector<OplTimbre>(m_insCache, c_defaultInsCache);
+        adl_fill_vector<const OplTimbre*>(m_insCache, &c_defaultInsCache);
+        adl_fill_vector<bool>(m_insCacheModified, false);
         adl_fill_vector<uint32_t>(m_channelCategory, 0);
         adl_fill_vector<uint32_t>(m_keyBlockFNumCache, 0);
         adl_fill_vector<uint32_t>(m_regBD, 0);
@@ -1869,7 +1894,8 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     if(rebuild_needed)
     {
         m_numChannels = m_numChips * NUM_OF_CHANNELS;
-        m_insCache.resize(m_numChannels, c_defaultInsCache);
+        m_insCache.resize(m_numChannels, &c_defaultInsCache);
+        m_insCacheModified.resize(m_numChannels, false);
         m_channelCategory.resize(m_numChannels, 0);
         m_keyBlockFNumCache.resize(m_numChannels,   0);
         m_regBD.resize(m_numChips,    0);
