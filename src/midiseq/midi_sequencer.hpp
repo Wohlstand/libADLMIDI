@@ -507,6 +507,9 @@ private:
         LOCAL_LOOPSTACK = 0x03
     };
 
+    /**
+     * @brief The loop state structure using during data parse of the song
+     */
     struct LoopPointParseState
     {
         //! Tick position of loop start tag
@@ -522,6 +525,19 @@ private:
         bool gotTrackStackLoopStart;
         //! Got any loop events in currently processing row? (Must be reset after flushing the events row!)
         unsigned gotLoopEventsInThisRow;
+    };
+
+    /**
+     * @brief The loop state structure usind during playback
+     */
+    struct LoopRuntimeState
+    {
+        bool     doLoopJump;
+        unsigned caughLoopStart;
+        unsigned caughLoopStackStart;
+        unsigned caughLoopStackEnds;
+        double   caughLoopStackEndsTime;
+        unsigned caughLoopStackBreaks;
     };
 
     /**
@@ -840,6 +856,11 @@ private:
      * @param status [_out] Last-triggered event (Note-Off) will be returned here
      */
     void processDuratedNotes(size_t track, int32_t &status);
+
+    void handleLoopStart(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob);
+    bool handleLoopEnd(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob);
+
+    bool processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos);
 
     /**
      * @brief Process MIDI events on the current tick moment

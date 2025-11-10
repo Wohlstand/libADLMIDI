@@ -327,6 +327,154 @@ void BW_MidiSequencer::processDuratedNotes(size_t track, int32_t &status)
     }
 }
 
+void BW_MidiSequencer::handleLoopStart(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob)
+{
+    if(loop.caughtStackStart)
+    {
+        if(glob && m_interface->onloopStart && (m_loopStartTime >= tk.pos->time)) // Loop Start hook
+            m_interface->onloopStart(m_interface->onloopStart_userData);
+
+        state.caughLoopStackStart++;
+        loop.caughtStackStart = false;
+    }
+
+    if(loop.caughtStackBreak)
+    {
+        state.caughLoopStackBreaks++;
+        loop.caughtStackBreak = false;
+    }
+}
+
+bool BW_MidiSequencer::handleLoopEnd(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob)
+{
+    if((glob && loop.caughtEnd) || loop.isStackEnd())
+    {
+        if(loop.caughtStackEnd)
+        {
+            loop.caughtStackEnd = false;
+            state.caughLoopStackEnds++;
+            state.caughLoopStackEndsTime = tk.pos->time;
+        }
+
+        if(glob)
+            state.doLoopJump = true;
+
+        return true; // Stop event handling on catching loopEnd event!
+    }
+
+    return false;
+}
+
+bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos)
+{
+    if(state.caughLoopStackStart > 0)
+    {
+        while(state.caughLoopStackStart > 0)
+        {
+            loop.stackUp();
+            LoopStackEntry &s = loop.getCurStack();
+
+            if(glob)
+                s.startPosition = pos;
+            else
+            {
+                // Store info for only one track
+                s.startPosition.track.clear();
+                s.startPosition.track.push_back(pos.track[tk]);
+                s.startPosition.absTimePosition = pos.absTimePosition;
+                s.startPosition.wait = pos.wait;
+                s.startPosition.began = pos.began;
+            }
+
+            state.caughLoopStackStart--;
+        }
+
+        return true;
+    }
+
+    if(state.caughLoopStackBreaks > 0)
+    {
+        while(state.caughLoopStackBreaks > 0)
+        {
+            LoopStackEntry &s = loop.getCurStack();
+            s.loops = 0;
+            s.infinity = false;
+            // Quit the loop
+            loop.stackDown();
+            state.caughLoopStackBreaks--;
+        }
+    }
+
+    if(state.caughLoopStackEnds > 0)
+    {
+        while(state.caughLoopStackEnds > 0)
+        {
+            LoopStackEntry &s = loop.getCurStack();
+            if(s.infinity)
+            {
+                if(glob && m_interface->onloopEnd && (m_loopEndTime >= state.caughLoopStackEndsTime)) // Loop End hook
+                {
+                    m_interface->onloopEnd(m_interface->onloopEnd_userData);
+                    if(m_loopHooksOnly) // Stop song on reaching loop end
+                    {
+                        m_atEnd = true; // Don't handle events anymore
+                        m_currentPosition.wait += m_postSongWaitDelay; // One second delay until stop playing
+                    }
+                }
+
+                if(glob)
+                {
+                    m_currentPosition = s.startPosition;
+
+                    // Do all notes off on loop
+                    for(uint8_t i = 0; i < 16; i++)
+                        m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+                }
+                else
+                    m_currentPosition.track[tk] = s.startPosition.track[0];
+
+                loop.skipStackStart = true;
+                return true;
+            }
+            else
+            if(s.loops >= 0)
+            {
+                s.loops--;
+                if(s.loops > 0)
+                {
+                    if(glob)
+                    {
+                        m_currentPosition = s.startPosition;
+
+                        // Do all notes off on loop
+                        for(uint8_t i = 0; i < 16; i++)
+                            m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+                    }
+                    else
+                        m_currentPosition.track[tk] = s.startPosition.track[0];
+
+                    loop.skipStackStart = true;
+                    return true;
+                }
+                else
+                {
+                    // Quit the loop
+                    loop.stackDown();
+                }
+            }
+            else
+            {
+                // Quit the loop
+                loop.stackDown();
+            }
+
+            state.caughLoopStackEnds--;
+        }
+    }
+
+    return false;
+}
+
 bool BW_MidiSequencer::processEvents(bool isSeek)
 {
     if(m_currentPosition.track.size() == 0)
@@ -338,12 +486,9 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     m_loop.caughtEnd = false;
     const size_t        trackCount = m_currentPosition.track.size();
     const Position      rowBeginPosition(m_currentPosition);
-    bool     doLoopJump = false;
-    unsigned caughLoopStart = 0;
-    unsigned caughLoopStackStart = 0;
-    unsigned caughLoopStackEnds = 0;
-    double   caughLoopStackEndsTime = 0.0;
-    unsigned caughLoopStackBreaks = 0;
+    LoopRuntimeState    loopState, loopStateLoc;
+
+    std::memset(&loopState, 0, sizeof(loopState));
 
 #ifdef DEBUG_TIME_CALCULATION
     double maxTime = 0.0;
@@ -353,9 +498,8 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
         LoopState &trackLoop = m_trackLoop[tk];
-        unsigned caughLocalLoopStackStart = 0;
-        unsigned caughLocalLoopStackEnds = 0;
-        unsigned caughLocalLoopStackBreaks = 0;
+
+        std::memset(&loopStateLoc, 0, sizeof(loopStateLoc));
 
         // Process note-OFFs
         processDuratedNotes(tk, track.lastHandledEvent);
@@ -382,63 +526,26 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 
                 handleEvent(tk, evt, track.lastHandledEvent);
 
+                // Global non-stacked loop start
                 if(m_loop.caughtStart)
                 {
                     if(m_interface->onloopStart) // Loop Start hook
                         m_interface->onloopStart(m_interface->onloopStart_userData);
 
-                    caughLoopStart++;
+                    loopState.caughLoopStart++;
                     m_loop.caughtStart = false;
                 }
 
-                if(m_loop.caughtStackStart)
-                {
-                    if(m_interface->onloopStart && (m_loopStartTime >= track.pos->time)) // Loop Start hook
-                        m_interface->onloopStart(m_interface->onloopStart_userData);
+                // Global stacked loop start
+                handleLoopStart(loopState, m_loop, track, true);
+                // Local stacked loop start
+                handleLoopStart(loopStateLoc, trackLoop, track, false);
 
-                    caughLoopStackStart++;
-                    m_loop.caughtStackStart = false;
-                }
+                if(handleLoopEnd(loopStateLoc, trackLoop, track, false))
+                    break;
 
-                if(m_loop.caughtStackBreak)
-                {
-                    caughLoopStackBreaks++;
-                    m_loop.caughtStackBreak = false;
-                }
-
-                if(trackLoop.caughtStackStart)
-                {
-                    caughLocalLoopStackStart++;
-                    trackLoop.caughtStackStart = false;
-                }
-
-                if(trackLoop.caughtStackBreak)
-                {
-                    caughLocalLoopStackBreaks++;
-                    trackLoop.caughtStackBreak = false;
-                }
-
-                if(trackLoop.isStackEnd())
-                {
-                    if(trackLoop.caughtStackEnd)
-                    {
-                        trackLoop.caughtStackEnd = false;
-                        caughLocalLoopStackEnds++;
-                    }
-                    break; // Stop event handling on catching loopEnd event!
-                }
-
-                if(m_loop.caughtEnd || m_loop.isStackEnd())
-                {
-                    if(m_loop.caughtStackEnd)
-                    {
-                        m_loop.caughtStackEnd = false;
-                        caughLoopStackEnds++;
-                        caughLoopStackEndsTime = track.pos->time;
-                    }
-                    doLoopJump = true;
-                    break; // Stop event handling on catching loopEnd event!
-                }
+                if(handleLoopEnd(loopState, m_loop, track, true))
+                    break;
             }
 
 #ifdef DEBUG_TIME_CALCULATION
@@ -452,73 +559,15 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                 track.pos++;
             }
 
+            // Register global loop start position
+            if(loopState.caughLoopStart > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
+                m_loopBeginPosition = rowBeginPosition;
+
             // Process local loop
-            if(caughLocalLoopStackStart > 0)
-            {
-                while(caughLocalLoopStackStart > 0)
-                {
-                    trackLoop.stackUp();
-                    LoopStackEntry &s = trackLoop.getCurStack();
-                    s.startPosition.track.clear();
-                    s.startPosition.track.push_back(rowBeginPosition.track[tk]);
-                    s.startPosition.absTimePosition = rowBeginPosition.absTimePosition;
-                    s.startPosition.wait = rowBeginPosition.wait;
-                    s.startPosition.began = rowBeginPosition.began;
-                    caughLocalLoopStackStart--;
-                }
-                return true;
-            }
+            if(processLoopPoints(loopStateLoc, trackLoop, false, tk, rowBeginPosition))
+                continue; // Done with this track for now
 
-            if(caughLocalLoopStackBreaks > 0)
-            {
-                while(caughLocalLoopStackBreaks > 0)
-                {
-                    LoopStackEntry &s = trackLoop.getCurStack();
-                    s.loops = 0;
-                    s.infinity = false;
-                    // Quit the loop
-                    trackLoop.stackDown();
-                    caughLocalLoopStackBreaks--;
-                }
-            }
-
-            if(caughLocalLoopStackEnds > 0)
-            {
-                while(caughLocalLoopStackEnds > 0)
-                {
-                    LoopStackEntry &s = trackLoop.getCurStack();
-                    if(s.infinity)
-                    {
-                        m_currentPosition.track[tk] = s.startPosition.track[0];
-                        trackLoop.skipStackStart = true;
-                        return true;
-                    }
-                    else
-                    if(s.loops >= 0)
-                    {
-                        s.loops--;
-                        if(s.loops > 0)
-                        {
-                            m_currentPosition.track[tk] = s.startPosition.track[0];
-                            trackLoop.skipStackStart = true;
-                            return true;
-                        }
-                        else
-                        {
-                            // Quit the loop
-                            trackLoop.stackDown();
-                        }
-                    }
-                    else
-                    {
-                        // Quit the loop
-                        trackLoop.stackDown();
-                    }
-                    caughLocalLoopStackEnds--;
-                }
-            }
-
-            if(doLoopJump)
+            if(loopState.doLoopJump)
                 break;
         }
     }
@@ -576,100 +625,23 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 #endif
         m_currentPosition.wait += t.value();
 
-    if(caughLoopStart > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
+    if(loopState.caughLoopStart > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
         m_loopBeginPosition = rowBeginPosition;
 
-    if(caughLoopStackStart > 0)
-    {
-        while(caughLoopStackStart > 0)
-        {
-            m_loop.stackUp();
-            LoopStackEntry &s = m_loop.getCurStack();
-            s.startPosition = rowBeginPosition;
-            caughLoopStackStart--;
-        }
-        return true;
-    }
-
-    if(caughLoopStackBreaks > 0)
-    {
-        while(caughLoopStackBreaks > 0)
-        {
-            LoopStackEntry &s = m_loop.getCurStack();
-            s.loops = 0;
-            s.infinity = false;
-            // Quit the loop
-            m_loop.stackDown();
-            caughLoopStackBreaks--;
-        }
-    }
-
-    if(caughLoopStackEnds > 0)
-    {
-        while(caughLoopStackEnds > 0)
-        {
-            LoopStackEntry &s = m_loop.getCurStack();
-            if(s.infinity)
-            {
-                if(m_interface->onloopEnd && (m_loopEndTime >= caughLoopStackEndsTime)) // Loop End hook
-                {
-                    m_interface->onloopEnd(m_interface->onloopEnd_userData);
-                    if(m_loopHooksOnly) // Stop song on reaching loop end
-                    {
-                        m_atEnd = true; // Don't handle events anymore
-                        m_currentPosition.wait += m_postSongWaitDelay; // One second delay until stop playing
-                    }
-                }
-
-                m_currentPosition = s.startPosition;
-                m_loop.skipStackStart = true;
-
-                // Do all notes off on loop
-                for(uint8_t i = 0; i < 16; i++)
-                    m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
-
-                return true;
-            }
-            else
-            if(s.loops >= 0)
-            {
-                s.loops--;
-                if(s.loops > 0)
-                {
-                    m_currentPosition = s.startPosition;
-                    m_loop.skipStackStart = true;
-
-                    // Do all notes off on loop
-                    for(uint8_t i = 0; i < 16; i++)
-                        m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
-
-                    return true;
-                }
-                else
-                {
-                    // Quit the loop
-                    m_loop.stackDown();
-                }
-            }
-            else
-            {
-                // Quit the loop
-                m_loop.stackDown();
-            }
-            caughLoopStackEnds--;
-        }
-
-        return true;
-    }
+    if(processLoopPoints(loopState, m_loop, true, 0, rowBeginPosition))
+        return true; // When loop jump happen, quit the function
 
     if(shortestDelayNotFound || m_loop.caughtEnd)
     {
         if(m_interface->onloopEnd) // Loop End hook
             m_interface->onloopEnd(m_interface->onloopEnd_userData);
 
-        // Do all notes off on loop
-        for(uint8_t i = 0; i < 16; i++)
-            m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+        if(m_loopEnabled)
+        {
+            // Do all notes off on loop
+            for(uint8_t i = 0; i < 16; i++)
+                m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+        }
 
         // Loop if song end or loop end point has reached
         m_loop.caughtEnd         = false;
