@@ -73,6 +73,7 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
         {
         case MidiEvent::ST_SONG_BEGIN_HOOK:
             return -1; // This should be really first event in the row!
+
         case MidiEvent::ST_MARKER:
         case MidiEvent::ST_DEVICESWITCH:
         case MidiEvent::ST_LOOPSTART:
