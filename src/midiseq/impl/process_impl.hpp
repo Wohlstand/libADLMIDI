@@ -334,13 +334,13 @@ void BW_MidiSequencer::handleLoopStart(LoopRuntimeState &state, LoopState &loop,
         if(glob && m_interface->onloopStart && (m_loopStartTime >= tk.pos->time)) // Loop Start hook
             m_interface->onloopStart(m_interface->onloopStart_userData);
 
-        state.caughLoopStackStart++;
+        state.numStackLoopStarts++;
         loop.caughtStackStart = false;
     }
 
     if(loop.caughtStackBreak)
     {
-        state.caughLoopStackBreaks++;
+        state.numStackLoopBreaks++;
         loop.caughtStackBreak = false;
     }
 }
@@ -352,8 +352,8 @@ bool BW_MidiSequencer::handleLoopEnd(LoopRuntimeState &state, LoopState &loop, P
         if(loop.caughtStackEnd)
         {
             loop.caughtStackEnd = false;
-            state.caughLoopStackEnds++;
-            state.caughLoopStackEndsTime = tk.pos->time;
+            state.numStackLoopEnds++;
+            state.stackLoopEndsTime = tk.pos->time;
         }
 
         if(glob)
@@ -367,9 +367,9 @@ bool BW_MidiSequencer::handleLoopEnd(LoopRuntimeState &state, LoopState &loop, P
 
 bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos)
 {
-    if(state.caughLoopStackStart > 0)
+    if(state.numStackLoopStarts > 0)
     {
-        while(state.caughLoopStackStart > 0)
+        while(state.numStackLoopStarts > 0)
         {
             loop.stackUp();
             LoopStackEntry &s = loop.getCurStack();
@@ -386,33 +386,33 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
                 s.startPosition.began = pos.began;
             }
 
-            state.caughLoopStackStart--;
+            state.numStackLoopStarts--;
         }
 
         return true;
     }
 
-    if(state.caughLoopStackBreaks > 0)
+    if(state.numStackLoopBreaks > 0)
     {
-        while(state.caughLoopStackBreaks > 0)
+        while(state.numStackLoopBreaks > 0)
         {
             LoopStackEntry &s = loop.getCurStack();
             s.loops = 0;
             s.infinity = false;
             // Quit the loop
             loop.stackDown();
-            state.caughLoopStackBreaks--;
+            state.numStackLoopBreaks--;
         }
     }
 
-    if(state.caughLoopStackEnds > 0)
+    if(state.numStackLoopEnds > 0)
     {
-        while(state.caughLoopStackEnds > 0)
+        while(state.numStackLoopEnds > 0)
         {
             LoopStackEntry &s = loop.getCurStack();
             if(s.infinity)
             {
-                if(glob && m_interface->onloopEnd && (m_loopEndTime >= state.caughLoopStackEndsTime)) // Loop End hook
+                if(glob && m_interface->onloopEnd && (m_loopEndTime >= state.stackLoopEndsTime)) // Loop End hook
                 {
                     m_interface->onloopEnd(m_interface->onloopEnd_userData);
                     if(m_loopHooksOnly) // Stop song on reaching loop end
@@ -468,7 +468,7 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
                 loop.stackDown();
             }
 
-            state.caughLoopStackEnds--;
+            state.numStackLoopEnds--;
         }
     }
 
@@ -532,7 +532,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                     if(m_interface->onloopStart) // Loop Start hook
                         m_interface->onloopStart(m_interface->onloopStart_userData);
 
-                    loopState.caughLoopStart++;
+                    loopState.numGlobLoopStarts++;
                     m_loop.caughtStart = false;
                 }
 
@@ -560,7 +560,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
             }
 
             // Register global loop start position
-            if(loopState.caughLoopStart > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
+            if(loopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
                 m_loopBeginPosition = rowBeginPosition;
 
             // Process local loop
@@ -625,7 +625,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 #endif
         m_currentPosition.wait += t.value();
 
-    if(loopState.caughLoopStart > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
+    if(loopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
         m_loopBeginPosition = rowBeginPosition;
 
     if(processLoopPoints(loopState, m_loop, true, 0, rowBeginPosition))

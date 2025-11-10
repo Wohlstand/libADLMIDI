@@ -518,13 +518,16 @@ private:
         uint64_t loopEndTicks;
         //! Full length of song in ticks
         uint64_t ticksSongLength;
-        bool gotLoopStart;
-        bool gotLoopEnd;
-        bool gotStackLoopStart;
-        //! Was the local loop start even got? (Must be reset on next track start!)
-        bool gotTrackStackLoopStart;
         //! Got any loop events in currently processing row? (Must be reset after flushing the events row!)
         unsigned gotLoopEventsInThisRow;
+        //! Got any global loop start event
+        bool gotLoopStart;
+        //! Got any loop end event
+        bool gotLoopEnd;
+        //! Got any stacked loop start event
+        bool gotStackLoopStart;
+        //! Was the local loop start event got? (Must be reset on next track start!)
+        bool gotTrackStackLoopStart;
     };
 
     /**
@@ -532,12 +535,18 @@ private:
      */
     struct LoopRuntimeState
     {
+        //! Time value of last stacked loop end caught
+        double   stackLoopEndsTime;
+        //! Number of global loop start events caught
+        unsigned numGlobLoopStarts;
+        //! Number of stacked loop start events caught
+        unsigned numStackLoopStarts;
+        //! Number of stacked loop end events caught
+        unsigned numStackLoopEnds;
+        //! Number of stacked loop end events caught
+        unsigned numStackLoopBreaks;
+        //! Shall global loop jump to be performed?
         bool     doLoopJump;
-        unsigned caughLoopStart;
-        unsigned caughLoopStackStart;
-        unsigned caughLoopStackEnds;
-        double   caughLoopStackEndsTime;
-        unsigned caughLoopStackBreaks;
     };
 
     /**
@@ -857,9 +866,34 @@ private:
      */
     void processDuratedNotes(size_t track, int32_t &status);
 
+    /**
+     * @brief Check the state of caught loop start points
+     * @param state Runtime state (for the track or for the global row)
+     * @param loop Loop state (for the track or for the entire song)
+     * @param tk Track info structure
+     * @param glob Is global loop or local?
+     */
     void handleLoopStart(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob);
+
+    /**
+     * @brief Check the state of caught loop end points
+     * @param state Runtime state (for the track or for the global row)
+     * @param loop Loop state (for the track or for the entire song)
+     * @param tk Track info structure
+     * @param glob Is global loop or local?
+     * @return true if it's required to stop further handling of events in this row (track or entire row)
+     */
     bool handleLoopEnd(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob);
 
+    /**
+     * @brief Process all caught loop points
+     * @param state Runtime state (for the track or for the global row)
+     * @param loop Loop state (for the track or for the entire song)
+     * @param glob Is global loop or local?
+     * @param tk Track number, used for local loops only, for global loop checks is unused
+     * @param pos Begin of the current row position
+     * @return true if it's required to don't process the global loop end and end of the song
+     */
     bool processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos);
 
     /**
