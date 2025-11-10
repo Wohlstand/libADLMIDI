@@ -224,8 +224,10 @@ bool BW_MidiSequencer::debugDumpContents(const std::string &outFile)
 
     for(size_t tk = 0; tk < m_tracksCount; ++tk)
     {
+        MidiTrackState &trackState = m_trackState[tk];
+
         fprintf(out, "=======================Track %lu=======================\r\n", (unsigned long)tk);
-        fprintf(out, "Device Mask: 0x%04X\r\n", (unsigned)m_trackDevices[tk]);
+        fprintf(out, "Device Mask: 0x%04X\r\n", (unsigned)trackState.deviceMask);
         fprintf(out, "\r\n");
 
         MidiTrackQueue::iterator it = m_trackBeginPosition.track[tk].pos;

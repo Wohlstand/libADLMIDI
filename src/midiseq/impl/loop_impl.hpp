@@ -28,7 +28,6 @@
 #define BW_MIDISEQ_LOOP_IMPL_HPP
 
 #include <cstring>
-#include <assert.h>
 
 #include "../midi_sequencer.hpp"
 

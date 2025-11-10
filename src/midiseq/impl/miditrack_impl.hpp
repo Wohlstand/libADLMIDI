@@ -239,4 +239,15 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
     }
 }
 
+
+BW_MidiSequencer::MidiTrackState::MidiTrackState() :
+    deviceMask(BW_MidiSequencer::Device_ANY),
+    disabled(false)
+{
+    loop.reset();
+    loop.invalidLoop = false;
+
+    std::memset(&duratedNotes, 0, sizeof(DuratedNotesCache));
+}
+
 #endif /* BW_MIDISEQ_READ_SMF_IMPL_HPP */

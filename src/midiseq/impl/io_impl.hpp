@@ -216,8 +216,9 @@ void BW_MidiSequencer::rewind()
 
     for(size_t tk = 0; tk < m_tracksCount; ++tk)
     {
-        m_trackLoop[tk].reset();
-        m_trackLoop[tk].temporaryBroken = false;
+        LoopState &loop = m_trackState[tk].loop;
+        loop.reset();
+        loop.temporaryBroken = false;
     }
 
     m_time.reset();

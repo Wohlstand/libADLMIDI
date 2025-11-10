@@ -149,7 +149,8 @@ bool BW_MidiSequencer::setTrackEnabled(size_t track, bool enable)
     size_t trackCount = m_trackData.size();
     if(track >= trackCount)
         return false;
-    m_trackDisable[track] = !enable;
+
+    m_trackState[track].disabled = !enable;
     return true;
 }
 

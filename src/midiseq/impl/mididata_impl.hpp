@@ -54,7 +54,6 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_loopStartTime = -1.0;
     m_loopEndTime = -1.0;
     m_loopFormat = Loop_Default;
-    m_trackDisable.clear();
     m_trackSolo = ~(size_t)0;
     m_musTitle.size = 0;
     m_musTitle.offset = 0;
@@ -69,10 +68,9 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_musMarkers.clear();
     m_dataBank.clear();
     m_eventBank.clear();
+
     m_trackData.clear();
-    m_trackDevices.clear();
-    m_trackLoop.clear();
-    m_trackDuratedNotes.clear();
+    m_trackState.clear();
 
     m_loop.reset();
     m_loop.invalidLoop = false;
@@ -82,13 +80,6 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 
     buildSmfResizeTracks(m_tracksCount);
 
-    for(size_t tk = 0; tk < m_tracksCount; ++tk)
-    {
-        m_trackLoop[tk].reset();
-        m_trackLoop[tk].invalidLoop = false;
-    }
-
-    std::memset(m_trackDuratedNotes.data(), 0, sizeof(DuratedNotesCache) * trackCount);
     std::memset(m_channelDisable, 0, sizeof(m_channelDisable));
 }
 
@@ -96,11 +87,8 @@ void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
 {
     m_tracksCount = tracksCount;
     m_trackData.resize(m_tracksCount, MidiTrackQueue());
-    m_trackDevices.resize(m_tracksCount, Device_ANY);
+    m_trackState.resize(m_tracksCount, MidiTrackState());
     m_currentPosition.track.resize(m_tracksCount);
-    m_trackDuratedNotes.resize(m_tracksCount);
-    m_trackDisable.resize(m_tracksCount);
-    m_trackLoop.resize(m_tracksCount);
 }
 
 

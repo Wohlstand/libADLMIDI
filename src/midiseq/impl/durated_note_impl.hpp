@@ -32,7 +32,7 @@
 
 bool BW_MidiSequencer::duratedNoteAlloc(size_t track, DuratedNote **note)
 {
-    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+    DuratedNotesCache &cache = m_trackState[track].duratedNotes;
 
     if(cache.notes_count >= 128)
         return false; // Can't insert delayed note off!
@@ -44,13 +44,13 @@ bool BW_MidiSequencer::duratedNoteAlloc(size_t track, DuratedNote **note)
 
 void BW_MidiSequencer::duratedNoteClear()
 {
-    for(std::vector<DuratedNotesCache>::iterator it = m_trackDuratedNotes.begin(); it != m_trackDuratedNotes.end(); ++it)
-        it->notes_count = 0;
+    for(std::vector<MidiTrackState>::iterator it = m_trackState.begin(); it != m_trackState.end(); ++it)
+        it->duratedNotes.notes_count = 0;
 }
 
 void BW_MidiSequencer::duratedNoteTick(size_t track, int64_t ticks)
 {
-    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+    DuratedNotesCache &cache = m_trackState[track].duratedNotes;
 
     for(size_t i = 0; i < cache.notes_count; ++i)
         cache.notes[i].ttl -= ticks;
@@ -58,7 +58,7 @@ void BW_MidiSequencer::duratedNoteTick(size_t track, int64_t ticks)
 
 void BW_MidiSequencer::duratedNotePop(size_t track, size_t i)
 {
-    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+    DuratedNotesCache &cache = m_trackState[track].duratedNotes;
 
     if(i < cache.notes_count)
     {

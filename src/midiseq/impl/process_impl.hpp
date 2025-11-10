@@ -42,8 +42,9 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     DuratedNote *note;
     LoopStackEntry *loopEntryP;
     LoopState *loop;
+    MidiTrackState &tk = m_trackState[track];
 
-    if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[track]) == 0)
+    if(m_deviceMask != Device_ANY && (m_deviceMask & tk.deviceMask) == 0)
         return; // Ignore this track completely
 
     if(track == 0 && m_smfFormat < 2 && evt.type == MidiEvent::T_SPECIAL &&
@@ -56,7 +57,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         if(m_trackSolo != ~static_cast<size_t>(0) && track != m_trackSolo)
             return;
 
-        if(m_trackDisable[track])
+        if(tk.disabled)
             return;
     }
 
@@ -201,7 +202,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             return;
 
         case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
-            loop = &m_trackLoop[track];
+            loop = &tk.loop;
             if(m_loopEnabled && !loop->invalidLoop)
             {
                 if(loop->skipStackStart)
@@ -230,13 +231,13 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             return;
 
         case MidiEvent::ST_TRACK_LOOPSTACK_END:
-            loop = &m_trackLoop[track];
+            loop = &tk.loop;
             if(m_loopEnabled && !loop->invalidLoop)
                 loop->caughtStackEnd = true;
             return;
 
         case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
-            loop = &m_trackLoop[track];
+            loop = &tk.loop;
             if(m_loopEnabled && !loop->invalidLoop)
                 loop->caughtStackBreak = true;
             return;
@@ -301,7 +302,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
 
 void BW_MidiSequencer::processDuratedNotes(size_t track, int32_t &status)
 {
-    DuratedNotesCache &cache = m_trackDuratedNotes[track];
+    DuratedNotesCache &cache = m_trackState[track].duratedNotes;
 
     if(cache.notes_count == 0)
         return; // Nothing to do!
@@ -497,7 +498,8 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
-        LoopState &trackLoop = m_trackLoop[tk];
+        MidiTrackState &trackState = m_trackState[tk];
+        LoopState &trackLoop = trackState.loop;
 
         std::memset(&loopStateLoc, 0, sizeof(loopStateLoc));
 
@@ -585,7 +587,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
-        DuratedNotesCache &timedNotes = m_trackDuratedNotes[tk];
+        DuratedNotesCache &timedNotes = m_trackState[tk].duratedNotes;
 
         // Normal events
         if((track.lastHandledEvent >= 0) && (shortestDelayNotFound || track.delay < shortestDelay))

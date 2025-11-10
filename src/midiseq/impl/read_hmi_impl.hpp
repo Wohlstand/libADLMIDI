@@ -1127,6 +1127,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     for(size_t tk = 0; tk < hmi_data.tracksCount; ++tk)
     {
         const HMITrackDir &d = dir[tk];
+        MidiTrackState &trackState = m_trackState[tk_v];
 
         if(d.len == 0)
             continue; // This track is broken
@@ -1139,7 +1140,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         fflush(stdout);
 #endif
 
-        m_trackDevices[tk_v] = Device_ANY;
+        trackState.deviceMask = Device_ANY;
 
         for(size_t dev = 0; dev < d.devicesNum; ++dev)
         {
@@ -1147,42 +1148,42 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 break;
 
             if(dev == 0)
-                m_trackDevices[tk_v] = 0;
+                trackState.deviceMask = 0;
 
             switch(d.devices[dev])
             {
             case HMI_DRIVER_SOUND_MASTER_II:
-                m_trackDevices[tk_v] |= Device_SoundMasterII;
+                trackState.deviceMask |= Device_SoundMasterII;
                 break;
             case HMI_DRIVER_MPU_401:
-                m_trackDevices[tk_v] |= Device_GeneralMidi;
+                trackState.deviceMask |= Device_GeneralMidi;
                 break;
             case HMI_DRIVER_OPL2:
-                m_trackDevices[tk_v] |= Device_OPL2;
+                trackState.deviceMask |= Device_OPL2;
                 break;
             case HMI_DRIVER_CALLBACK:
-                m_trackDevices[tk_v] |= Device_Callback;
+                trackState.deviceMask |= Device_Callback;
                 break;
             case HMI_DRIVER_MT_32:
-                m_trackDevices[tk_v] |= Device_MT32;
+                trackState.deviceMask |= Device_MT32;
                 break;
             case HMI_DRIVER_DIGI:
-                m_trackDevices[tk_v] |= Device_DIGI;
+                trackState.deviceMask |= Device_DIGI;
                 break;
             case HMI_DRIVER_INTERNAL_SPEAKER:
-                m_trackDevices[tk_v] |= Device_PCSpeaker;
+                trackState.deviceMask |= Device_PCSpeaker;
                 break;
             case HMI_DRIVER_WAVE_TABLE_SYNTH:
-                m_trackDevices[tk_v] |= Device_WaveTable;
+                trackState.deviceMask |= Device_WaveTable;
                 break;
             case HMI_DRIVER_AWE32:
-                m_trackDevices[tk_v] |= Device_AWE32;
+                trackState.deviceMask |= Device_AWE32;
                 break;
             case HMI_DRIVER_OPL3:
-                m_trackDevices[tk_v] |= Device_OPL3;
+                trackState.deviceMask |= Device_OPL3;
                 break;
             case HMI_DRIVER_GUS:
-                m_trackDevices[tk_v] |= Device_GravisUltrasound;
+                trackState.deviceMask |= Device_GravisUltrasound;
                 break;
             default:
                 m_errorString.setFmt("HMI/HMP: Unsupported device type 0x%04X\n", (unsigned)hmi_data.trackDevice[tk][dev]);
@@ -1190,15 +1191,15 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
         }
 
-        if(m_trackDevices[tk_v] != Device_ANY)
+        if(trackState.deviceMask != Device_ANY)
         {
             if(m_deviceMaskAvailable == Device_ANY)
-                m_deviceMaskAvailable = m_trackDevices[tk_v];
+                m_deviceMaskAvailable = trackState.deviceMask;
             else
-                m_deviceMaskAvailable |= m_trackDevices[tk_v];
+                m_deviceMaskAvailable |= trackState.deviceMask;
         }
 
-        if(m_deviceMask != Device_ANY && (m_deviceMask & m_trackDevices[tk_v]) == 0)
+        if(m_deviceMask != Device_ANY && (m_deviceMask & trackState.deviceMask) == 0)
             continue; // Exclude this track completely
 
         // Time delay that follows the first event in the track

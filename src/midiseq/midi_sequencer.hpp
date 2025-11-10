@@ -630,7 +630,23 @@ private:
      */
     typedef void (*TriggerHandler)(void *userData, unsigned trigger, size_t track);
 
+    /**
+     * @brief The state of the MIDI track
+     */
+    struct MidiTrackState
+    {
+        //! Cache of active durated notes per track
+        DuratedNotesCache duratedNotes;
+        //! Track-local loop state
+        LoopState loop;
+        //! Device designation mask (don't play this track if no match with sequencer setup)
+        uint32_t deviceMask;
+        //! Disable handling of this track
+        bool disabled;
 
+        //! Constructor to initialize member variables
+        MidiTrackState();
+    };
 
     /**********************************************************************************
      *                      Private variable fields definitions                       *
@@ -689,14 +705,11 @@ private:
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue> m_trackData;
 
-    //! Per-device filter of tracks
-    std::vector<uint32_t> m_trackDevices;
+    //! State of every MIDI track
+    std::vector<MidiTrackState> m_trackState;
 
     //! Current count of MIDI tracks
     size_t m_tracksCount;
-
-    //! Cache of active durated notes per track
-    std::vector<DuratedNotesCache> m_trackDuratedNotes;
 
     //! CMF instruments
     std::vector<CmfInstrument> m_cmfInstruments;
@@ -733,11 +746,6 @@ private:
     //! The state of the loop
     LoopState m_loop;
 
-    //! Per-track loop state
-    std::vector<LoopState> m_trackLoop;
-
-    //! Whether the nth track has playback disabled
-    std::vector<bool> m_trackDisable;
     //! Index of solo track, or max for disabled
     size_t m_trackSolo;
     //! MIDI channel disable (exception for extra port-prefix-based channels)
