@@ -376,7 +376,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     }
 
     if(!m_trackData[0].empty())
-        m_currentPosition.track[0].pos = m_trackData[0].begin();
+        initTracksBegin(0);
 
     buildTimeLine(temposList);
 

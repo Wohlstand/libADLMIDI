@@ -115,6 +115,7 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
         return false;
     }
 
+    initTracksBegin(0);
     installLoop(loopState);
     buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
 
