@@ -79,10 +79,14 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
         case MidiEvent::ST_LOOPSTART:
         case MidiEvent::ST_LOOPEND:
         case MidiEvent::ST_LOOPSTACK_BEGIN:
+        case MidiEvent::ST_LOOPSTACK_BEGIN_ID:
         case MidiEvent::ST_LOOPSTACK_END:
+        case MidiEvent::ST_LOOPSTACK_END_ID:
         case MidiEvent::ST_LOOPSTACK_BREAK:
         case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
+        case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID:
         case MidiEvent::ST_TRACK_LOOPSTACK_END:
+        case MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
         case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
         case MidiEvent::ST_BRANCH_LOCATION:
         case MidiEvent::ST_BRANCH_TO:

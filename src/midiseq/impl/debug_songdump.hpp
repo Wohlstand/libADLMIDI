@@ -114,8 +114,12 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
 
         case BW_MidiSequencer::MidiEvent::ST_LOOPSTACK_BEGIN:
             return "XX-LoopStack-Begin";
+        case BW_MidiSequencer::MidiEvent::ST_LOOPSTACK_BEGIN_ID:
+            return "XX-LoopStack-Begin-ID";
         case BW_MidiSequencer::MidiEvent::ST_LOOPSTACK_END:
             return "XX-LoopStack-End";
+        case BW_MidiSequencer::MidiEvent::ST_LOOPSTACK_END_ID:
+            return "XX-LoopStack-End-ID";
         case BW_MidiSequencer::MidiEvent::ST_LOOPSTACK_BREAK:
             return "XX-LoopStack-Break";
 
@@ -124,8 +128,12 @@ const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::M
 
         case BW_MidiSequencer::MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
             return "XX-Track-LoopStack-Begin";
+        case BW_MidiSequencer::MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID:
+            return "XX-Track-LoopStack-Begin-ID";
         case BW_MidiSequencer::MidiEvent::ST_TRACK_LOOPSTACK_END:
             return "XX-Track-LoopStack-End";
+        case BW_MidiSequencer::MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
+            return "XX-Track-LoopStack-End-ID";
         case BW_MidiSequencer::MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
             return "XX-Track-LoopStack-Break";
 
