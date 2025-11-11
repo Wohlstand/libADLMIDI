@@ -30,12 +30,15 @@
 #include <cstring>
 #include <cstdarg>
 #include <vector>
-#include <algorithm>
+// #include <algorithm>
 #include <stdint.h>
+#ifdef _WIN32
+#   include <windows.h> // for Windows-specific setCursorVisibility implementation
+#endif
 #ifndef ADLMIDI_ENABLE_HW_DOS
 #   include <deque>
 #   include <signal.h>
-#   include "utf8main.h"
+#   include "utf8main.h" // IWYU pragma: keep
 #endif
 
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
@@ -512,7 +515,23 @@ static void sighandler(int dum)
         break;
     }
 }
+
+static void setCursorVisibility(bool visible)
+{
+#ifdef _WIN32
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = visible ? TRUE : FALSE;
+    SetConsoleCursorInfo(consoleHandle, &info);
+#else
+    if(visible)
+        printf("\e[?25h");
+    else
+        printf("\e[?25l");
 #endif
+}
+#endif // ADLMIDI_ENABLE_HW_DOS
 
 //#define DEBUG_SONG_CHANGE
 //#define DEBUG_SONG_CHANGE_BY_HOOK
@@ -777,6 +796,8 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
     double eat_delay;
     // bool tickSkip = true;
 
+    setCursorVisibility(false);
+
     s_timeCounter.clearLineR();
 
     while(!stop)
@@ -854,6 +875,8 @@ static void runHWSerialLoop(ADL_MIDIPlayer *myDevice)
         }
 #endif
     }
+
+    setCursorVisibility(true);
 
     s_timeCounter.clearLine();
 
@@ -962,6 +985,8 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
     uint8_t buff[16384];
 
     audio_start();
+
+    setCursorVisibility(false);
 
     s_timeCounter.clearLineR();
 
@@ -1095,6 +1120,8 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 #       endif
     }
 
+    setCursorVisibility(true);
+
     s_timeCounter.clearLine();
 
     audio_stop();
@@ -1116,6 +1143,8 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
         wave_enable_stereo();
         short buff[4096];
 
+        setCursorVisibility(false);
+
         while(!stop)
         {
             size_t got = static_cast<size_t>(adl_play(myDevice, 4096, buff));
@@ -1125,6 +1154,8 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
 
             s_timeCounter.printProgress(adl_positionTell(myDevice));
         }
+
+        setCursorVisibility(true);
 
         wave_close();
         s_timeCounter.clearLine();
