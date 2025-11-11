@@ -630,6 +630,30 @@ private:
         LoopStackEntry &getCurStack();
     };
 
+    // FIXME: Implement the proper save/restore functionality!
+    struct TrackStateRestore
+    {
+        enum RestoreSetup
+        {
+            RESTORE_CC          = 0x01,
+            RESTORE_NOTEOFFS    = 0x02,
+            RESTORE_PATCH       = 0x04,
+            RESTORE_WHEEL       = 0x08,
+            RESTORE_NOTE_ATT    = 0x10,
+            RESTORE_CHAN_ATT    = 0x20,
+            RESTORE_ALL_CC      = 0x40
+        };
+        //! Settings
+        uint8_t setup;
+        //! MIDI Channel that track uses right now (if track contains multi-channel events, this thing will fail!)
+        uint8_t track_channel;
+        //! On loop, restore state for controllers
+        uint8_t cc_to_restpore[102];
+        uint8_t reserve_patch;
+        uint8_t reserve_wheel[2];
+        uint8_t reserve_note_att[128];
+        uint8_t reserve_note_cc;
+    };
     /**
      * @brief Handler of callback trigger events
      * @param userData Pointer to user data (usually, context of something)
