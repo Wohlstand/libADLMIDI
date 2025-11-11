@@ -226,8 +226,7 @@ bool MIDIplay::LoadMIDI_post()
             adlins.voice2_fine_tune = 0.0;
         }
 
-        synth.m_embeddedBank = Synth::CustomBankTag; // Ignore AdlBank number, use dynamic banks instead
-        //std::printf("CMF deltas %u ticks %u, basictempo = %u\n", deltas, ticks, basictempo);
+        synth.m_embeddedBank = Synth::CustomBankTag;
         synth.m_rhythmMode = true;
         synth.m_musicMode = Synth::MODE_CMF;
         synth.m_volumeScale = Synth::VOLUME_NATIVE;
@@ -238,7 +237,6 @@ bool MIDIplay::LoadMIDI_post()
     }
     else if(format == MidiSequencer::Format_RSXX)
     {
-        //opl.CartoonersVolumes = true;
         synth.m_musicMode     = Synth::MODE_RSXX;
         synth.m_volumeScale   = Synth::VOLUME_NATIVE;
 
@@ -247,7 +245,6 @@ bool MIDIplay::LoadMIDI_post()
     }
     else if(format == MidiSequencer::Format_IMF || format == MidiSequencer::Format_KLM)
     {
-        //std::fprintf(stderr, "Done reading IMF file\n");
         synth.m_numFourOps  = 0; //Don't use 4-operator channels for IMF playing!
         synth.m_rhythmMode = false;//Don't enforce rhythm-mode when it's unneeded
         synth.m_musicMode = Synth::MODE_IMF;
