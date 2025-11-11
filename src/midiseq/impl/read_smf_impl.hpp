@@ -48,14 +48,10 @@ static const uint8_t s_midi_evtSizeCtrls[16] =
 
 bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks_offset, const size_t tracks_count)
 {
-    // bool gotGlobalLoopStart = false,
-    //      gotGlobalLoopEnd = false,
-    //      gotStackLoopStart = false,
-    //      gotLoopEventInThisRow = false;
-
     uint8_t headBuf[8];
     size_t fsize = 0;
     size_t trackLength;
+    size_t offset_next;
     //! Tempo change events list
     std::vector<TempoEvent> temposList;
     LoopPointParseState loopState;
@@ -64,26 +60,23 @@ bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks
 
     buildSmfSetupReset(tracks_count);
 
-    // Read tracks from here
-    fr.seek(tracks_offset, FileAndMemReader::SET);
+    offset_next = tracks_offset;
 
-    /*
-     * TODO: Make this be safer for memory in case of broken input data
-     * which may cause going away of available track data (and then give a crash!)
-     *
-     * POST: Check this more carefully for possible vulnuabilities are can crash this
-     */
     for(size_t tk = 0; tk < tracks_count; ++tk)
     {
+        // Read current track from here
+        fr.seek(offset_next, FileAndMemReader::SET);
+
         fsize = fr.read(headBuf, 1, 8);
         if((fsize < 8) || (std::memcmp(headBuf, "MTrk", 4) != 0))
         {
-            m_errorString.set(fr.fileName().c_str());
-            m_errorString.append(": Invalid format, MTrk signature is not found!\n");
+            m_parsingErrorsString.set(fr.fileName().c_str());
+            m_parsingErrorsString.append(": Invalid format, MTrk signature is not found!\n");
             return false;
         }
 
         trackLength = (size_t)readBEint(headBuf + 4, 4);
+        offset_next += trackLength + 8; // Track length plus header size
 
         if(!smf_buildOneTrack(fr, tk, trackLength, temposList, loopState))
             return false; // Failed to parse track (error already written!)
@@ -107,7 +100,6 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     int status = 0;
     const size_t end = fr.tell() + track_size;
     bool ok = false;
-    char error[150];
     std::vector<uint8_t> text_buffer;
 
     //! Caches note on/off states.
@@ -126,9 +118,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 
     if(!ok)
     {
-        int len = snprintf(error, 150, "buildTrackData: Can't read variable-length value at begin of track %lu.\n", (unsigned long)track_idx);
-        if((len > 0) && (len < 150))
-            m_parsingErrorsString.append(error, (size_t)len);
+        m_parsingErrorsString.appendFmt("buildTrackData: Can't read variable-length value at begin of track %lu.\n", (unsigned long)track_idx);
         return false;
     }
 
@@ -153,9 +143,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
         event = smf_parseEvent(fr, end, status, text_buffer);
         if(!event.isValid)
         {
-            int len = snprintf(error, 150, "buildTrackData: Fail to parse event in the track %lu.\n", (unsigned long)track_idx);
-            if((len > 0) && (len < 150))
-                m_parsingErrorsString.append(error, (size_t)len);
+            m_parsingErrorsString.appendFmt("buildTrackData: Fail to parse event in the track %lu.\n", (unsigned long)track_idx);
             return false;
         }
 
