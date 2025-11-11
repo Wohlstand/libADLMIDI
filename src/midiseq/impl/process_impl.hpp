@@ -98,12 +98,14 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
 
     case MidiEvent::T_SPECIAL:
     {
-        length = evt.data_block.size > 0 ? evt.data_block.size : static_cast<size_t>(evt.data_loc_size);
-        datau = evt.data_block.size > 0 ? getData(evt.data_block) : evt.data_loc;
-        data = (length ? reinterpret_cast<const char *>(datau) : "\0\0\0\0\0\0\0\0");
-
         if(m_interface->rt_metaEvent && evt.subtype < 0x100) // Meta event hook
-            m_interface->rt_metaEvent(m_interface->rtUserData, evt.subtype, reinterpret_cast<const uint8_t*>(data), length);
+        {
+            if(evt.data_loc_size > 0)
+                m_interface->rt_metaEvent(m_interface->rtUserData, evt.subtype, evt.data_loc, evt.data_loc_size);
+
+            if(evt.data_block.size > 0)
+                m_interface->rt_metaEvent(m_interface->rtUserData, evt.subtype, getData(evt.data_block), evt.data_block.size);
+        }
 
         switch(evt.subtype)
         {
@@ -111,12 +113,17 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             status = -1;
             return;
         case MidiEvent::ST_TEMPOCHANGE:
-            tempo_mul(&m_tempo, &m_invDeltaTicks, readBEint(datau, length));
+            tempo_mul(&m_tempo, &m_invDeltaTicks, readBEint(evt.data_loc, evt.data_loc_size));
             return;
 
         case MidiEvent::ST_DEVICESWITCH:
+            length = evt.data_block.size > 0 ? evt.data_block.size : static_cast<size_t>(evt.data_loc_size);
+            datau = evt.data_block.size > 0 ? getData(evt.data_block) : evt.data_loc;
+            data = (length ? reinterpret_cast<const char *>(datau) : "\0\0\0\0\0\0\0\0");
+
             if(m_interface->onDebugMessage)
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Switching another device: %.*s", length, data);
+
             if(m_interface->rt_deviceSwitch)
                 m_interface->rt_deviceSwitch(m_interface->rtUserData, track, data, length);
             return;
@@ -139,12 +146,12 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Callback Trigger: %02X", evt.data[0]);
 #endif
             if(m_triggerHandler)
-                m_triggerHandler(m_triggerUserData, static_cast<unsigned>(data[0]), track);
+                m_triggerHandler(m_triggerUserData, static_cast<unsigned>(evt.data_loc[0]), track);
             return;
 
         case MidiEvent::ST_RAWOPL:
             if(m_interface->rt_rawOPL)
-                m_interface->rt_rawOPL(m_interface->rtUserData, datau[0], datau[1]);
+                m_interface->rt_rawOPL(m_interface->rtUserData, evt.data_loc[0], evt.data_loc[1]);
             return;
 
 
@@ -173,7 +180,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     return;
                 }
 
-                loopsNum = datau[0];
+                loopsNum = evt.data_loc[0];
                 loopStackLevel = static_cast<size_t>(m_loop.stackLevel + 1);
 
                 while(loopStackLevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
@@ -225,7 +232,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     return;
                 }
 
-                loopsNum = datau[0];
+                loopsNum = evt.data_loc[0];
                 loopStackLevel = static_cast<size_t>(loop->stackLevel + 1);
 
                 while(loopStackLevel >= loop->stackDepth && loop->stackDepth < LoopState::stackDepthMax - 1)

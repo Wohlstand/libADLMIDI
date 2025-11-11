@@ -227,9 +227,9 @@ static uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok
     return result;
 }
 
-static bool strEqual(const uint8_t *in_str, size_t length, const char *needle)
+static bool strEqual(const char *in_str, size_t length, const char *needle)
 {
-    const char *it_i = reinterpret_cast<const char *>(in_str), *it_n = needle;
+    const char *it_i = in_str, *it_n = needle;
     size_t i = 0;
 
     for( ; i < length && *it_n != 0; ++i, ++it_i, ++it_n)

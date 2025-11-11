@@ -1087,10 +1087,9 @@ private:
      * @param [_inout] ptr pointer to pointer to current position on the raw data track
      * @param [_in] end Address to end of raw track data, needed to validate position and size
      * @param [_inout] status Status of the track processing
-     * @param [_out] text_buffer Externally allocated buffer for text processing (special markers, etc.)
      * @return Parsed MIDI event entry
      */
-    MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer);
+    MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status);
 
     /**
      * @brief Load file as Standard MIDI file

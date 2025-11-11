@@ -100,7 +100,6 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     int status = 0;
     const size_t end = fr.tell() + track_size;
     bool ok = false;
-    std::vector<uint8_t> text_buffer;
 
     //! Caches note on/off states.
     bool noteStates[0x7FF]; // [ccc|cnnnnnnn] - c = channel, n = note
@@ -140,7 +139,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 
     do
     {
-        event = smf_parseEvent(fr, end, status, text_buffer);
+        event = smf_parseEvent(fr, end, status);
         if(!event.isValid)
         {
             m_parsingErrorsString.appendFmt("buildTrackData: Fail to parse event in the track %lu.\n", (unsigned long)track_idx);
@@ -208,7 +207,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 }
 
 
-BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status, std::vector<uint8_t> &text_buffer)
+BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status)
 {
     uint8_t byte, midCh, evType;
     size_t locSize;
@@ -271,9 +270,6 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
             evt.isValid = 0;
             return evt;
         }
-
-        // const uint8_t *data = ptr;
-        // ptr += (size_t)length;
 
         evt.type = byte;
         evt.subtype = evtype;
@@ -349,32 +345,26 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
             break;
 
         case MidiEvent::ST_MARKER:
-            text_buffer.resize(length);
+            insertDataToBankWithTerm(evt, m_dataBank, fr, length);
+            entry = reinterpret_cast<const char*>(getData(evt.data_block));
 
-            if(fr.read(text_buffer.data(), 1, length) != length)
-            {
-                m_parsingErrorsString.append("parseEvent: Failed to read marker data!\n");
-                evt.isValid = 0;
-                return evt;
-            }
-
-            if(strEqual(text_buffer.data(), length, "loopstart"))
+            if(strEqual(entry, length, "loopstart"))
             {
                 // Return a custom Loop Start event instead of Marker
                 evt.subtype = MidiEvent::ST_LOOPSTART;
                 return evt;
             }
-            else if(strEqual(text_buffer.data(), length, "loopend"))
+            else if(strEqual(entry, length, "loopend"))
             {
                 // Return a custom Loop End event instead of Marker
                 evt.subtype = MidiEvent::ST_LOOPEND;
                 return evt;
             }
-            else if(length > 10 && strEqual(text_buffer.data(), 10, "loopstart="))
+            else if(length > 10 && strEqual(entry, 10, "loopstart="))
             {
                 char loop_key[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
                 size_t key_len = length - 10;
-                std::memcpy(loop_key, text_buffer.data() + 10, key_len > 10 ? 10 : key_len);
+                std::memcpy(loop_key, entry + 10, key_len > 10 ? 10 : key_len);
 
                 evt.type = MidiEvent::T_SPECIAL;
                 evt.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
@@ -394,7 +384,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
 
                 return evt;
             }
-            else if(length > 8 && strEqual(text_buffer.data(), 8, "loopend="))
+            else if(length > 8 && strEqual(entry, 8, "loopend="))
             {
                 evt.type = MidiEvent::T_SPECIAL;
                 evt.subtype = MidiEvent::ST_LOOPSTACK_END;
@@ -411,10 +401,6 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
                     );
                 }
                 return evt;
-            }
-            else
-            {
-                insertDataToBankWithTerm(evt, m_dataBank, text_buffer.data(), length);
             }
             break;
 
