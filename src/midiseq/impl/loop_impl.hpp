@@ -38,7 +38,7 @@ BW_MidiSequencer::LoopStackEntry::LoopStackEntry() :
     loops(0),
     start(0),
     end(0),
-    id(0xFFFF)
+    id(LOOP_STACK_NO_ID)
 {}
 
 BW_MidiSequencer::LoopState::LoopState() :
