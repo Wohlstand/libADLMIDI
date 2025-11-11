@@ -650,7 +650,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
             if(track.lastHandledEvent >= 0)
             {
                 track.delay += track.pos->delay;
-                track.pos++;
+                ++track.pos;
             }
 
             // Register global loop start position

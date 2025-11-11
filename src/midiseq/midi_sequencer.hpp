@@ -930,7 +930,7 @@ private:
      * @param event An event entry that was been proceeded just now
      * @param abs_position Current in-track absolute position
      */
-    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position, LoopState *trackLoop = NULL);
+    void analyseLoopEvent(LoopPointParseState &loopState, const MidiEvent &event, uint64_t abs_position, LoopState *trackLoop);
 
 
 

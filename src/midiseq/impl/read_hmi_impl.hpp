@@ -1374,7 +1374,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                         temposList.push_back(t);
                     }
                     else
-                        analyseLoopEvent(loopState, event, abs_position);
+                        analyseLoopEvent(loopState, event, abs_position, &trackState.loop);
                 }
 
                 evtPos.delay = hmi_data.fReadVarLen(fr, d.end, ok);

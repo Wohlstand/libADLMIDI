@@ -117,7 +117,7 @@ BW_MidiSequencer::LoopStackEntry &BW_MidiSequencer::LoopState::getCurStack()
         d.infinity = 0;
         d.start = 0;
         d.end = 0;
-        d.id = 0xFFFF;
+        d.id = LOOP_STACK_NO_ID;
         stack[stackDepth++] = d;
     }
 
@@ -133,7 +133,7 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
     uint64_t minDelay;
     BranchEntry branch;
     LoopRuntimeState rtLoopState;
-    Tempo_t t;
+    Tempo_t t, curTempo = m_tempo;
 
     std::memset(&rtLoopState, 0, sizeof(rtLoopState));
 
@@ -144,7 +144,7 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
     }
 
     // loopStart must be located before loopEnd!
-    if(loopState.loopStartTicks >= loopState.loopEndTicks)
+    if(loopState.loopStartTicks != 0 && loopState.loopEndTicks != 0 && loopState.loopStartTicks >= loopState.loopEndTicks)
     {
         m_loop.invalidLoop = true;
         if(m_interface->onDebugMessage && (loopState.gotLoopStart || loopState.gotLoopEnd))
@@ -192,6 +192,9 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
                     {
                         switch(evt.subtype)
                         {
+                        case MidiEvent::ST_TEMPOCHANGE:
+                            tempo_mul(&curTempo, &m_invDeltaTicks, readBEint(evt.data_loc, evt.data_loc_size));
+                            break;
                         case MidiEvent::ST_LOOPSTART:
                             gotGlobStart = true;
                             break;
@@ -254,7 +257,7 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
                 if(track.lastHandledEvent >= 0)
                 {
                     track.delay += track.pos->delay;
-                    track.pos++;
+                    ++track.pos;
                 }
             }
         }
@@ -277,7 +280,7 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
         for(size_t tk = 0; tk < m_tracksCount; ++tk)
             scanPosition.track[tk].delay -= minDelay;
 
-        tempo_mul(&t, &m_tempo, minDelay);
+        tempo_mul(&t, &curTempo, minDelay);
         scanPosition.absTickPosition += minDelay;
         scanPosition.absTimePosition += tempo_get(&t);
 
@@ -356,11 +359,11 @@ void BW_MidiSequencer::setLoopStackEnd(LoopPointParseState &loopState, LoopState
 
         if(dstLoop->dstLoopStackId != LOOP_STACK_NO_ID)
         {
-            do
+            while(dstLoop->stackLevel >= 0 && dstLoop->getCurStack().id != dstLoop->dstLoopStackId)
             {
                 dstLoop->getCurStack().end = abs_position;
                 dstLoop->stackDown();
-            } while(dstLoop->stackLevel >= 0 && dstLoop->getCurStack().id != dstLoop->dstLoopStackId);
+            }
 
             if(dstLoop->stackLevel < 0)
             {
@@ -374,11 +377,9 @@ void BW_MidiSequencer::setLoopStackEnd(LoopPointParseState &loopState, LoopState
                 }
             }
         }
-        else
-        {
-            dstLoop->getCurStack().end = abs_position;
-            dstLoop->stackDown();
-        }
+
+        dstLoop->getCurStack().end = abs_position;
+        dstLoop->stackDown();
     }
 
     // In this row we got loop event, register this!
@@ -439,25 +440,41 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
         loopState.gotLoopEventsInThisRow |= GLOBAL_LOOP;
         break;
 
-    case MidiEvent::ST_LOOPSTACK_BEGIN:
     case MidiEvent::ST_LOOPSTACK_BEGIN_ID:
+        m_loop.dstLoopStackId = event.data_loc[1];
+        setLoopStackStart(loopState, &m_loop, event, abs_position, GLOBAL_LOOPSTACK);
+        break;
+    case MidiEvent::ST_LOOPSTACK_BEGIN:
+        m_loop.dstLoopStackId = LOOP_STACK_NO_ID;
         setLoopStackStart(loopState, &m_loop, event, abs_position, GLOBAL_LOOPSTACK);
         break;
 
-    case MidiEvent::ST_LOOPSTACK_END:
     case MidiEvent::ST_LOOPSTACK_END_ID:
+        m_loop.dstLoopStackId = event.data_loc[0];
+        setLoopStackEnd(loopState, &m_loop, abs_position, GLOBAL_LOOPSTACK);
+        break;
+    case MidiEvent::ST_LOOPSTACK_END:
     case MidiEvent::ST_LOOPSTACK_BREAK:
+        m_loop.dstLoopStackId = LOOP_STACK_NO_ID;
         setLoopStackEnd(loopState, &m_loop, abs_position, GLOBAL_LOOPSTACK);
         break;
 
-    case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
     case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID:
+        trackLoop->dstLoopStackId = event.data_loc[1];
+        setLoopStackStart(loopState, trackLoop, event, abs_position, LOCAL_LOOPSTACK);
+        break;
+    case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
+        trackLoop->dstLoopStackId = LOOP_STACK_NO_ID;
         setLoopStackStart(loopState, trackLoop, event, abs_position, LOCAL_LOOPSTACK);
         break;
 
-    case MidiEvent::ST_TRACK_LOOPSTACK_END:
     case MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
+        trackLoop->dstLoopStackId = event.data_loc[0];
+        setLoopStackEnd(loopState, trackLoop, abs_position, LOCAL_LOOPSTACK);
+        break;
+    case MidiEvent::ST_TRACK_LOOPSTACK_END:
     case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
+        trackLoop->dstLoopStackId = LOOP_STACK_NO_ID;
         setLoopStackEnd(loopState, trackLoop, abs_position, LOCAL_LOOPSTACK);
         break;
 

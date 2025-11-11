@@ -169,7 +169,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
                 temposList.push_back(t);
             }
             else
-                analyseLoopEvent(loopState, event, abs_position);
+                analyseLoopEvent(loopState, event, abs_position, &m_trackState[track_idx].loop);
         }
 
         // Don't try to read delta after EndOfTrack event!
