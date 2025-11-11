@@ -485,17 +485,7 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
                     }
                 }
 
-                if(glob)
-                {
-                    m_currentPosition = s->startPosition;
-
-                    // Do all notes off on loop
-                    for(uint8_t i = 0; i < 16; i++)
-                        m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
-                }
-                else
-                    m_currentPosition.track[tk] = s->startPosition.track[0];
-
+                jumpToPosition(glob ? BRANCH_GLOBAL_TRACK : tk, &s->startPosition);
                 loop.skipStackStart = true;
                 return true;
             }
@@ -505,17 +495,7 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
                 s->loops--;
                 if(s->loops > 0)
                 {
-                    if(glob)
-                    {
-                        m_currentPosition = s->startPosition;
-
-                        // Do all notes off on loop
-                        for(uint8_t i = 0; i < 16; i++)
-                            m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
-                    }
-                    else
-                        m_currentPosition.track[tk] = s->startPosition.track[0];
-
+                    jumpToPosition(glob ? BRANCH_GLOBAL_TRACK : tk, &s->startPosition);
                     loop.skipStackStart = true;
                     return true;
                 }
@@ -538,6 +518,26 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
     return false;
 }
 
+void BW_MidiSequencer::jumpToPosition(size_t track, const Position *pos)
+{
+    if(track == BRANCH_GLOBAL_TRACK)
+    {
+        m_currentPosition = *pos;
+
+        // Do all notes off on loop
+        // FIXME: Implement handling of state restore assigned to every individual position
+        for(uint8_t i = 0; i < 16; i++)
+            m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+    }
+    else
+    {
+        m_currentPosition.track[track] = pos->track[0];
+        // Reset the time (lesser evil than time going to infinite!)
+        m_currentPosition.absTickPosition = pos->absTickPosition;
+        m_currentPosition.absTimePosition = pos->absTimePosition;
+    }
+}
+
 bool BW_MidiSequencer::jumpToBranch(uint32_t dstTrack, uint16_t dstBranch)
 {
     if(dstTrack != BRANCH_GLOBAL_TRACK && dstTrack >= m_currentPosition.track.size())
@@ -548,17 +548,7 @@ bool BW_MidiSequencer::jumpToBranch(uint32_t dstTrack, uint16_t dstBranch)
         BranchEntry &e = *it;
         if(e.id == dstBranch && e.track == dstTrack)
         {
-            if(dstTrack == BRANCH_GLOBAL_TRACK)
-            {
-                m_currentPosition = e.offset;
-
-                // Do all notes off on loop
-                for(uint8_t i = 0; i < 16; i++)
-                    m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
-            }
-            else
-                m_currentPosition.track[dstTrack] = e.offset.track[0];
-
+            jumpToPosition(dstTrack, &e.offset);
             return true;
         }
     }
@@ -733,13 +723,6 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
         if(m_interface->onloopEnd) // Loop End hook
             m_interface->onloopEnd(m_interface->onloopEnd_userData);
 
-        if(m_loopEnabled)
-        {
-            // Do all notes off on loop
-            for(uint8_t i = 0; i < 16; i++)
-                m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
-        }
-
         // Loop if song end or loop end point has reached
         m_loop.caughtEnd         = false;
 
@@ -752,12 +735,12 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 
         if(m_loop.temporaryBroken)
         {
-            m_currentPosition = m_trackBeginPosition;
+            jumpToPosition(BRANCH_GLOBAL_TRACK, &m_trackBeginPosition);
             m_loop.temporaryBroken = false;
         }
         else if(m_loop.loopsCount < 0 || m_loop.loopsLeft >= 1)
         {
-            m_currentPosition = m_loopBeginPosition;
+            jumpToPosition(BRANCH_GLOBAL_TRACK, &m_loopBeginPosition);
             if(m_loop.loopsCount >= 1)
                 m_loop.loopsLeft--;
         }

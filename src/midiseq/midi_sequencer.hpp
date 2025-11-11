@@ -1030,6 +1030,16 @@ private:
     bool processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos);
 
     /**
+     * @brief Changes current playback position to the state of `pos`
+     * @param track Track number to change position or 0xFFFFFFFF of entire song
+     * @param pos Position state structure.
+     *
+     * IMPORTANT: Tracks count in structure must match the song's tracks, otherwise the thing will crash.
+     * For single-track positions it's allowed to have only one track entry.
+     */
+    void jumpToPosition(size_t track, const Position *pos);
+
+    /**
      * @brief Jump to selected branch
      * @param dstTrack Jump to the track-local branch or to global branch (if specify 0xFFFFFFFF value)
      * @param dstBranch Branch ID to jump

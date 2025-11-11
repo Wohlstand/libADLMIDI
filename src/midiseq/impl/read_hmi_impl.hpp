@@ -812,7 +812,7 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir
                     event.data_loc_size = 1;
                     break;
 
-                case HMP_CC_LOC_LOOP_START:
+                case HMP_CC_LOC_LOOP_START: /* 115 */
                     if(!hmi_data.isHMP)
                         break;
                     event.type = MidiEvent::T_SPECIAL;
