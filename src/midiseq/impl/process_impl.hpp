@@ -41,7 +41,8 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     int loopsNum;
     DuratedNote *note;
     LoopStackEntry *loopEntryP;
-    LoopState *loop;
+    LoopState *loop = NULL;
+    bool loopHasId;
     MidiTrackState &tk = m_trackState[track];
 
     if(m_deviceMask != Device_ANY && (m_deviceMask & tk.deviceMask) == 0)
@@ -160,6 +161,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                 m_interface->onSongStart(m_interface->onSongStart_userData);
             return;
 
+
         case MidiEvent::ST_LOOPSTART:
             if(m_loopEnabled && !m_loop.invalidLoop)
                 m_loop.caughtStart = true;
@@ -170,60 +172,16 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                 m_loop.caughtEnd = true;
             return;
 
-        case MidiEvent::ST_LOOPSTACK_BEGIN:
-        case MidiEvent::ST_LOOPSTACK_BEGIN_ID:
-            if(m_loopEnabled && !m_loop.invalidLoop)
-            {
-                if(m_loop.skipStackStart)
-                {
-                    m_loop.skipStackStart = false;
-                    return;
-                }
-
-                loopsNum = evt.data_loc[0];
-                loopStackLevel = static_cast<size_t>(m_loop.stackLevel + 1);
-
-                while(loopStackLevel >= m_loop.stackDepth && m_loop.stackDepth < LoopState::stackDepthMax - 1)
-                {
-                    loopEntryP = &m_loop.stack[m_loop.stackDepth++];
-                    loopEntryP->loops = loopsNum;
-                    loopEntryP->infinity = (loopsNum == 0);
-                    loopEntryP->start = 0;
-                    loopEntryP->end = 0;
-                    loopEntryP->id = 0xFFFF;
-                }
-
-                loopEntryP = &m_loop.stack[loopStackLevel];
-                loopEntryP->loops = static_cast<int>(loopsNum);
-                loopEntryP->infinity = (loopsNum == 0);
-                loopEntryP->id = evt.subtype == MidiEvent::ST_LOOPSTACK_BEGIN_ID ? evt.data_loc[1] : 0xFFFF;
-                m_loop.caughtStackStart = true;
-            }
-            return;
-
-        case MidiEvent::ST_LOOPSTACK_END:
-            if(m_loopEnabled && !m_loop.invalidLoop)
-            {
-                m_loop.caughtStackEnd = true;
-                m_loop.dstLoopStackId = 0xFFFF;
-            }
-            return;
-        case MidiEvent::ST_LOOPSTACK_END_ID:
-            if(m_loopEnabled && !m_loop.invalidLoop)
-            {
-                m_loop.caughtStackEnd = true;
-                m_loop.dstLoopStackId = evt.data_loc[0];
-            }
-            break;
-
-        case MidiEvent::ST_LOOPSTACK_BREAK:
-            if(m_loopEnabled && !m_loop.invalidLoop)
-                m_loop.caughtStackBreak = true;
-            return;
 
         case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
         case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID:
             loop = &tk.loop;
+            /* fallthrough */
+        case MidiEvent::ST_LOOPSTACK_BEGIN:
+        case MidiEvent::ST_LOOPSTACK_BEGIN_ID:
+            if(!loop)
+                loop = &m_loop;
+
             if(m_loopEnabled && !loop->invalidLoop)
             {
                 if(loop->skipStackStart)
@@ -231,6 +189,8 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     loop->skipStackStart = false;
                     return;
                 }
+
+                loopHasId = evt.subtype == MidiEvent::ST_LOOPSTACK_BEGIN_ID || evt.subtype == MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID;
 
                 loopsNum = evt.data_loc[0];
                 loopStackLevel = static_cast<size_t>(loop->stackLevel + 1);
@@ -242,50 +202,55 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     loopEntryP->infinity = (loopsNum == 0);
                     loopEntryP->start = 0;
                     loopEntryP->end = 0;
-                    loopEntryP->id = 0xFFFF;
+                    loopEntryP->id = LOOP_STACK_NO_ID;
                 }
 
                 loopEntryP = &loop->stack[loopStackLevel];
                 loopEntryP->loops = static_cast<int>(loopsNum);
                 loopEntryP->infinity = (loopsNum == 0);
-                loopEntryP->id = evt.subtype == MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID ? evt.data_loc[1] : 0xFFFF;
+                loopEntryP->id = loopHasId ? evt.data_loc[1] : LOOP_STACK_NO_ID;
                 loop->caughtStackStart = true;
             }
             return;
 
+
+        case MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
         case MidiEvent::ST_TRACK_LOOPSTACK_END:
             loop = &tk.loop;
+            /* fallthrough */
+        case MidiEvent::ST_LOOPSTACK_END:
+        case MidiEvent::ST_LOOPSTACK_END_ID:
+            if(!loop)
+                loop = &m_loop;
+
             if(m_loopEnabled && !loop->invalidLoop)
             {
+                loopHasId = evt.subtype == MidiEvent::ST_LOOPSTACK_END_ID || evt.subtype == MidiEvent::ST_TRACK_LOOPSTACK_END_ID;
                 loop->caughtStackEnd = true;
-                loop->dstLoopStackId = 0xFFFF;
-            }
-            return;
-        case MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
-            loop = &tk.loop;
-            if(m_loopEnabled && !loop->invalidLoop)
-            {
-                loop->caughtStackEnd = true;
-                loop->dstLoopStackId = evt.data_loc[0];
+                loop->dstLoopStackId = loopHasId ? evt.data_loc[0] : LOOP_STACK_NO_ID;
             }
             return;
 
+
         case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
             loop = &tk.loop;
+            /* fallthrough */
+        case MidiEvent::ST_LOOPSTACK_BREAK:
+            if(!loop)
+                loop = &m_loop;
+
             if(m_loopEnabled && !loop->invalidLoop)
                 loop->caughtStackBreak = true;
             return;
 
-        case MidiEvent::ST_BRANCH_TO:
-            if(m_loopEnabled && !m_loop.invalidLoop)
-            {
-                m_loop.caughtBranchJump = true;
-                m_loop.dstBranchId = readLEint16(evt.data_loc, evt.data_loc_size);
-            }
-            return;
 
         case MidiEvent::ST_TRACK_BRANCH_TO:
             loop = &tk.loop;
+            /* fallthrough */
+        case MidiEvent::ST_BRANCH_TO:
+            if(!loop)
+                loop = &m_loop;
+
             if(m_loopEnabled && !loop->invalidLoop)
             {
                 loop->caughtBranchJump = true;
