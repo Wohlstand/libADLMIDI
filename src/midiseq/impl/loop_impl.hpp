@@ -29,6 +29,7 @@
 
 #include <cstring>
 
+#include "common.hpp"
 #include "../midi_sequencer.hpp"
 
 
@@ -36,7 +37,8 @@ BW_MidiSequencer::LoopStackEntry::LoopStackEntry() :
     infinity(false),
     loops(0),
     start(0),
-    end(0)
+    end(0),
+    id(0xFFFF)
 {}
 
 BW_MidiSequencer::LoopState::LoopState() :
@@ -50,6 +52,8 @@ BW_MidiSequencer::LoopState::LoopState() :
     temporaryBroken(false),
     loopsCount(-1),
     loopsLeft(0),
+    caughtBranchJump(false),
+    dstBranchId(0),
     stackDepth(0),
     stackLevel(-1)
 {}
@@ -63,6 +67,8 @@ void BW_MidiSequencer::LoopState::reset()
     caughtStackBreak = false;
     skipStackStart = false;
     loopsLeft = loopsCount;
+    caughtBranchJump = false;
+    dstBranchId = 0;
 }
 
 void BW_MidiSequencer::LoopState::fullReset()
@@ -73,6 +79,8 @@ void BW_MidiSequencer::LoopState::fullReset()
     temporaryBroken = false;
     stackDepth = 0;
     stackLevel = -1;
+    caughtBranchJump = false;
+    dstBranchId = 0;
 }
 
 bool BW_MidiSequencer::LoopState::isStackEnd()
@@ -109,6 +117,7 @@ BW_MidiSequencer::LoopStackEntry &BW_MidiSequencer::LoopState::getCurStack()
         d.infinity = 0;
         d.start = 0;
         d.end = 0;
+        d.id = 0xFFFF;
         stack[stackDepth++] = d;
     }
 
@@ -117,6 +126,17 @@ BW_MidiSequencer::LoopStackEntry &BW_MidiSequencer::LoopState::getCurStack()
 
 void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopState)
 {
+    Position scanPosition, rowBegin;
+    bool found = false;
+    bool gotGlobStart = false;
+    bool gotBranchId = false;
+    uint64_t minDelay;
+    BranchEntry branch;
+    LoopRuntimeState rtLoopState;
+    Tempo_t t;
+
+    std::memset(&rtLoopState, 0, sizeof(rtLoopState));
+
     if(loopState.gotLoopStart && !loopState.gotLoopEnd)
     {
         loopState.gotLoopEnd = true;
@@ -135,6 +155,136 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
             );
         }
     }
+
+    // Find loop points and branches
+    scanPosition = m_trackBeginPosition;
+
+    // Ensure the list of branches is clear!
+    m_branches.clear();
+
+    do
+    {
+        if(scanPosition.track.empty())
+            break; // Nothing to do!
+
+        rowBegin = scanPosition;
+
+        for(size_t tk = 0; tk < m_tracksCount; ++tk)
+        {
+            Position::TrackInfo &track = scanPosition.track[tk];
+            MidiTrackQueue::iterator end = m_trackData[tk].end();
+
+            if((track.lastHandledEvent >= 0) && (track.delay <= 0))
+            {
+                // Check is an end of track has been reached
+                if(track.pos == end)
+                {
+                    track.lastHandledEvent = -1;
+                    break;
+                }
+
+                for(size_t i = track.pos->events_begin; i < track.pos->events_end; ++i)
+                {
+                    const MidiEvent &evt = m_eventBank[i];
+                    track.lastHandledEvent = evt.type;
+
+                    if(evt.type == MidiEvent::T_SPECIAL)
+                    {
+                        switch(evt.subtype)
+                        {
+                        case MidiEvent::ST_LOOPSTART:
+                            gotGlobStart = true;
+                            break;
+                        case MidiEvent::ST_BRANCH_LOCATION:
+                        case MidiEvent::ST_TRACK_BRANCH_LOCATION:
+                            gotBranchId = true;
+                            break;
+                        case MidiEvent::ST_ENDTRACK:
+                            track.lastHandledEvent = -1;
+                            break;
+                        }
+                    }
+
+                    if(gotBranchId)
+                    {
+                        bool duplicate = false;
+
+                        branch.id = readLEint16(evt.data_loc, evt.data_loc_size);
+                        branch.tick = scanPosition.absTickPosition;
+                        branch.init = true;
+
+                        if(evt.subtype == MidiEvent::ST_TRACK_BRANCH_LOCATION)
+                        {
+                            branch.track = tk;
+                            branch.offset.assignOneTrack(&rowBegin, tk);
+                        }
+                        else
+                        {
+                            branch.track = BRANCH_GLOBAL_TRACK;
+                            branch.offset = rowBegin;
+                        }
+
+                        for(std::vector<BranchEntry>::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
+                        {
+                            BranchEntry &e = *it;
+                            if(e.id == branch.id && e.track == branch.track)
+                            {
+                                duplicate = true;
+                                break;
+                            }
+                        }
+
+                        if(!duplicate)
+                            m_branches.push_back(branch);
+
+                        gotBranchId = false;
+                    }
+
+                    if(gotGlobStart)
+                    {
+                        ++rtLoopState.numStackLoopStarts;
+                        gotGlobStart = false;
+                    }
+
+                    if(track.lastHandledEvent < 0)
+                        break;
+                }
+
+                // Read next event time (unless the track just ended)
+                if(track.lastHandledEvent >= 0)
+                {
+                    track.delay += track.pos->delay;
+                    track.pos++;
+                }
+            }
+        }
+
+        found = false;
+        minDelay = 0;
+
+        for(size_t tk = 0; tk < m_tracksCount; ++tk)
+        {
+            Position::TrackInfo &track = scanPosition.track[tk];
+            // Normal events
+            if((track.lastHandledEvent >= 0) && (!found || track.delay < minDelay))
+            {
+                minDelay = track.delay;
+                found = true;
+            }
+        }
+
+        // Schedule the next playevent to be processed after that delay
+        for(size_t tk = 0; tk < m_tracksCount; ++tk)
+            scanPosition.track[tk].delay -= minDelay;
+
+        tempo_mul(&t, &m_tempo, minDelay);
+        scanPosition.absTickPosition += minDelay;
+        scanPosition.absTimePosition += tempo_get(&t);
+
+        if(rtLoopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
+            m_loopBeginPosition = rowBegin;
+
+    } while(found);
 }
 
 void BW_MidiSequencer::setLoopStackStart(LoopPointParseState &loopState, LoopState *dstLoop, const MidiEvent &event, uint64_t abs_position, unsigned int type)
@@ -171,6 +321,10 @@ void BW_MidiSequencer::setLoopStackStart(LoopPointParseState &loopState, LoopSta
             loopEntryP->loops = event.data_loc[0];
             loopEntryP->infinity = (event.data_loc[0] == 0);
             loopEntryP->start = abs_position;
+            if(event.subtype == MidiEvent::ST_LOOPSTACK_BEGIN_ID || event.subtype == MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID)
+                loopEntryP->id = event.data_loc[1];
+            else
+                loopEntryP->id = LOOP_STACK_NO_ID;
             loopEntryP->end = abs_position;
         }
     }
@@ -200,8 +354,31 @@ void BW_MidiSequencer::setLoopStackEnd(LoopPointParseState &loopState, LoopState
         if(loopState.loopEndTicks < abs_position)
             loopState.loopEndTicks = abs_position;
 
-        dstLoop->getCurStack().end = abs_position;
-        dstLoop->stackDown();
+        if(dstLoop->dstLoopStackId != LOOP_STACK_NO_ID)
+        {
+            do
+            {
+                dstLoop->getCurStack().end = abs_position;
+                dstLoop->stackDown();
+            } while(dstLoop->stackLevel >= 0 && dstLoop->getCurStack().id != dstLoop->dstLoopStackId);
+
+            if(dstLoop->stackLevel < 0)
+            {
+                dstLoop->invalidLoop = true; // Loop ID is not exists!
+                if(m_interface->onDebugMessage)
+                {
+                    m_interface->onDebugMessage(
+                        m_interface->onDebugMessage_userData,
+                        "== Invalid loop detected! [Caught loop end ID tag with invalid loop end!] =="
+                    );
+                }
+            }
+        }
+        else
+        {
+            dstLoop->getCurStack().end = abs_position;
+            dstLoop->stackDown();
+        }
     }
 
     // In this row we got loop event, register this!
@@ -263,19 +440,23 @@ void BW_MidiSequencer::analyseLoopEvent(LoopPointParseState &loopState, const Mi
         break;
 
     case MidiEvent::ST_LOOPSTACK_BEGIN:
+    case MidiEvent::ST_LOOPSTACK_BEGIN_ID:
         setLoopStackStart(loopState, &m_loop, event, abs_position, GLOBAL_LOOPSTACK);
         break;
 
     case MidiEvent::ST_LOOPSTACK_END:
+    case MidiEvent::ST_LOOPSTACK_END_ID:
     case MidiEvent::ST_LOOPSTACK_BREAK:
         setLoopStackEnd(loopState, &m_loop, abs_position, GLOBAL_LOOPSTACK);
         break;
 
     case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
+    case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID:
         setLoopStackStart(loopState, trackLoop, event, abs_position, LOCAL_LOOPSTACK);
         break;
 
     case MidiEvent::ST_TRACK_LOOPSTACK_END:
+    case MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
     case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
         setLoopStackEnd(loopState, trackLoop, abs_position, LOCAL_LOOPSTACK);
         break;

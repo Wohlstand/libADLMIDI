@@ -164,6 +164,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             return;
 
         case MidiEvent::ST_LOOPSTACK_BEGIN:
+        case MidiEvent::ST_LOOPSTACK_BEGIN_ID:
             if(m_loopEnabled && !m_loop.invalidLoop)
             {
                 if(m_loop.skipStackStart)
@@ -182,19 +183,31 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     loopEntryP->infinity = (loopsNum == 0);
                     loopEntryP->start = 0;
                     loopEntryP->end = 0;
+                    loopEntryP->id = 0xFFFF;
                 }
 
                 loopEntryP = &m_loop.stack[loopStackLevel];
                 loopEntryP->loops = static_cast<int>(loopsNum);
                 loopEntryP->infinity = (loopsNum == 0);
+                loopEntryP->id = evt.subtype == MidiEvent::ST_LOOPSTACK_BEGIN_ID ? evt.data_loc[1] : 0xFFFF;
                 m_loop.caughtStackStart = true;
             }
             return;
 
         case MidiEvent::ST_LOOPSTACK_END:
             if(m_loopEnabled && !m_loop.invalidLoop)
+            {
                 m_loop.caughtStackEnd = true;
+                m_loop.dstLoopStackId = 0xFFFF;
+            }
             return;
+        case MidiEvent::ST_LOOPSTACK_END_ID:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+            {
+                m_loop.caughtStackEnd = true;
+                m_loop.dstLoopStackId = evt.data_loc[0];
+            }
+            break;
 
         case MidiEvent::ST_LOOPSTACK_BREAK:
             if(m_loopEnabled && !m_loop.invalidLoop)
@@ -202,6 +215,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
             return;
 
         case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN:
+        case MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID:
             loop = &tk.loop;
             if(m_loopEnabled && !loop->invalidLoop)
             {
@@ -221,11 +235,13 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     loopEntryP->infinity = (loopsNum == 0);
                     loopEntryP->start = 0;
                     loopEntryP->end = 0;
+                    loopEntryP->id = 0xFFFF;
                 }
 
                 loopEntryP = &loop->stack[loopStackLevel];
                 loopEntryP->loops = static_cast<int>(loopsNum);
                 loopEntryP->infinity = (loopsNum == 0);
+                loopEntryP->id = evt.subtype == MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID ? evt.data_loc[1] : 0xFFFF;
                 loop->caughtStackStart = true;
             }
             return;
@@ -233,13 +249,41 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         case MidiEvent::ST_TRACK_LOOPSTACK_END:
             loop = &tk.loop;
             if(m_loopEnabled && !loop->invalidLoop)
+            {
                 loop->caughtStackEnd = true;
+                loop->dstLoopStackId = 0xFFFF;
+            }
+            return;
+        case MidiEvent::ST_TRACK_LOOPSTACK_END_ID:
+            loop = &tk.loop;
+            if(m_loopEnabled && !loop->invalidLoop)
+            {
+                loop->caughtStackEnd = true;
+                loop->dstLoopStackId = evt.data_loc[0];
+            }
             return;
 
         case MidiEvent::ST_TRACK_LOOPSTACK_BREAK:
             loop = &tk.loop;
             if(m_loopEnabled && !loop->invalidLoop)
                 loop->caughtStackBreak = true;
+            return;
+
+        case MidiEvent::ST_BRANCH_TO:
+            if(m_loopEnabled && !m_loop.invalidLoop)
+            {
+                m_loop.caughtBranchJump = true;
+                m_loop.dstBranchId = readLEint16(evt.data_loc, evt.data_loc_size);
+            }
+            return;
+
+        case MidiEvent::ST_TRACK_BRANCH_TO:
+            loop = &tk.loop;
+            if(m_loopEnabled && !loop->invalidLoop)
+            {
+                loop->caughtBranchJump = true;
+                loop->dstBranchId = readLEint16(evt.data_loc, evt.data_loc_size);
+            }
             return;
         }
 
@@ -348,6 +392,17 @@ void BW_MidiSequencer::handleLoopStart(LoopRuntimeState &state, LoopState &loop,
 
 bool BW_MidiSequencer::handleLoopEnd(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob)
 {
+    if(loop.caughtBranchJump)
+    {
+        ++state.numBranchJumps;
+        loop.caughtBranchJump = false;
+
+        if(glob)
+            state.doLoopJump = true;
+
+        return true;
+    }
+
     if((glob && loop.caughtEnd) || loop.isStackEnd())
     {
         if(loop.caughtStackEnd)
@@ -377,15 +432,8 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
 
             if(glob)
                 s.startPosition = pos;
-            else
-            {
-                // Store info for only one track
-                s.startPosition.track.clear();
-                s.startPosition.track.push_back(pos.track[tk]);
-                s.startPosition.absTimePosition = pos.absTimePosition;
-                s.startPosition.wait = pos.wait;
-                s.startPosition.began = pos.began;
-            }
+            else // Store info for only one track
+                s.startPosition.assignOneTrack(&pos, tk);
 
             state.numStackLoopStarts--;
         }
@@ -406,12 +454,26 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
         }
     }
 
+    if(state.numBranchJumps > 0)
+        return jumpToBranch(glob ? BRANCH_GLOBAL_TRACK : tk, loop.dstBranchId);
+
     if(state.numStackLoopEnds > 0)
     {
         while(state.numStackLoopEnds > 0)
         {
-            LoopStackEntry &s = loop.getCurStack();
-            if(s.infinity)
+            LoopStackEntry *s = &loop.getCurStack();
+
+            // We should change stack if ID is not matching
+            if(loop.dstLoopStackId != LOOP_STACK_NO_ID && s->id != loop.dstLoopStackId)
+            {
+                do
+                {
+                    loop.stackDown();
+                    s = &loop.getCurStack();
+                } while(loop.stackLevel >= 0 && s->id != loop.dstLoopStackId);
+            }
+
+            if(s->infinity)
             {
                 if(glob && m_interface->onloopEnd && (m_loopEndTime >= state.stackLoopEndsTime)) // Loop End hook
                 {
@@ -425,34 +487,34 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
 
                 if(glob)
                 {
-                    m_currentPosition = s.startPosition;
+                    m_currentPosition = s->startPosition;
 
                     // Do all notes off on loop
                     for(uint8_t i = 0; i < 16; i++)
                         m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
                 }
                 else
-                    m_currentPosition.track[tk] = s.startPosition.track[0];
+                    m_currentPosition.track[tk] = s->startPosition.track[0];
 
                 loop.skipStackStart = true;
                 return true;
             }
             else
-            if(s.loops >= 0)
+            if(s->loops >= 0)
             {
-                s.loops--;
-                if(s.loops > 0)
+                s->loops--;
+                if(s->loops > 0)
                 {
                     if(glob)
                     {
-                        m_currentPosition = s.startPosition;
+                        m_currentPosition = s->startPosition;
 
                         // Do all notes off on loop
                         for(uint8_t i = 0; i < 16; i++)
                             m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
                     }
                     else
-                        m_currentPosition.track[tk] = s.startPosition.track[0];
+                        m_currentPosition.track[tk] = s->startPosition.track[0];
 
                     loop.skipStackStart = true;
                     return true;
@@ -470,6 +532,34 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
             }
 
             state.numStackLoopEnds--;
+        }
+    }
+
+    return false;
+}
+
+bool BW_MidiSequencer::jumpToBranch(uint32_t dstTrack, uint16_t dstBranch)
+{
+    if(dstTrack != BRANCH_GLOBAL_TRACK && dstTrack >= m_currentPosition.track.size())
+        return false; // Invalid query!
+
+    for(std::vector<BranchEntry>::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
+    {
+        BranchEntry &e = *it;
+        if(e.id == dstBranch && e.track == dstTrack)
+        {
+            if(dstTrack == BRANCH_GLOBAL_TRACK)
+            {
+                m_currentPosition = e.offset;
+
+                // Do all notes off on loop
+                for(uint8_t i = 0; i < 16; i++)
+                    m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+            }
+            else
+                m_currentPosition.track[dstTrack] = e.offset.track[0];
+
+            return true;
         }
     }
 
@@ -499,6 +589,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
+        MidiTrackQueue::iterator end = m_trackData[tk].end();
         MidiTrackState &trackState = m_trackState[tk];
         LoopState &trackLoop = trackState.loop;
 
@@ -510,7 +601,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
         if((track.lastHandledEvent >= 0) && (track.delay <= 0))
         {
             // Check is an end of track has been reached
-            if(track.pos == m_trackData[tk].end())
+            if(track.pos == end)
             {
                 track.lastHandledEvent = -1;
                 break;
@@ -535,7 +626,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                     if(m_interface->onloopStart) // Loop Start hook
                         m_interface->onloopStart(m_interface->onloopStart_userData);
 
-                    loopState.numGlobLoopStarts++;
+                    ++loopState.numGlobLoopStarts;
                     m_loop.caughtStart = false;
                 }
 
@@ -626,7 +717,10 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 #ifdef ENABLE_BEGIN_SILENCE_SKIPPING
     if(m_currentPosition.began)
 #endif
+    {
         m_currentPosition.wait += tempo_get(&t);
+        m_currentPosition.absTickPosition += shortestDelay;
+    }
 
     if(loopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
         m_loopBeginPosition = rowBeginPosition;

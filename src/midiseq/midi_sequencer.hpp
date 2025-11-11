@@ -129,7 +129,7 @@ public:
         Device_WaveBlaster      = 0x0020,
         Device_ProAudioSpectrum = 0x0040,
         Device_SoundMan16       = 0x0080,
-        Device_DIGI             = 0x0100, // Digital MIDI devices
+        Device_DIGI             = 0x0100, // Digital samples controlled by MIDI
         Device_SoundScape       = 0x0200,
         Device_WaveTable        = 0x0400,
         Device_GravisUltrasound = 0x0800,
@@ -271,79 +271,87 @@ private:
             ST_UNKNOWN = 0x100,
 
             //! [Non-Standard] Built-in song begin hook trigger
-            ST_SONG_BEGIN_HOOK = 0x101,
+            ST_SONG_BEGIN_HOOK,
 
             //! [Non-Standard] Loop Start point
-            ST_LOOPSTART    = 0x102,//size == 0 <CUSTOM>
+            ST_LOOPSTART,   //size == 0 <CUSTOM>
             //! [Non-Standard] Loop End point
-            ST_LOOPEND      = 0x103,//size == 0 <CUSTOM>
+            ST_LOOPEND,     //size == 0 <CUSTOM>
             //! [Non-Standard] Raw OPL data
-            ST_RAWOPL       = 0x104,//size == 0 <CUSTOM>
+            ST_RAWOPL,      //size == 0 <CUSTOM>
 
             //! [Non-Standard] Loop Start point at entire song with support of multi-loops
-            ST_LOOPSTACK_BEGIN = 0x105,//size == 1 <CUSTOM>
+            ST_LOOPSTACK_BEGIN,//size == 1 <CUSTOM>
             //! [Non-Standard] Loop End point at entire song with support of multi-loops
-            ST_LOOPSTACK_END   = 0x106,//size == 0 <CUSTOM>
+            ST_LOOPSTACK_END, //size == 0 <CUSTOM>
+            //! Loop start point with ID
+            ST_LOOPSTACK_BEGIN_ID,
+            //! Loop end point of ID, jump to the point with the same ID
+            ST_LOOPSTACK_END_ID,
             //! [Non-Standard] Break the current loop at entire song and continue playback without loop
-            ST_LOOPSTACK_BREAK = 0x107,//size == 0 <CUSTOM>
+            ST_LOOPSTACK_BREAK, //size == 0 <CUSTOM>
 
             //! [Non-Standard] Callback Trigger executed from XMI and HMI formats
-            ST_CALLBACK_TRIGGER = 0x108,//size == 1 <CUSTOM>
+            ST_CALLBACK_TRIGGER, //size == 1 <CUSTOM>
 
             //! [Non-Standard] Loop Start point at individual track with support of multi-loops
-            ST_TRACK_LOOPSTACK_BEGIN    = 0x109,
+            ST_TRACK_LOOPSTACK_BEGIN,
             //! [Non-Standard] Loop End point at individual track with support of multi-loops
-            ST_TRACK_LOOPSTACK_END      = 0x10A,
+            ST_TRACK_LOOPSTACK_END,
+            //! Loop start point with ID
+            ST_TRACK_LOOPSTACK_BEGIN_ID,
+            //! Loop end point of ID, jump to the point with the same ID
+            ST_TRACK_LOOPSTACK_END_ID,
             //! [Non-Standard] Break the current loop at individual track and continue playback without loop
-            ST_TRACK_LOOPSTACK_BREAK    = 0x10B,
+            ST_TRACK_LOOPSTACK_BREAK,
 
             //! Installs a new song-wide branch tag of ID marker at the location
-            ST_BRANCH_LOCATION          = 0x10C,
+            ST_BRANCH_LOCATION,
             //! Jump to the location of the song-wide by ID of the branch tag
-            ST_BRANCH_TO                = 0x10D,
+            ST_BRANCH_TO,
 
             //! Installs a new track-local branch tag of ID marker at the location
-            ST_TRACK_BRANCH_LOCATION    = 0x10E,
+            ST_TRACK_BRANCH_LOCATION,
             //! Jump to the location of the track-local by ID of the branch tag
-            ST_TRACK_BRANCH_TO          = 0x10F,
+            ST_TRACK_BRANCH_TO,
 
             //! Lock the MIDI channel in the multi-song mapper from the stealing
-            ST_CHANNEL_LOCK             = 0x110,
+            ST_CHANNEL_LOCK,
             //! Unlock the MIDI channel in the multi-song mapper
-            ST_CHANNEL_UNLOCK           = 0x111,
+            ST_CHANNEL_UNLOCK,
 
             //! Enable restore state of selected controller on loop
-            ST_ENABLE_RESTORE_CC_ON_LOOP    = 0x112,
+            ST_ENABLE_RESTORE_CC_ON_LOOP,
             //! Enable calling of note-offs on loop
-            ST_ENABLE_NOTEOFF_ON_LOOP       = 0x113,
+            ST_ENABLE_NOTEOFF_ON_LOOP,
             //! Enable restore state of selected patch program on loop
-            ST_ENABLE_RESTORE_PATCH_ON_LOOP = 0x114,
+            ST_ENABLE_RESTORE_PATCH_ON_LOOP,
             //! Enable restore state of selected pitch bend wheel on loop
-            ST_ENABLE_RESTORE_WHEEL_ON_LOOP = 0x115,
+            ST_ENABLE_RESTORE_WHEEL_ON_LOOP,
             //! Enable restore state of selected note after-touch on loop
-            ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP = 0x116,
+            ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP,
             //! Enable restore state of selected channel after-touch/pressure on loop
-            ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP = 0x117,
+            ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP,
             //! Enable restore state of all alternated controllers on loop
-            ST_ENABLE_RESTORE_ALL_CC_ON_LOOP = 0x118,
+            ST_ENABLE_RESTORE_ALL_CC_ON_LOOP,
 
             //! Disable restore state of selected controller on loop
-            ST_DISABLE_RESTORE_CC_ON_LOOP    = 0x119,
+            ST_DISABLE_RESTORE_CC_ON_LOOP,
             //! Enable calling of note-offs on loop
-            ST_DISABLE_NOTEOFF_ON_LOOP       = 0x11A,
+            ST_DISABLE_NOTEOFF_ON_LOOP,
             //! Enable restore state of selected patch program on loop
-            ST_DISABLE_RESTORE_PATCH_ON_LOOP = 0x11B,
+            ST_DISABLE_RESTORE_PATCH_ON_LOOP,
             //! Enable restore state of selected pitch bend wheel on loop
-            ST_DISABLE_RESTORE_WHEEL_ON_LOOP = 0x11C,
+            ST_DISABLE_RESTORE_WHEEL_ON_LOOP,
             //! Enable restore state of selected note after-touch on loop
-            ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP = 0x11D,
+            ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP,
             //! Enable restore state of selected channel after-touch/pressure on loop
-            ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP = 0x11E,
+            ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP,
             //! Enable restore state of all alternated controllers on loop
-            ST_DISABLE_RESTORE_ALL_CC_ON_LOOP = 0x11F,
+            ST_DISABLE_RESTORE_ALL_CC_ON_LOOP,
 
             //! Set the priority of MIDI channel for the stealing algorithm
-            ST_CHANNEL_PRIORITY = 0x120,
+            ST_CHANNEL_PRIORITY,
 
             //! Tail of the enum, is not supposed to be used
             ST_TYPE_LAST = ST_TRACK_BRANCH_TO
@@ -451,6 +459,8 @@ private:
         double wait;
         //! Absolute time position on the track in seconds
         double absTimePosition;
+        //! Absolute MIDI tick position on the song
+        uint64_t absTickPosition;
         //! Was track began playing
         bool began;
 
@@ -475,9 +485,29 @@ private:
         Position():
             wait(0.0),
             absTimePosition(0.0),
+            absTickPosition(0),
             began(false),
             track()
         {}
+
+        inline void clear()
+        {
+            wait = 0.0;
+            began = false;
+            absTimePosition = 0.0;
+            absTickPosition = 0;
+            track.clear();
+        }
+
+        inline void assignOneTrack(const Position *o, size_t tk)
+        {
+            absTimePosition = o->absTimePosition;
+            wait = o->wait;
+            began = o->began;
+            absTickPosition = o->absTickPosition;
+            track.clear();
+            track.push_back(o->track[tk]);
+        }
     };
 
     struct SequencerTime
@@ -553,6 +583,8 @@ private:
         unsigned numStackLoopEnds;
         //! Number of stacked loop end events caught
         unsigned numStackLoopBreaks;
+        //! Number of branch jumps caught
+        unsigned numBranchJumps;
         //! Shall global loop jump to be performed?
         bool     doLoopJump;
     };
@@ -574,7 +606,30 @@ private:
         uint64_t start;
         //! Loop end tick
         uint64_t end;
+        //! ID of loop entry (by default unused)
+        uint16_t id;
     };
+
+    static const uint32_t LOOP_STACK_NO_ID = 0xFFFF;
+
+    /**
+     * @brief The named tag that allows to jump to here from anywhere
+     */
+    struct BranchEntry
+    {
+        //! Position snapshot where branch is placed
+        Position offset;
+        //! Tick
+        uint64_t tick;
+        //! Owner track (if 0xFFFFFFFF, branch is global)
+        uint32_t track;
+        //! ID of the branch
+        uint16_t id;
+        //! Is track position built?
+        bool init;
+    };
+
+    static const uint32_t BRANCH_GLOBAL_TRACK = 0xFFFFFFFF;
 
     struct LoopState
     {
@@ -591,6 +646,8 @@ private:
         bool    caughtStackBreak;
         //! Skip next stack loop start event handling
         bool    skipStackStart;
+        //! Destination loop stack ID
+        uint16_t dstLoopStackId;
 
         //! Are loop points invalid?
         bool    invalidLoop; /*Loop points are invalid (loopStart after loopEnd or loopStart and loopEnd are on same place)*/
@@ -603,6 +660,9 @@ private:
 
         //! how many loops left until finish the song
         int     loopsLeft;
+
+        bool        caughtBranchJump;
+        uint16_t    dstBranchId;
 
         static const size_t stackDepthMax = 127;
         //! Stack of nested loops
@@ -654,6 +714,7 @@ private:
         uint8_t reserve_note_att[128];
         uint8_t reserve_note_cc;
     };
+
     /**
      * @brief Handler of callback trigger events
      * @param userData Pointer to user data (usually, context of something)
@@ -739,6 +800,9 @@ private:
 
     //! State of every MIDI track
     std::vector<MidiTrackState> m_trackState;
+
+    //! List of available branches
+    std::vector<BranchEntry> m_branches;
 
     //! Current count of MIDI tracks
     size_t m_tracksCount;
@@ -906,6 +970,8 @@ private:
      * @param tempos Pre-collected list of tempo events
      * @param loopStartTicks Global loop start tick (give zero if no global loop presented)
      * @param loopEndTicks Global loop end tick (give zero if no global loop presented)
+     *
+     * IMPORTANT: This function MUST be called after parsing any file format!
      */
     void buildTimeLine(const std::vector<TempoEvent> &tempos,
                        uint64_t loopStartTicks = 0,
@@ -950,6 +1016,8 @@ private:
      */
     bool handleLoopEnd(LoopRuntimeState &state, LoopState &loop, Position::TrackInfo &tk, bool glob);
 
+
+
     /**
      * @brief Process all caught loop points
      * @param state Runtime state (for the track or for the global row)
@@ -960,6 +1028,14 @@ private:
      * @return true if it's required to don't process the global loop end and end of the song
      */
     bool processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos);
+
+    /**
+     * @brief Jump to selected branch
+     * @param dstTrack Jump to the track-local branch or to global branch (if specify 0xFFFFFFFF value)
+     * @param dstBranch Branch ID to jump
+     * @return true if jump happen, or false if branch ID and track combo was not found
+     */
+    bool jumpToBranch(uint32_t dstTrack, uint16_t dstBranch);
 
     /**
      * @brief Process MIDI events on the current tick moment
@@ -1097,6 +1173,9 @@ private:
         // Helper function pointers
         HMIVarLenReadCB fReadVarLen;
     };
+
+    static bool hmi_cc_restore_on_cvt(MidiEvent *event);
+    static bool hmi_cc_restore_off_cvt(MidiEvent *event);
 
     /**
      * @brief Parse single event for the HMI/HMP music file

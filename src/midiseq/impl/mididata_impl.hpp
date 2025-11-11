@@ -60,14 +60,15 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_musCopyright.size = 0;
     m_musCopyright.offset = 0;
 
-    m_currentPosition.began = false;
-    m_currentPosition.absTimePosition = 0.0;
-    m_currentPosition.wait = 0.0;
+    m_currentPosition.clear();
+    m_trackBeginPosition.clear();
+    m_loopBeginPosition.clear();
 
     m_musTrackTitles.clear();
     m_musMarkers.clear();
     m_dataBank.clear();
     m_eventBank.clear();
+    m_branches.clear();
 
     m_trackData.clear();
     m_trackState.clear();
@@ -75,8 +76,6 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
     m_loop.reset();
     m_loop.invalidLoop = false;
     m_time.reset();
-
-    m_currentPosition.track.clear();
 
     buildSmfResizeTracks(m_tracksCount);
 
@@ -88,7 +87,7 @@ void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
     m_tracksCount = tracksCount;
     m_trackData.resize(m_tracksCount, MidiTrackQueue());
     m_trackState.resize(m_tracksCount, MidiTrackState());
-    m_currentPosition.track.resize(m_tracksCount);
+    m_trackBeginPosition.track.resize(m_tracksCount);
 }
 
 
@@ -97,15 +96,15 @@ void BW_MidiSequencer::initTracksBegin(size_t track)
     if(m_trackData[track].size() > 0)
     {
         MidiTrackQueue::iterator pos = m_trackData[track].begin();
-        m_currentPosition.track[track].pos = pos;
+        m_trackBeginPosition.track[track].pos = pos;
         // Some events doesn't begin at zero!
-        m_currentPosition.track[track].delay = pos->absPos;
-        m_currentPosition.track[track].lastHandledEvent = 0;
+        m_trackBeginPosition.track[track].delay = pos->absPos;
+        m_trackBeginPosition.track[track].lastHandledEvent = 0;
     }
     else
     {
-        m_currentPosition.track[track].delay = 0;
-        m_currentPosition.track[track].lastHandledEvent = -1;
+        m_trackBeginPosition.track[track].delay = 0;
+        m_trackBeginPosition.track[track].lastHandledEvent = -1;
     }
 }
 
@@ -270,9 +269,9 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
 
     m_fullSongTimeLength += m_postSongWaitDelay;
     // Set begin of the music
-    m_trackBeginPosition = m_currentPosition;
+    m_currentPosition = m_trackBeginPosition;
     // Initial loop position will begin at begin of track until passing of the loop point
-    m_loopBeginPosition  = m_currentPosition;
+    m_loopBeginPosition = m_trackBeginPosition;
     // Set lowest level of the loop stack
     m_loop.stackLevel = -1;
 
@@ -287,7 +286,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
     {
         caughLoopStart = 0;
         scanDone = false;
-        rowPosition = m_currentPosition;
+        rowPosition = m_trackBeginPosition;
 
         while(!scanDone)
         {

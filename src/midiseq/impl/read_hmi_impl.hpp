@@ -171,7 +171,7 @@ enum HMIEventSubTypes
 };
 
 /**
- * @brief The HMI/HMP specific MIDI controllers
+ * @brief The HMI specific MIDI controllers
  */
 enum HMIController
 {
@@ -210,6 +210,43 @@ enum HMIController
 };
 
 /**
+ * @brief Controllers specific to old HMP format
+ */
+enum HMPController
+{
+    //! Disable controller restore
+    HMP_CC_DISABLE_CC_RESTORE   = 103,
+    //! Enable controller restore
+    HMP_CC_ENABLE_CC_RESTORE    = 104,
+    //! Set the loops count to branch by taking 6'th byte at begin of controller entry
+    HMP_CC_GLOB_LOOP_START      = 109,
+    //! Dummy controller that holds loops count number
+    HMP_CC_GLOB_LOOPS_COUNT     = 110,
+
+    HMP_CC_GLOB_LOOP_END        = 111,
+    HMP_CC_GLOB_LOOP_END2       = 112,
+
+    HMP_CC_SET_GLOBAL_BRANCH    = 113,
+    HMP_CC_JUMP_TO_GLOB_BRANCH  = 114,
+
+    //! Set the loops count to branch by taking 6'th byte at begin of controller entry
+    HMP_CC_LOC_LOOP_START       = 115,
+    //! Dummy controller that holds loops count number
+    HMP_CC_LOC_LOOPS_COUNT      = 116,
+
+    //! Local loop end
+    HMP_CC_LOCAL_LOOP_END       = 117,
+    HMP_CC_LOCAL_LOOP_END2      = 118,
+
+    //! Callback Trigger
+    HMP_CC_CALLBACK_TRIGGER     = 119,
+    //! (UNSURE) Set local branch location
+    HMP_CC_SET_LOCAL_BRANCH     = 120,
+    //! Jump to local branch
+    HMP_CC_JUMP_TO_LOCLBRANCH   = 121
+};
+
+/**
  * @brief Sub-type of the on-loop state restore setup event
  */
 enum HMISaveRestore
@@ -229,6 +266,82 @@ enum HMISaveRestore
     //! Restore all CC controllers state on loop
     HMI_ONLOOP_RESTORE_ALL_CC   = 115
 };
+
+bool BW_MidiSequencer::hmi_cc_restore_on_cvt(MidiEvent *event)
+{
+    event->type = MidiEvent::T_SPECIAL;
+    event->data_loc_size = 0;
+
+    switch(event->data_loc[1])
+    {
+    default:
+        if(event->data_loc[1] > HMI_ONLOOP_RESTORE_CC)
+            return false;
+
+        event->subtype = MidiEvent::ST_ENABLE_RESTORE_CC_ON_LOOP;
+        event->data_loc[0] = event->data_loc[1];
+        event->data_loc_size = 1;
+        break;
+    case HMI_ONLOOP_NOTEOFFS:
+        event->subtype = MidiEvent::ST_ENABLE_NOTEOFF_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_PATCH:
+        event->subtype = MidiEvent::ST_ENABLE_RESTORE_PATCH_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_WHEEL:
+        event->subtype = MidiEvent::ST_ENABLE_RESTORE_WHEEL_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_NOTEATT:
+        event->subtype = MidiEvent::ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_CHANATT:
+        event->subtype = MidiEvent::ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_ALL_CC:
+        event->subtype = MidiEvent::ST_ENABLE_RESTORE_ALL_CC_ON_LOOP;
+        break;
+    }
+
+    return true;
+}
+
+bool BW_MidiSequencer::hmi_cc_restore_off_cvt(MidiEvent *event)
+{
+    event->type = MidiEvent::T_SPECIAL;
+    event->data_loc_size = 0;
+
+    switch(event->data_loc[1])
+    {
+    default:
+        if(event->data_loc[1] > HMI_ONLOOP_RESTORE_CC)
+            return false;
+
+        event->subtype = MidiEvent::ST_DISABLE_RESTORE_CC_ON_LOOP;
+        event->data_loc[0] = event->data_loc[1];
+        event->data_loc_size = 1;
+        break;
+    case HMI_ONLOOP_NOTEOFFS:
+        event->subtype = MidiEvent::ST_DISABLE_NOTEOFF_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_PATCH:
+        event->subtype = MidiEvent::ST_DISABLE_RESTORE_PATCH_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_WHEEL:
+        event->subtype = MidiEvent::ST_DISABLE_RESTORE_WHEEL_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_NOTEATT:
+        event->subtype = MidiEvent::ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_CHANATT:
+        event->subtype = MidiEvent::ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
+        break;
+    case HMI_ONLOOP_RESTORE_ALL_CC:
+        event->subtype = MidiEvent::ST_DISABLE_RESTORE_ALL_CC_ON_LOOP;
+        break;
+    }
+
+    return true;
+}
 
 
 bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir &d, FileAndMemReader &fr, MidiEvent &event, int &status)
@@ -463,6 +576,8 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir
                 m_errorString.append("HMI/HMP: Failed to read unknown event value!\n");
                 return false;
             }
+
+            event.data_loc[0] &= 0x7F; // Filter the highest bit
             break;
 
         default:
@@ -559,118 +674,102 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir
             {
                 switch(event.data_loc[0])
                 {
-                case HMI_CC_RESTORE_ENABLE:
-                    event.type = MidiEvent::T_SPECIAL;
-                    switch(event.data_loc[1])
+                case HMI_CC_RESTORE_ENABLE: /* 103, Same as HMP_CC_DISABLE_CC_RESTORE */
+                    if(!hmi_data.isHMP && !hmi_cc_restore_on_cvt(&event))
                     {
-                    default:
-                        if(event.data_loc[1] > HMI_ONLOOP_RESTORE_CC)
-                        {
-                            m_errorString.appendFmt("HMI/HMP: Unsupported value for the CC103 Enable state restoring on loop: %u", event.data_loc[1]);
-                            return false;
-                        }
-                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_CC_ON_LOOP;
-                        event.data_loc[0] = event.data_loc[1];
-                        event.data_loc_size = 1;
-                        break;
-                    case HMI_ONLOOP_NOTEOFFS:
-                        event.subtype = MidiEvent::ST_ENABLE_NOTEOFF_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_PATCH:
-                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_PATCH_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_WHEEL:
-                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_WHEEL_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_NOTEATT:
-                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_CHANATT:
-                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_ALL_CC:
-                        event.subtype = MidiEvent::ST_ENABLE_RESTORE_ALL_CC_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
+                        m_errorString.appendFmt("HMI: Unsupported value for the CC103 Enable state restoring on loop: %u", event.data_loc[1]);
+                        return false;
+                    }
+                    else if(hmi_data.isHMP && !hmi_cc_restore_off_cvt(&event))
+                    {
+                        m_errorString.appendFmt("HMP: Unsupported value for the CC104 Disable state restoring on loop: %u", event.data_loc[1]);
+                        return false;
                     }
                     break;
 
-                case HMI_CC_RESTORE_DISABLE:
-                    event.type = MidiEvent::T_SPECIAL;
-                    switch(event.data_loc[1])
+                case HMI_CC_RESTORE_DISABLE: /* 104, Same as HMP_CC_ENABLE_CC_RESTORE */
+                    if(!hmi_data.isHMP && !hmi_cc_restore_off_cvt(&event))
                     {
-                    default:
-                        if(event.data_loc[1] > HMI_ONLOOP_RESTORE_CC)
-                        {
-                            m_errorString.appendFmt("HMI/HMP: Unsupported value for the CC104 Disable state restoring on loop: %u", event.data_loc[1]);
-                            return false;
-                        }
-                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_CC_ON_LOOP;
-                        event.data_loc[0] = event.data_loc[1];
-                        event.data_loc_size = 1;
-                        break;
-                    case HMI_ONLOOP_NOTEOFFS:
-                        event.subtype = MidiEvent::ST_DISABLE_NOTEOFF_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_PATCH:
-                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_PATCH_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_WHEEL:
-                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_WHEEL_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_NOTEATT:
-                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_CHANATT:
-                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
-                    case HMI_ONLOOP_RESTORE_ALL_CC:
-                        event.subtype = MidiEvent::ST_DISABLE_RESTORE_ALL_CC_ON_LOOP;
-                        event.data_loc_size = 0;
-                        break;
+                        m_errorString.appendFmt("HMI: Unsupported value for the CC104 Disable state restoring on loop: %u", event.data_loc[1]);
+                        return false;
+                    }
+                    else if(hmi_data.isHMP && !hmi_cc_restore_on_cvt(&event))
+                    {
+                        m_errorString.appendFmt("HMP: Unsupported value for the CC103 Enable state restoring on loop: %u", event.data_loc[1]);
+                        return false;
                     }
                     break;
 
-                case HMI_CC_LOCK_CHANNEL:
-                    event.type = MidiEvent::T_SPECIAL;
-                    event.subtype = event.data_loc[1] == 0 ? MidiEvent::ST_CHANNEL_UNLOCK : MidiEvent::ST_CHANNEL_LOCK;
-                    event.data_loc_size = 0;
+                case HMI_CC_LOCK_CHANNEL: /* 106 */
+                    if(!hmi_data.isHMP)
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = event.data_loc[1] == 0 ? MidiEvent::ST_CHANNEL_UNLOCK : MidiEvent::ST_CHANNEL_LOCK;
+                        event.data_loc_size = 0;
+                    }
                     break;
 
-                case HMI_CC_SET_CH_PRIORITY:
+                case HMI_CC_SET_CH_PRIORITY: /* 107 */
+                    if(!hmi_data.isHMP)
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_CHANNEL_PRIORITY;
+                        event.data_loc[0] = event.data_loc[1];
+                        event.data_loc_size = 1;
+                    }
+                    break;
+
+
+                case HMI_CC_SET_LOCAL_BRANCH: /* 108 */
+                    if(hmi_data.isHMP)
+                        break;
                     event.type = MidiEvent::T_SPECIAL;
-                    event.subtype = MidiEvent::ST_CHANNEL_PRIORITY;
+                    event.subtype = MidiEvent::ST_TRACK_BRANCH_LOCATION;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
-
-
-                case HMI_CC_SET_LOCAL_BRANCH:
+                case HMP_CC_SET_LOCAL_BRANCH: /* 120 */
+                    if(!hmi_data.isHMP)
+                        break;
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_BRANCH_LOCATION;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
-                case HMI_CC_JUMP_TO_LOC_BRANCH:
+                case HMI_CC_JUMP_TO_LOC_BRANCH: /* 109, Same as HMP_CC_GLOB_LOOP_START */
+                    if(hmi_data.isHMP)
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN_ID;
+                        fr.seek(3, FileAndMemReader::CUR);
+                        // ID will be stored at second byte
+                        fr.read(event.data_loc, 1, 1);
+                        // fr.seek(-4, FileAndMemReader::CUR);
+                        if(event.data_loc[0] == 0xFF)
+                            event.data_loc[0] = 0; // 0xFF is "infinite" too
+                        event.data_loc_size = 2;
+                    }
+                    else
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_TRACK_BRANCH_TO;
+                        event.data_loc[0] = event.data_loc[1];
+                        event.data_loc_size = 1;
+                    }
+                    break;
+                case HMP_CC_JUMP_TO_LOCLBRANCH: /* 121 */
+                    if(!hmi_data.isHMP)
+                        break;
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_BRANCH_TO;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
-
-                case HMI_CC_GLOB_LOOP_START:
+                case HMI_CC_GLOB_LOOP_START: /* 110, Same as HMP_CC_GLOB_LOOPS_COUNT */
+                    if(hmi_data.isHMP)
+                        break;
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
                     event.data_loc[0] = event.data_loc[1];
@@ -679,29 +778,57 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir
                     event.data_loc_size = 1;
                     break;
 
-                case HMI_CC_GLOB_LOOP_END:
-                    event.type = MidiEvent::T_SPECIAL;
-                    event.subtype = MidiEvent::ST_LOOPSTACK_END;
-                    event.data_loc_size = 0;
+                case HMP_CC_GLOB_LOOP_END2: /* 112 */
+                    if(!hmi_data.isHMP)
+                        break;
+                    /* fallthrough */
+                case HMI_CC_GLOB_LOOP_END: /* 111 */
+                    if(hmi_data.isHMP)
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_LOOPSTACK_END_ID;
+                        event.data_loc[0] = event.data_loc[1];
+                        event.data_loc_size = 1;
+                    }
+                    else
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_LOOPSTACK_END;
+                        event.data_loc_size = 0;
+                    }
                     break;
 
-
-                case HMI_CC_SET_GLOBAL_BRANCH:
+                case HMI_CC_SET_GLOBAL_BRANCH: /* 113, same as HMP_CC_SET_GLOBAL_BRANCH */
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_BRANCH_LOCATION;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
-                case HMI_CC_JUMP_TO_GLOB_BRANCH:
+                case HMI_CC_JUMP_TO_GLOB_BRANCH: /* 114, same as HMP_CC_JUMP_TO_GLOB_BRANCH */
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_BRANCH_TO;
                     event.data_loc[0] = event.data_loc[1];
                     event.data_loc_size = 1;
                     break;
 
+                case HMP_CC_LOC_LOOP_START:
+                    if(!hmi_data.isHMP)
+                        break;
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN_ID;
+                    fr.seek(3, FileAndMemReader::CUR);
+                    // ID will be stored at second byte
+                    fr.read(event.data_loc, 1, 1);
+                    // fr.seek(-4, FileAndMemReader::CUR);
+                    if(event.data_loc[0] == 0xFF)
+                        event.data_loc[0] = 0; // 0xFF is "infinite" too
+                    event.data_loc_size = 2;
+                    break;
 
-                case HMI_CC_LOCAL_LOOP_START:
+                case HMI_CC_LOCAL_LOOP_START: /* 116 */
+                    if(hmi_data.isHMP)
+                        break;
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN;
                     event.data_loc[0] = event.data_loc[1];
@@ -710,14 +837,27 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir
                     event.data_loc_size = 1;
                     break;
 
-                case HMI_CC_LOCAL_LOOP_END:
-                    event.type = MidiEvent::T_SPECIAL;
-                    event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
-                    event.data_loc_size = 0;
+                case HMP_CC_LOCAL_LOOP_END2: /* 118 */
+                    if(!hmi_data.isHMP)
+                        break;
+                    /* fallthrough */
+                case HMI_CC_LOCAL_LOOP_END: /* 117 */
+                    if(hmi_data.isHMP)
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END_ID;
+                        event.data_loc[0] = event.data_loc[1];
+                        event.data_loc_size = 1;
+                    }
+                    else
+                    {
+                        event.type = MidiEvent::T_SPECIAL;
+                        event.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
+                        event.data_loc_size = 0;
+                    }
                     break;
 
-
-                case HMI_CC_CALLBACK_TRIGGER:
+                case HMI_CC_CALLBACK_TRIGGER: /* 119 */
                     event.type = MidiEvent::T_SPECIAL;
                     event.subtype = MidiEvent::ST_CALLBACK_TRIGGER;
                     event.data_loc[0] = event.data_loc[1];
