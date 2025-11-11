@@ -26,6 +26,7 @@
 #ifndef BW_MIDISEQ_READ_SMF_IMPL_HPP
 #define BW_MIDISEQ_READ_SMF_IMPL_HPP
 
+#include <cstdlib>
 #include <cstring>
 
 #include "../midi_sequencer.hpp"
@@ -390,7 +391,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
                 evt.type = MidiEvent::T_SPECIAL;
                 evt.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
                 evt.data_loc_size = 1;
-                evt.data_loc[0] = static_cast<uint8_t>(atoi(loop_key));
+                evt.data_loc[0] = static_cast<uint8_t>(std::atoi(loop_key));
 
                 if(m_interface->onDebugMessage)
                 {
@@ -450,6 +451,32 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
     }
 
     status = byte;
+
+    // RSXX-specific song end event
+    if(m_format == Format_RSXX && byte == 0xFC)
+    {
+        if(fr.tell() + 1 > end)
+        {
+            m_parsingErrorsString.appendFmt("parseEvent: Can't read RSXX specific event of type 0x%02X- Unexpected end of track data.\n", byte);
+            evt.isValid = 0;
+            return evt;
+        }
+
+        fr.read(evt.data_loc, 1, 1);
+
+        evt.type = MidiEvent::T_SPECIAL;
+        if(evt.data_loc[0] == 0x80)
+            evt.subtype = MidiEvent::ST_LOOPEND;
+        else
+        {
+            evt.subtype = MidiEvent::ST_ENDTRACK;
+            status = -1;
+        }
+
+        evt.channel = 0;
+        evt.data_loc_size = 0;
+        return evt;
+    }
 
     // Sys Com Song Select(Song #) [0-127]
     // Sys Com Song Position Pntr [LSB, MSB]
