@@ -155,7 +155,7 @@ void MIDIplay::applySetup()
         synth.setVolumeScaleModel(static_cast<ADLMIDI_VolumeModels>(m_setup.volumeScaleModel));
 
     if(m_setup.volumeScaleModel == ADLMIDI_VolumeModel_AUTO)//Use bank default volume model
-        synth.m_volumeScale = (Synth::VolumesScale)synth.m_insBankSetup.volumeModel;
+        synth.setFrequencyModel((Synth::VolumesScale)synth.m_insBankSetup.volumeModel);
 
     synth.m_numChips    = m_setup.numChips;
     m_cmfPercussionMode = false;

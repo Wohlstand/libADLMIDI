@@ -222,6 +222,9 @@ public:
         VOLUME_HMI_OLD
     } m_volumeScale;
 
+    //! Frequency computation function
+    uint32_t (*m_getFreq)(double tone, uint32_t *mul_offset);
+
     //! Channel allocation algorithm
     ADLMIDI_ChannelAlloc m_channelAlloc;
 
@@ -282,6 +285,12 @@ public:
      * @return true when setup on the fly is locked
      */
     bool setupLocked();
+
+    /**
+     * @brief Changes the volume model and assigns frequency formula
+     * @param model
+     */
+    void setFrequencyModel(VolumesScale model);
 
     /**
      * @brief Choose one of embedded banks

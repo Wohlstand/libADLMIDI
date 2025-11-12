@@ -664,7 +664,7 @@ ADLMIDI_EXPORT void adl_setVolumeRangeModel(struct ADL_MIDIPlayer *device, int v
     if(!synth.setupLocked())
     {
         if(play->m_setup.volumeScaleModel == ADLMIDI_VolumeModel_AUTO)//Use bank default volume model
-            synth.m_volumeScale = (Synth::VolumesScale)synth.m_insBankSetup.volumeModel;
+            synth.setFrequencyModel((Synth::VolumesScale)synth.m_insBankSetup.volumeModel);
         else
             synth.setVolumeScaleModel(static_cast<ADLMIDI_VolumeModels>(volumeModel));
     }

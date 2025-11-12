@@ -229,7 +229,7 @@ bool MIDIplay::LoadMIDI_post()
         synth.m_embeddedBank = Synth::CustomBankTag;
         synth.m_rhythmMode = true;
         synth.m_musicMode = Synth::MODE_CMF;
-        synth.m_volumeScale = Synth::VOLUME_NATIVE;
+        synth.setFrequencyModel(Synth::VOLUME_NATIVE);
         setToOPL2 = true;
 
         synth.m_numChips = 1;
@@ -238,7 +238,7 @@ bool MIDIplay::LoadMIDI_post()
     else if(format == MidiSequencer::Format_RSXX)
     {
         synth.m_musicMode     = Synth::MODE_RSXX;
-        synth.m_volumeScale   = Synth::VOLUME_NATIVE;
+        synth.setFrequencyModel(Synth::VOLUME_NATIVE);
 
         synth.m_numChips = 1;
         synth.m_numFourOps = 0;

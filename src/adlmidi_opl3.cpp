@@ -332,9 +332,31 @@ static const uint_fast32_t s_hmi_volume_table[64] =
  *               Standard frequency formula                    *
  * *************************************************************/
 
-static inline double s_commonFreq(double tone)
+static uint32_t s_commonFreq(double tone, uint32_t *mul_offset)
 {
-    return BEND_COEFFICIENT * std::exp(0.057762265 * tone);
+    uint32_t octave = 0;
+    double hertz = BEND_COEFFICIENT * std::exp(0.057762265 * tone);
+
+    *mul_offset = 0;
+
+    if(hertz < 0)
+        return 0xC0000000; // Forbidden value
+
+    //Basic range until max of octaves reaching
+    while((hertz >= 1023.5) && (octave < 0x1C00))
+    {
+        hertz /= 2.0;    // Calculate octave
+        octave += 0x400;
+    }
+
+    //Extended range, rely on frequency multiplication increment
+    while(hertz >= 1022.75)
+    {
+        hertz /= 2.0;    // Calculate octave
+        ++(*mul_offset);
+    }
+
+    return octave | static_cast<uint32_t>(hertz);
 }
 
 
@@ -455,12 +477,20 @@ static const int_fast32_t s_dmx_freq_table[] =
     0x036C
 };
 
-static inline double s_dmxFreq(double tone)
+static uint32_t s_dmxFreq(double tone, uint32_t *mul_offset)
 {
-    uint_fast32_t noteI = (uint_fast32_t)(tone);
+    uint_fast32_t noteI;
     int_fast32_t bendI = 0;
     int_fast32_t outHz = 0;
-    double bendDec = tone - (int)tone;
+    double bendDec;
+
+    *mul_offset = 0;
+
+    if(tone >= 12)
+        tone -= 12;
+
+    noteI = (uint_fast32_t)(tone);
+    bendDec = tone - (int)tone;
 
     bendI = (int_fast32_t)((bendDec * 128.0) / 2.0) + 128;
     bendI = bendI >> 1;
@@ -481,13 +511,13 @@ static inline double s_dmxFreq(double tone)
 
     outHz = s_dmx_freq_table[freqIndex];
 
-    while(oct > 1)
+    while(oct > 7)
     {
-        outHz *= 2;
-        oct -= 1;
+        ++(*mul_offset);
+        --oct;
     }
 
-    return (double)outHz;
+    return outHz | (oct << 10);
 }
 
 
@@ -533,18 +563,20 @@ static const int_fast32_t s_apogee_freq_table[31 + 1][12] =
     { 0x16a, 0x17f, 0x197, 0x1af, 0x1c8, 0x1e4, 0x200, 0x21f, 0x23f, 0x262, 0x286, 0x2ac }
 };
 
-static inline double s_apogeeFreq(double tone)
+static uint32_t s_apogeeFreq(double tone, uint32_t *mul_offset)
 {
-    uint_fast32_t noteI = (uint_fast32_t)(tone);
-    int_fast32_t bendI = 0;
-    int_fast32_t outHz = 0;
-    double bendDec = tone - (int)tone;
-    int_fast32_t octave;
-    int_fast32_t scaleNote;
+    uint_fast32_t noteI;
+    int_fast32_t bendI = 0, outHz = 0, octave, scaleNote;
+    double bendDec;
 
+    *mul_offset = 0;
+
+    noteI = (uint_fast32_t)(tone >= 12 ? tone - 12 : tone);
+
+    bendDec = tone - (int)tone;
     bendI = (int_fast32_t)(bendDec * 32) + 32;
 
-    noteI += bendI / 32;
+    noteI += (bendI / 32);
     noteI -= 1;
 
     scaleNote = noteI % 12;
@@ -552,13 +584,13 @@ static inline double s_apogeeFreq(double tone)
 
     outHz = s_apogee_freq_table[bendI % 32][scaleNote];
 
-    while(octave > 1)
+    while(octave > 7)
     {
-        outHz *= 2;
-        octave -= 1;
+        ++(*mul_offset);
+        --octave;
     }
 
-    return (double)outHz;
+    return outHz | (octave << 10);
 }
 
 
@@ -598,18 +630,16 @@ static uint_fast32_t s_9x_opl_applypitch(uint_fast32_t freq, int_fast32_t pitch)
     return freq;
 }
 
-static inline double s_9xFreq(double tone)
+static uint32_t s_9xFreq(double tone, uint32_t *mul_offset)
 {
-    uint_fast32_t note = (uint_fast32_t)(tone);
+    uint_fast32_t note, freq, freqpitched, octave, block, bendMsb, bendLsb;
     int_fast32_t bend;
-    double bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
+    double bendDec;
 
-    uint_fast32_t freq;
-    uint_fast32_t freqpitched;
-    uint_fast32_t octave;
+    *mul_offset = 0;
 
-    uint_fast32_t bendMsb;
-    uint_fast32_t bendLsb;
+    note = (uint_fast32_t)(tone >= 12 ? tone - 12 : tone);
+    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
 
     bend = (int_fast32_t)(bendDec * 4096) + 8192; // convert to MIDI standard value
 
@@ -629,7 +659,20 @@ static inline double s_9xFreq(double tone)
     freqpitched = s_9x_opl_applypitch(freq, bend);
     freqpitched *= 2;
 
-    return (double)freqpitched;
+    block = 1;
+    while(freqpitched > 0x3ff)
+    {
+        freqpitched /= 2;
+        ++block;
+    }
+
+    while(block > 7)
+    {
+        ++(*mul_offset);
+        --block;
+    }
+
+    return freqpitched | (block << 10);
 }
 
 
@@ -727,16 +770,16 @@ static uint_fast32_t s_hmi_bend_calc(uint_fast32_t bend, int_fast32_t note)
 }
 #undef hmi_range_fix
 
-static inline double s_hmiFreq(double tone)
+static uint32_t s_hmiFreq(double tone, uint32_t *mul_offset)
 {
-    int_fast32_t note = (int_fast32_t)(tone);
-    double bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
-    int_fast32_t bend;
-    uint_fast32_t inFreq;
-    uint_fast32_t freq;
-    int_fast32_t octave;
-    int_fast32_t octaveOffset = 0;
+    int_fast32_t note, bend, octave, octaveOffset = 0;
+    uint_fast32_t inFreq, freq;
+    double bendDec;
 
+    *mul_offset = 0;
+
+    note = (int_fast32_t)(tone);
+    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
     bend = (int_fast32_t)(bendDec * 64.0) + 64;
 
     while(note < 12)
@@ -744,6 +787,7 @@ static inline double s_hmiFreq(double tone)
         octaveOffset--;
         note += 12;
     }
+
     while(note > 114)
     {
         octaveOffset++;
@@ -757,16 +801,15 @@ static inline double s_hmiFreq(double tone)
 
     freq = inFreq & 0x3FF;
     octave = (inFreq >> 10) & 0x07;
-
     octave += octaveOffset;
 
-    while(octave > 0)
+    while(octave > 7)
     {
-        freq *= 2;
-        octave -= 1;
+        ++(*mul_offset);
+        --octave;
     }
 
-    return freq;
+    return freq | (octave << 10);
 }
 
 
@@ -776,7 +819,8 @@ static inline double s_hmiFreq(double tone)
  *          Audio Interface Library frequency model            *
  ***************************************************************/
 
-static const uint_fast16_t s_ail_freqtable[] = {
+static const uint_fast16_t s_ail_freqtable[] =
+{
     0x02b2, 0x02b4, 0x02b7, 0x02b9, 0x02bc, 0x02be, 0x02c1, 0x02c3,
     0x02c6, 0x02c9, 0x02cb, 0x02ce, 0x02d0, 0x02d3, 0x02d6, 0x02d8,
     0x02db, 0x02dd, 0x02e0, 0x02e3, 0x02e5, 0x02e8, 0x02eb, 0x02ed,
@@ -803,7 +847,8 @@ static const uint_fast16_t s_ail_freqtable[] = {
     0xfe9e, 0xfea1, 0xfea3, 0xfea5, 0xfea8, 0xfeaa, 0xfead, 0xfeaf
 };
 
-static const uint_fast8_t s_ail_note_octave[] = {
+static const uint_fast8_t s_ail_note_octave[] =
+{
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01,
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -818,7 +863,8 @@ static const uint_fast8_t s_ail_note_octave[] = {
     0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07
 };
 
-static const uint_fast8_t s_ail_note_halftone[] = {
+static const uint_fast8_t s_ail_note_halftone[] =
+{
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x00, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
@@ -833,16 +879,16 @@ static const uint_fast8_t s_ail_note_halftone[] = {
     0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b
 };
 
-static inline double s_ailFreq(double tone)
+static uint32_t s_ailFreq(double tone, uint32_t *mul_offset)
 {
-    int_fast32_t note = (int_fast32_t)(tone);
-    double bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
-    int_fast32_t pitch;
-    uint_fast16_t freq;
-    int_fast32_t octave;
-    int_fast32_t octaveOffset = 0;
-    uint_fast8_t halftones;
+    uint_fast16_t freq, halftones;
+    int_fast32_t note, pitch, octave, octaveOffset = 0;
+    double bendDec;
 
+    *mul_offset = 0;
+
+    note = (int_fast32_t)(tone);
+    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
     pitch = (int_fast32_t)(bendDec * 4096) + 8192; // convert to MIDI standard value
     pitch = ((pitch - 0x2000) / 0x20) * 2;
 
@@ -853,6 +899,7 @@ static inline double s_ailFreq(double tone)
         octaveOffset--;
         note += 12;
     }
+
     while(note > 95)
     {
         octaveOffset++;
@@ -861,12 +908,12 @@ static inline double s_ailFreq(double tone)
 
     pitch += (((uint_fast8_t)note) << 8) + 8;
     pitch /= 16;
-    while (pitch < 12 * 16) {
+
+    while(pitch < 12 * 16)
         pitch += 12 * 16;
-    }
-    while (pitch > 96 * 16 - 1) {
+
+    while(pitch > 96 * 16 - 1)
         pitch -= 12 * 16;
-    }
 
     halftones = (s_ail_note_halftone[pitch >> 4] << 4) + (pitch & 0x0f);
     freq = s_ail_freqtable[halftones];
@@ -874,24 +921,23 @@ static inline double s_ailFreq(double tone)
 
     if((freq & 0x8000) == 0)
     {
-        if (octave > 0) {
+        if (octave > 0)
             octave--;
-        } else {
+        else
             freq /= 2;
-        }
     }
 
     freq &= 0x3FF;
 
     octave += octaveOffset;
 
-    while(octave > 0)
+    while(octave > 7)
     {
-        freq *= 2;
-        octave -= 1;
+        ++(*mul_offset);
+        --octave;
     }
 
-    return freq;
+    return freq | (octave << 10);
 }
 
 
@@ -942,6 +988,7 @@ OPL3::OPL3() :
     m_masterVolume(MasterVolumeDefault),
     m_musicMode(MODE_MIDI),
     m_volumeScale(VOLUME_Generic),
+    m_getFreq(&s_commonFreq),
     m_channelAlloc(ADLMIDI_ChanAlloc_AUTO)
 {
     m_insBankSetup.volumeModel = OPL3::VOLUME_Generic;
@@ -975,6 +1022,42 @@ bool OPL3::setupLocked()
     return (m_musicMode == MODE_CMF ||
             m_musicMode == MODE_IMF ||
             m_musicMode == MODE_RSXX);
+}
+
+void OPL3::setFrequencyModel(VolumesScale model)
+{
+    m_volumeScale = model;
+
+    // Use different frequency formulas in depend on a volume model
+    switch(m_volumeScale)
+    {
+    case VOLUME_DMX:
+    case VOLUME_DMX_FIXED:
+        m_getFreq = &s_dmxFreq;
+        break;
+
+    case VOLUME_APOGEE:
+    case VOLUME_APOGEE_FIXED:
+        m_getFreq = &s_apogeeFreq;
+        break;
+
+    case VOLUME_9X:
+    case VOLUME_9X_GENERIC_FM:
+        m_getFreq = &s_9xFreq;
+        break;
+
+    case VOLUME_HMI:
+    case VOLUME_HMI_OLD:
+        m_getFreq = &s_hmiFreq;
+        break;
+
+    case VOLUME_AIL:
+        m_getFreq = &s_ailFreq;
+        break;
+
+    default:
+        m_getFreq = &s_commonFreq;
+    }
 }
 
 void OPL3::setEmbeddedBank(uint32_t bank)
@@ -1071,69 +1154,24 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
 {
     size_t chip = c1 / NUM_OF_CHANNELS, cc1 = c1 % NUM_OF_CHANNELS, cc2 = c2 % NUM_OF_CHANNELS;
     size_t chan2 = c2 < m_insCache.size() ? c2 : 0;
-    uint32_t octave = 0, ftone = 0, mul_offset = 0;
-    // Hertz range: 0..131071
-    double hertz;
+    uint32_t ftone = 0, mul_offset = 0;
+    uint32_t chn = m_musicMode == MODE_CMF ? g_channelsMapPan[cc1] : g_channelsMap[cc1];
+    const OplTimbre *patch1 = m_insCache[c1];
+    const OplTimbre *patch2 = m_insCache[chan2];
 
     if(tone < 0.0)
         tone = 0.0; // Lower than 0 is impossible!
 
     // Use different frequency formulas in depend on a volume model
-    switch(m_volumeScale)
-    {
-    case VOLUME_DMX:
-    case VOLUME_DMX_FIXED:
-        hertz = s_dmxFreq(tone);
-        break;
+    ftone = m_getFreq(tone, &mul_offset);
 
-    case VOLUME_APOGEE:
-    case VOLUME_APOGEE_FIXED:
-        hertz = s_apogeeFreq(tone);
-        break;
+    if((ftone & 0xC0000000) != 0)
+        return; // Invalid value!
 
-    case VOLUME_9X:
-    case VOLUME_9X_GENERIC_FM:
-        hertz = s_9xFreq(tone);
-        break;
-
-    case VOLUME_HMI:
-    case VOLUME_HMI_OLD:
-        hertz = s_hmiFreq(tone);
-        break;
-
-    case VOLUME_AIL:
-        hertz = s_ailFreq(tone);
-        break;
-
-    default:
-        hertz = s_commonFreq(tone);
-    }
-
-    if(hertz < 0)
-        return;
-
-    //Basic range until max of octaves reaching
-    while((hertz >= 1023.5) && (octave < 0x1C00))
-    {
-        hertz /= 2.0;    // Calculate octave
-        octave += 0x400;
-    }
-    //Extended range, rely on frequency multiplication increment
-    while(hertz >= 1022.75)
-    {
-        hertz /= 2.0;    // Calculate octave
-        mul_offset++;
-    }
-
-    ftone = octave + static_cast<uint32_t>(hertz /*+ 0.5*/);
-    uint32_t chn = m_musicMode == MODE_CMF ? g_channelsMapPan[cc1] : g_channelsMap[cc1];
-
-    const OplTimbre &patch1 = *m_insCache[c1];
-    const OplTimbre &patch2 = *m_insCache[chan2];
 
     if(cc1 < OPL3_CHANNELS_RHYTHM_BASE)
     {
-        ftone += 0x2000u; /* Key-ON [KON] */
+        ftone |= 0x2000u; /* Key-ON [KON] */
 
         const bool natural_4op = (m_channelCategory[c1] == ChanCat_4op_First);
         const size_t opsCount = natural_4op ? 4 : 2;
@@ -1144,10 +1182,10 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
         };
         const uint32_t ops[4] =
         {
-            patch1.modulator_E862 & 0xFF,
-            patch1.carrier_E862 & 0xFF,
-            patch2.modulator_E862 & 0xFF,
-            patch2.carrier_E862 & 0xFF
+            patch1->modulator_E862 & 0xFF,
+            patch1->carrier_E862 & 0xFF,
+            patch2->modulator_E862 & 0xFF,
+            patch2->carrier_E862 & 0xFF
         };
 
         for(size_t op = 0; op < opsCount; op++)
@@ -1182,7 +1220,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     if(chn != 0xFFF)
     {
         writeRegI(chip , 0xA0 + chn, (ftone & 0xFF));
-        writeRegI(chip , 0xB0 + chn, (ftone >> 8));
+        writeRegI(chip , 0xB0 + chn, (ftone >> 8) & 0xFF);
         m_keyBlockFNumCache[c1] = (ftone >> 8);
     }
 
@@ -1768,47 +1806,47 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
         break;
 
     case ADLMIDI_VolumeModel_Generic:
-        m_volumeScale = OPL3::VOLUME_Generic;
+        setFrequencyModel(OPL3::VOLUME_Generic);
         break;
 
     case ADLMIDI_VolumeModel_NativeOPL3:
-        m_volumeScale = OPL3::VOLUME_NATIVE;
+        setFrequencyModel(OPL3::VOLUME_NATIVE);
         break;
 
     case ADLMIDI_VolumeModel_DMX:
-        m_volumeScale = OPL3::VOLUME_DMX;
+        setFrequencyModel(OPL3::VOLUME_DMX);
         break;
 
     case ADLMIDI_VolumeModel_APOGEE:
-        m_volumeScale = OPL3::VOLUME_APOGEE;
+        setFrequencyModel(OPL3::VOLUME_APOGEE);
         break;
 
     case ADLMIDI_VolumeModel_9X:
-        m_volumeScale = OPL3::VOLUME_9X;
+        setFrequencyModel(OPL3::VOLUME_9X);
         break;
 
     case ADLMIDI_VolumeModel_DMX_Fixed:
-        m_volumeScale = OPL3::VOLUME_DMX_FIXED;
+        setFrequencyModel(OPL3::VOLUME_DMX_FIXED);
         break;
 
     case ADLMIDI_VolumeModel_APOGEE_Fixed:
-        m_volumeScale = OPL3::VOLUME_APOGEE_FIXED;
+        setFrequencyModel(OPL3::VOLUME_APOGEE_FIXED);
         break;
 
     case ADLMIDI_VolumeModel_AIL:
-        m_volumeScale = OPL3::VOLUME_AIL;
+        setFrequencyModel(OPL3::VOLUME_AIL);
         break;
 
     case ADLMIDI_VolumeModel_9X_GENERIC_FM:
-        m_volumeScale = OPL3::VOLUME_9X_GENERIC_FM;
+        setFrequencyModel(OPL3::VOLUME_9X_GENERIC_FM);
         break;
 
     case ADLMIDI_VolumeModel_HMI:
-        m_volumeScale = OPL3::VOLUME_HMI;
+        setFrequencyModel(OPL3::VOLUME_HMI);
         break;
 
     case ADLMIDI_VolumeModel_HMI_OLD:
-        m_volumeScale = OPL3::VOLUME_HMI_OLD;
+        setFrequencyModel(OPL3::VOLUME_HMI_OLD);
         break;
     }
 }
