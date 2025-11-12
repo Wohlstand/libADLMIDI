@@ -932,7 +932,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         }
 
         fr.seek(2, FileAndMemReader::CUR);
-        if(!readUInt32LE(hmi_data.track_dir_offset, fr))
+        if(!readUInt32LE_SZ(hmi_data.track_dir_offset, fr))
         {
             m_errorString.set("HMI: Failed to read track dir pointer!\n");
             return false;
@@ -957,7 +957,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             HMITrackDir &d = dir[tk];
 
             fr.seek(hmi_data.track_dir_offset + (tk * 4), FileAndMemReader::SET);
-            if(!readUInt32LE(d.start, fr))
+            if(!readUInt32LE_SZ(d.start, fr))
             {
                 m_errorString.set("HMI: Failed to read track start offset!\n");
                 return false;
@@ -990,7 +990,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             else
             {
                 fr.seek(hmi_data.track_dir_offset + (tk * HMI_SIZE_TRACK_DIR_HEAD) + HMI_OFFSET_TRACK_LEN, FileAndMemReader::SET);
-                if(!readUInt32LE(d.len, fr))
+                if(!readUInt32LE_SZ(d.len, fr))
                 {
                     m_errorString.set("HMI: Failed to read track start offset!\n");
                     return false;
@@ -1011,7 +1011,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             }
 
             fr.seek(d.start + HMI_OFFSET_TRACK_DATA_OFFSET, FileAndMemReader::SET);
-            if(!readUInt32LE(d.offset, fr))
+            if(!readUInt32LE_SZ(d.offset, fr))
             {
                 m_errorString.set("HMI: Failed to read MIDI events offset!\n");
                 return false;
@@ -1075,7 +1075,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         fr.seek(0x20, FileAndMemReader::SET);
 
         // File length value
-        if(!readUInt32LE(hmi_data.branch_offset, fr))
+        if(!readUInt32LE_SZ(hmi_data.branch_offset, fr))
         {
             m_errorString.set("HMP: Failed to read file length field value!\n");
             return false;
@@ -1085,7 +1085,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         fr.seek(12, FileAndMemReader::CUR);
 
         // Tracks count value
-        if(!readUInt32LE(hmi_data.tracksCount, fr))
+        if(!readUInt32LE_SZ(hmi_data.tracksCount, fr))
         {
             m_errorString.set("HMP: Failed to read tracks count!\n");
             return false;
@@ -1097,20 +1097,20 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             return false;
         }
 
-        if(!readUInt32LE(hmi_data.tpqn, fr))
+        if(!readUInt32LE_SZ(hmi_data.tpqn, fr))
         {
             m_errorString.set("HMP: Failed to read TPQN value!\n");
             return false;
         }
 
         // Beats per minute
-        if(!readUInt32LE(hmi_data.division, fr))
+        if(!readUInt32LE_SZ(hmi_data.division, fr))
         {
             m_errorString.set("HMP: Failed to read division value!\n");
             return false;
         }
 
-        if(!readUInt32LE(hmi_data.timeDuration, fr))
+        if(!readUInt32LE_SZ(hmi_data.timeDuration, fr))
         {
             m_errorString.set("HMP: Failed to read time duration value!\n");
             return false;
@@ -1165,7 +1165,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 break; // Track is incomplete
             }
 
-            if(!readUInt32LE(hmi_data.current_track, fr))
+            if(!readUInt32LE_SZ(hmi_data.current_track, fr))
             {
                 m_errorString.set("HMP: Failed to read track number value!\n");
                 return false;
@@ -1177,13 +1177,13 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 return false;
             }
 
-            if(!readUInt32LE(d.len, fr))
+            if(!readUInt32LE_SZ(d.len, fr))
             {
                 m_errorString.set("HMP: Failed to read track start offset!\n");
                 return false;
             }
 
-            if(!readUInt32LE(d.midichan, fr))
+            if(!readUInt32LE_SZ(d.midichan, fr))
             {
                 m_errorString.set("HMP: Failed to read track's MIDI channel value!\n");
                 return false;

@@ -538,6 +538,41 @@ private:
         }
     };
 
+    /**
+     * @brief The TrackStateRestore class
+     */
+    enum TrackRestoreSetup
+    {
+        TRACK_RESTORE_CC          = 0x01,
+        TRACK_RESTORE_NOTEOFFS    = 0x02,
+        TRACK_RESTORE_PATCH       = 0x04,
+        TRACK_RESTORE_WHEEL       = 0x08,
+        TRACK_RESTORE_NOTE_ATT    = 0x10,
+        TRACK_RESTORE_CHAN_ATT    = 0x20,
+        TRACK_RESTORE_ALL_CC      = 0x40
+    };
+
+    /**
+     * @brief Saved track state
+     */
+    struct TrackStateSaved
+    {
+        //! MIDI Channel that track uses right now (if track contains multi-channel events, this thing will fail!)
+        uint8_t track_channel;
+        //! On loop, restore state for controllers
+        uint8_t cc_to_restore[102];
+        //! Values of saved controllers
+        uint8_t cc_values[102];
+        //! Reserved patch
+        uint8_t reserve_patch;
+        //! Reserved pitch bend value
+        uint8_t reserve_wheel[2];
+        //! Reserved note after-touch
+        uint8_t reserve_note_att[128];
+        //! Reserved channel after-touch
+        uint8_t reserve_note_cc;
+    };
+
     enum LoopTypes
     {
         GLOBAL_LOOP = 0x01,
@@ -688,31 +723,6 @@ private:
         void stackDown(int count = 1);
 
         LoopStackEntry &getCurStack();
-    };
-
-    // FIXME: Implement the proper save/restore functionality!
-    struct TrackStateRestore
-    {
-        enum RestoreSetup
-        {
-            RESTORE_CC          = 0x01,
-            RESTORE_NOTEOFFS    = 0x02,
-            RESTORE_PATCH       = 0x04,
-            RESTORE_WHEEL       = 0x08,
-            RESTORE_NOTE_ATT    = 0x10,
-            RESTORE_CHAN_ATT    = 0x20,
-            RESTORE_ALL_CC      = 0x40
-        };
-        //! Settings
-        uint8_t setup;
-        //! MIDI Channel that track uses right now (if track contains multi-channel events, this thing will fail!)
-        uint8_t track_channel;
-        //! On loop, restore state for controllers
-        uint8_t cc_to_restpore[102];
-        uint8_t reserve_patch;
-        uint8_t reserve_wheel[2];
-        uint8_t reserve_note_att[128];
-        uint8_t reserve_note_cc;
     };
 
     /**

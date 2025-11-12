@@ -103,9 +103,7 @@ static uint32_t readLEint32(const void *buffer, size_t nbytes)
     return result;
 }
 
-// For platforms where uint32_t and size_t has different types!
-#if __SIZEOF_POINTER__ != 4 || defined(__3DS__) || defined(__PSP__) || defined(__NDS__)
-static bool readUInt32LE(unsigned long &out, FileAndMemReader &fr)
+static bool readUInt32LE_SZ(size_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[4];
 
@@ -116,9 +114,8 @@ static bool readUInt32LE(unsigned long &out, FileAndMemReader &fr)
 
     return true;
 }
-#endif
 
-static bool readUInt32LE(unsigned int &out, FileAndMemReader &fr)
+static bool readUInt32LE(uint32_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[4];
 
