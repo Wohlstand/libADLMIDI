@@ -466,11 +466,11 @@ public:
         {
             uint16_t    MidCh;
             uint8_t     note;
-            bool operator==(const Location &l) const
-                { return MidCh == l.MidCh && note == l.note; }
-            bool operator!=(const Location &l) const
-                { return !operator==(l); }
+
+            bool operator==(const Location &l) const { return MidCh == l.MidCh && note == l.note; }
+            bool operator!=(const Location &l) const { return !operator==(l); }
         };
+
         struct LocationData
         {
             Location loc;
@@ -973,6 +973,18 @@ private:
         Upd_Mute   = 0x40,
         Upd_OffMute = Upd_Off + Upd_Mute
     };
+
+    void noteUpdPatch(const AdlChannel::Location &loc, const MIDIchannel::NoteInfo::Phys &ins, const OplInstMeta *ains);
+
+    void noteUpdOff(size_t midCh,
+                    MIDIchannel::NoteInfo &info,
+                    const AdlChannel::Location &loc,
+                    const MIDIchannel::NoteInfo::Phys &ins,
+                    bool mute);
+
+    void noteUpdVolume(size_t midCh, MIDIchannel::NoteInfo &info, const MIDIchannel::NoteInfo::Phys &ins);
+
+    void noteUpdFreq(size_t midCh, const AdlChannel::Location &loc, MIDIchannel::NoteInfo &info, const MIDIchannel::NoteInfo::Phys &ins);
 
     /**
      * @brief Update active note

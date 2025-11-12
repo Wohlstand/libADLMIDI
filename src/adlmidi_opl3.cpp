@@ -1602,10 +1602,21 @@ void OPL3::setPatch(size_t c, const OplTimbre *instrument)
     x = instrument->modulator_E862, y = instrument->carrier_E862;
     fbconn_reg = 0x00;
 
+    if(m_volumeScale == VOLUME_DMX || m_volumeScale == VOLUME_DMX_FIXED)
+    {
+        // Also write dummy volume value
+        if(o1 != 0xFFF)
+            writeRegI(chip, 0x40 + o1, 0);
+
+        if(o2 != 0xFFF)
+            writeRegI(chip, 0x40 + o2, 0);
+    }
+
     for(size_t a = 0; a < 4; ++a, x >>= 8, y >>= 8)
     {
         if(o1 != 0xFFF)
             writeRegI(chip, data[a] + o1, x & 0xFF);
+
         if(o2 != 0xFFF)
             writeRegI(chip, data[a] + o2, y & 0xFF);
     }
