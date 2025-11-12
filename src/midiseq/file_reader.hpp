@@ -26,15 +26,31 @@
 #ifndef FILE_AND_MEM_READER_HHHH
 #define FILE_AND_MEM_READER_HHHH
 
-#include <string> // std::string
-#include <cstdio> // std::fopen, std::fread, std::fseek, std::ftell, std::fclose, std::feof
+#include <string>   // std::string
+#include <cstdio>   // std::fopen, std::fread, std::fseek, std::ftell, std::fclose, std::feof
 #include <stdint.h> // uint*_t
 #include <stddef.h> // size_t and friends
+#include <cstdlib>  // std::malloc
+#include <cstring>  // std::strlen, std::memcpy
 #ifdef _WIN32
 #define NOMINMAX 1
-#include <cstring> // std::strlen
-#include <windows.h> // MultiByteToWideChar
+#include <windows.h>    // MultiByteToWideChar
 #endif
+
+#if !defined(__SIZEOF_POINTER__) // Workaround for MSVC
+#   if defined(_WIN32)
+#       if defined(_WIN64)
+#           define __SIZEOF_POINTER__ 8
+#       else
+#           define __SIZEOF_POINTER__ 4
+#       endif
+#   else
+#       warning UNKNOWN SIZE OF POINTER! The value 4 is set as a workaround
+#       define __SIZEOF_POINTER__ 4
+#   endif
+#endif
+
+
 
 /**
  * @brief A little class gives able to read filedata from disk and also from a memory segment
@@ -52,6 +68,9 @@ class FileAndMemReader
     size_t      m_mp_size;
     //! Cursor position in the memory block
     size_t      m_mp_tell;
+
+    //! Dumped file content
+    void        *m_dump;
 
 public:
     /**
@@ -74,7 +93,8 @@ public:
         m_fp(NULL),
         m_mp(NULL),
         m_mp_size(0),
-        m_mp_tell(0)
+        m_mp_tell(0),
+        m_dump(NULL)
     {}
 
     /**
@@ -93,6 +113,7 @@ public:
     {
         if(m_fp)
             this->close();//Close previously opened file first!
+
 #if !defined(_WIN32) || defined(__WATCOMC__)
         m_fp = std::fopen(path, "rb");
 #else
@@ -101,6 +122,7 @@ public:
         widePath[size] = '\0';
         m_fp = _wfopen(widePath, L"rb");
 #endif
+
         m_file_name = path;
         m_mp = NULL;
         m_mp_size = 0;
@@ -115,11 +137,52 @@ public:
     void openData(const void *mem, size_t length)
     {
         if(m_fp)
-            this->close();//Close previously opened file first!
+            this->close(); /* Close previously opened file first! */
+
         m_fp = NULL;
         m_mp = mem;
         m_mp_size = length;
         m_mp_tell = 0;
+    }
+
+    /**
+     * @brief If file loaded from the disk, it dumps content of entire file into memory and releases descriptor
+     */
+    void dumpFile()
+    {
+        if(!m_fp)
+            return; /* Nothing to do */
+
+        m_mp_tell = static_cast<size_t>(std::ftell(m_fp));
+        m_mp_size = fileSize();
+
+        m_dump = std::malloc(m_mp_size);
+        if(!m_dump)
+        {
+            /* Out of memory! */
+            m_mp_tell = 0;
+            m_mp_size = 0;
+            return;
+        }
+
+        std::fseek(m_fp, 0, SEEK_SET);
+
+        if(std::fread(m_dump, 1, m_mp_size, m_fp) != m_mp_size)
+        {
+            /* Filed to read data! */
+            /* Return back */
+            this->seek(m_mp_tell, SET);
+            m_mp_tell = 0;
+            m_mp_size = 0;
+            std::free(m_dump);
+            m_dump = NULL;
+            return;
+        }
+
+        m_mp = m_dump;
+
+        std::fclose(m_fp);
+        m_fp = NULL;
     }
 
     /**
@@ -132,11 +195,11 @@ public:
         if(!this->isValid())
             return;
 
-        if(m_fp)//If a file
+        if(m_fp)    /* If a file */
         {
             std::fseek(m_fp, pos, rel_to);
         }
-        else//If a memory block
+        else        /* If a memory block */
         {
             switch(rel_to)
             {
@@ -180,6 +243,7 @@ public:
     {
         if(!this->isValid())
             return 0;
+
         if(m_fp)
             return std::fread(buf, num, size, m_fp);
         else
@@ -187,11 +251,23 @@ public:
             size_t pos = 0;
             size_t maxSize = static_cast<size_t>(size * num);
 
-            while((pos < maxSize) && (m_mp_tell < m_mp_size))
+            if(maxSize >= __SIZEOF_POINTER__) /* Larger blocks better to be copied via memcpy */
             {
-                reinterpret_cast<uint8_t *>(buf)[pos] = reinterpret_cast<const uint8_t *>(m_mp)[m_mp_tell];
-                m_mp_tell++;
-                pos++;
+                if(m_mp_tell + maxSize >= m_mp_size)
+                    maxSize = m_mp_size - m_mp_tell;
+
+                std::memcpy(buf, reinterpret_cast<const uint8_t *>(m_mp) + m_mp_tell, maxSize);
+                m_mp_tell += maxSize;
+                pos = maxSize;
+            }
+            else
+            {
+                while((pos < maxSize) && (m_mp_tell < m_mp_size))
+                {
+                    reinterpret_cast<uint8_t *>(buf)[pos] = reinterpret_cast<const uint8_t *>(m_mp)[m_mp_tell];
+                    m_mp_tell++;
+                    pos++;
+                }
             }
 
             return pos / num;
@@ -206,14 +282,14 @@ public:
     {
         if(!this->isValid())
             return -1;
-        if(m_fp)//If a file
-        {
+
+        if(m_fp)    /* If a file */
             return std::getc(m_fp);
-        }
-        else  //If a memory block
+        else        /* If a memory block */
         {
             if(m_mp_tell >= m_mp_size)
                 return -1;
+
             int x = reinterpret_cast<const uint8_t *>(m_mp)[m_mp_tell];
             m_mp_tell++;
             return x;
@@ -228,9 +304,10 @@ public:
     {
         if(!this->isValid())
             return 0;
-        if(m_fp)//If a file
+
+        if(m_fp)    /* If a file */
             return static_cast<size_t>(std::ftell(m_fp));
-        else//If a memory block
+        else        /* If a memory block */
             return m_mp_tell;
     }
 
@@ -242,6 +319,10 @@ public:
         if(m_fp)
             std::fclose(m_fp);
 
+        if(m_dump)
+            std::free(m_dump);
+
+        m_dump = NULL;
         m_fp = NULL;
         m_mp = NULL;
         m_mp_size = 0;
@@ -265,6 +346,7 @@ public:
     {
         if(!this->isValid())
             return true;
+
         if(m_fp)
             return (std::feof(m_fp) != 0);
         else
@@ -288,8 +370,10 @@ public:
     {
         if(!this->isValid())
             return 0;
+
         if(!m_fp)
-            return m_mp_size; //Size of memory block is well known
+            return m_mp_size; /* Size of memory block is well known */
+
         size_t old_pos = this->tell();
         seek(0l, FileAndMemReader::END);
         size_t file_size = this->tell();

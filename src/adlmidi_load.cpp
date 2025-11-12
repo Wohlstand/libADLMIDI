@@ -282,6 +282,8 @@ bool MIDIplay::LoadMIDI(const std::string &filename)
     FileAndMemReader file;
     file.openFile(filename.c_str());
 
+    file.dumpFile();
+
     if(!LoadMIDI_pre())
         return false;
 

@@ -38,6 +38,9 @@
 #       else
 #           define __SIZEOF_POINTER__ 4
 #       endif
+#   else
+#       warning UNKNOWN SIZE OF POINTER! The value 4 is set as a workaround
+#       define __SIZEOF_POINTER__ 4
 #   endif
 #endif
 
