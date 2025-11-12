@@ -1255,8 +1255,8 @@ void OPL3::touchNote(size_t c,
              srcCar = adli.carrier_40;
     uint32_t mode = 1; // 2-op AM
 
-    uint_fast32_t kslMod = srcMod & 0xC0;
-    uint_fast32_t kslCar = srcCar & 0xC0;
+    const uint_fast32_t kslMod = srcMod & 0xC0;
+    const uint_fast32_t kslCar = srcCar & 0xC0;
     uint_fast32_t tlMod = srcMod & 0x3F;
     uint_fast32_t tlCar = srcCar & 0x3F;
 
@@ -1602,14 +1602,14 @@ void OPL3::setPatch(size_t c, const OplTimbre *instrument)
     x = instrument->modulator_E862, y = instrument->carrier_E862;
     fbconn_reg = 0x00;
 
-    if(m_volumeScale == VOLUME_DMX || m_volumeScale == VOLUME_DMX_FIXED)
+    if(m_channelCategory[c] == ChanCat_Regular && (m_volumeScale == VOLUME_DMX || m_volumeScale == VOLUME_DMX_FIXED))
     {
         // Also write dummy volume value
         if(o1 != 0xFFF)
-            writeRegI(chip, 0x40 + o1, 0);
+            writeRegI(chip, 0x40 + o1, instrument->modulator_40);
 
         if(o2 != 0xFFF)
-            writeRegI(chip, 0x40 + o2, 0);
+            writeRegI(chip, 0x40 + o2, instrument->carrier_40);
     }
 
     for(size_t a = 0; a < 4; ++a, x >>= 8, y >>= 8)
