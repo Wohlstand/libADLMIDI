@@ -191,6 +191,7 @@ To build that example you will need to have installed SDL2 library.
  * Optimized work with chip instruments.
  * The panic will be always triggered on attempt to switch the bank.
  * Improved sounding accuracy at DMX banks.
+ * Added MS Adlib driver's for Win3x volume model.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.

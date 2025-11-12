@@ -1467,6 +1467,10 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
                 allocType = ADLMIDI_ChanAlloc_AnyReleased; // HMI doesn't care about the same instrument
                 break;
 
+            case Synth::VOLUME_MS_ADLIB:
+                allocType = ADLMIDI_ChanAlloc_SameInst;
+                break;
+
             default:
                 allocType = ADLMIDI_ChanAlloc_OffDelay;
                 break;

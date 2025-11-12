@@ -219,7 +219,9 @@ public:
         //! HMI Sound Operating System volume scale table
         VOLUME_HMI,
         //! HMI Sound Operating System volume scale model, older variant
-        VOLUME_HMI_OLD
+        VOLUME_HMI_OLD,
+        //! Volume model from the AdLib driver for Windows 3.1
+        VOLUME_MS_ADLIB
     } m_volumeScale;
 
     //! Frequency computation function
