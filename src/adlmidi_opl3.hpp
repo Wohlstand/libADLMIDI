@@ -220,6 +220,11 @@ public:
         VOLUME_HMI_OLD,
         //! Volume model from the AdLib driver for Windows 3.1
         VOLUME_MS_ADLIB,
+        //! Uses DMX fixed volume model and "same-instrument" channel allocation
+        VOLUME_IMF_CREATOR,
+
+        /* !! Insert new PUBLIC enum leafs to HERE, NOT BELOW! !! */
+
         //! [PRIVATE] Volume model specific to RSXX format playing, should never being refered in WOPL file!
         VOLUME_RSXX
     } m_volumeScale;

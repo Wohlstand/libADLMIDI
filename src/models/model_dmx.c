@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_DMX_H
-#define FREQ_DMX_H
-
 #include "opl_models.h"
 
 /***************************************************************
@@ -263,5 +260,3 @@ void oplModel_dmxFixedVolume(struct OPLVolume_t *v)
     if(v->doCar)
         v->tlCar = 63 - volume + (volume * v->tlCar) / 63;
 }
-
-#endif /* FREQ_DMX_H */

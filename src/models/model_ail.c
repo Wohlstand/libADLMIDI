@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_AIL_H
-#define FREQ_AIL_H
-
 #include "opl_models.h"
 
 /***************************************************************
@@ -199,5 +196,3 @@ void oplModel_ailVolume(struct OPLVolume_t *v)
     v->tlMod = (~v0_val) & 0x3F;
     v->tlCar = (~v1_val) & 0x3F;
 }
-
-#endif /* FREQ_AIL_H */

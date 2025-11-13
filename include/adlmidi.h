@@ -128,6 +128,8 @@ enum ADLMIDI_VolumeModels
     ADLMIDI_VolumeModel_HMI_OLD = 11,
     /*! Volume model from the AdLib driver for Windows 3.1 */
     ADLMIDI_VolumeModel_MS_ADLIB = 12,
+    /*! Volume model used by IMF Creator utility */
+    ADLMIDI_VolumeModel_IMF_Creator = 13,
     /*! Count of available volume model modes */
     ADLMIDI_VolumeModel_Count
 };

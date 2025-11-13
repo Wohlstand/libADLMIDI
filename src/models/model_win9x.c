@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_WIN9X_H
-#define FREQ_WIN9X_H
-
 #include "opl_models.h"
 
 /***************************************************************
@@ -180,6 +177,3 @@ void oplModel_9xSB16Volume(struct OPLVolume_t *v)
         v->tlMod = mod;
     }
 }
-
-
-#endif /* FREQ_WIN9X_H */

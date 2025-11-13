@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_MSADLIB_H
-#define FREQ_MSADLIB_H
-
 #include "opl_models.h"
 
 /***************************************************************
@@ -164,5 +161,3 @@ void oplModel_msAdLibVolume(struct OPLVolume_t *v)
         v->tlCar = 63 - outVol / (2 * 0x7F);
     }
 }
-
-#endif /* FREQ_MSADLIB_H */

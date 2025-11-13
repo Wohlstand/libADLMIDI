@@ -1468,6 +1468,7 @@ int64_t MIDIplay::calculateChipChannelGoodness(size_t c, const MIDIchannel::Note
                 break;
 
             case Synth::VOLUME_MS_ADLIB:
+            case Synth::VOLUME_IMF_CREATOR:
                 allocType = ADLMIDI_ChanAlloc_SameInst;
                 break;
 

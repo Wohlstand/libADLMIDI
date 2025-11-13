@@ -461,6 +461,8 @@ const char* volume_model_to_str(int vm)
         return "HMI Sound Operating System (Old)";
     case ADLMIDI_VolumeModel_MS_ADLIB:
         return "MS AdLib";
+    case ADLMIDI_VolumeModel_IMF_Creator:
+        return "IMF Creator";
     }
 }
 
@@ -1556,6 +1558,7 @@ static struct Args
                 "   10 HMI Sound Operating System\n"
                 "   11 Old HMI Sound Operating System (Some instruments might distort)\n"
                 "   12 MS Adlib Driver for Win3x\n"
+                "   13 IMF Creator\n"
                 " -frb  Enables full-ranged CC74 XG Brightness controller\n"
                 " -nl   Quit without looping\n"
                 " -w    Write WAV file rather than playing\n"

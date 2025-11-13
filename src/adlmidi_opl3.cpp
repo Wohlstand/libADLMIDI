@@ -353,6 +353,7 @@ void OPL3::setFrequencyModel(VolumesScale model)
         m_getVolume = &oplModel_dmxOrigVolume;
         break;
 
+    case VOLUME_IMF_CREATOR:
     case VOLUME_DMX_FIXED:
         m_getFreq = &oplModel_dmxFreq;
         m_getVolume = &oplModel_dmxFixedVolume;
@@ -972,6 +973,10 @@ void OPL3::setVolumeScaleModel(ADLMIDI_VolumeModels volumeModel)
     case ADLMIDI_VolumeModel_MS_ADLIB:
         setFrequencyModel(OPL3::VOLUME_MS_ADLIB);
         break;
+
+    case ADLMIDI_VolumeModel_IMF_Creator:
+        setFrequencyModel(OPL3::VOLUME_IMF_CREATOR);
+        break;
     }
 }
 
@@ -1005,6 +1010,8 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
         return ADLMIDI_VolumeModel_HMI_OLD;
     case OPL3::VOLUME_MS_ADLIB:
         return ADLMIDI_VolumeModel_MS_ADLIB;
+    case OPL3::VOLUME_IMF_CREATOR:
+        return ADLMIDI_VolumeModel_IMF_Creator;
     }
 }
 

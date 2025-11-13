@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_APOGEE_H
-#define FREQ_APOGEE_H
-
 #include "opl_models.h"
 
 /***************************************************************
@@ -174,5 +171,3 @@ void oplModel_apogeeFixedVolume(struct OPLVolume_t *v)
         v->tlMod = mod;
     }
 }
-
-#endif /* FREQ_APOGEE_H */

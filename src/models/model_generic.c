@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_COMMON_H
-#define FREQ_COMMON_H
-
 #include <stddef.h>
 #include <math.h>   /* log() */
 #include "opl_models.h"
@@ -381,5 +378,3 @@ uint_fast16_t oplModels_xgBrightnessToOPL(uint_fast16_t brightness)
 {
     return s_xgBrightness[brightness & 0xFF];
 }
-
-#endif /* FREQ_COMMON_H */

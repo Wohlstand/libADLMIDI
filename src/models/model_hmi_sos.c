@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef FREQ_HMI_SOS_H
-#define FREQ_HMI_SOS_H
-
 #include <stddef.h>
 #include "opl_models.h"
 
@@ -239,5 +236,3 @@ void oplModel_sosNewVolume(struct OPLVolume_t *v)
         v->tlCar = (8192 - outVol) >> 7;
     }
 }
-
-#endif /* FREQ_HMI_SOS_H */
