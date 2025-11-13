@@ -353,7 +353,6 @@ void OPL3::setFrequencyModel(VolumesScale model)
         m_getVolume = &oplModel_dmxOrigVolume;
         break;
 
-    case VOLUME_IMF_CREATOR:
     case VOLUME_DMX_FIXED:
         m_getFreq = &oplModel_dmxFreq;
         m_getVolume = &oplModel_dmxFixedVolume;
@@ -407,6 +406,11 @@ void OPL3::setFrequencyModel(VolumesScale model)
     case VOLUME_RSXX:
         m_getFreq = &oplModel_genericFreq;
         m_getVolume = &oplModel_rsxxVolume;
+        break;
+
+    case VOLUME_IMF_CREATOR:
+        m_getFreq = &oplModel_hmiFreq;
+        m_getVolume = &oplModel_dmxFixedVolume;
         break;
 
     default:
