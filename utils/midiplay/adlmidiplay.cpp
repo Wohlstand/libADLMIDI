@@ -463,6 +463,8 @@ const char* volume_model_to_str(int vm)
         return "MS AdLib";
     case ADLMIDI_VolumeModel_IMF_Creator:
         return "IMF Creator";
+    case ADLMIDI_VolumeModel_OConnel:
+        return "Jammie O'Connel's FM Synth";
     }
 }
 
@@ -1559,6 +1561,7 @@ static struct Args
                 "   11 Old HMI Sound Operating System (Some instruments might distort)\n"
                 "   12 MS Adlib Driver for Win3x\n"
                 "   13 IMF Creator\n"
+                "   14 Jammie O'Connel's FM Synth\n"
                 " -frb  Enables full-ranged CC74 XG Brightness controller\n"
                 " -nl   Quit without looping\n"
                 " -w    Write WAV file rather than playing\n"

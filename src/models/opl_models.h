@@ -93,6 +93,13 @@ extern uint16_t oplModel_ailFreq(double tone, uint32_t *mul_offset);
  */
 extern uint16_t oplModel_msAdLibFreq(double tone, uint32_t *mul_offset);
 
+/**
+ * @brief Frequency formula that replicates behaviour of AdLib, Sound Blaster 1.x / 2.x drivers for Windows 3.x
+ * @param tone MIDI Note semi-tone with detune (decimal is a detune)
+ * @param mul_offset !REQUIRED! A pointer to the frequency multiplier offset if note is too high
+ * @return FNum+Block value compatible to OPL chips
+ */
+extern uint16_t oplModel_OConnelFreq(double tone, uint32_t *mul_offset);
 
 
 /***************************************************************
@@ -230,12 +237,27 @@ extern void oplModel_sosNewVolume(struct OPLVolume_t *v);
 extern void oplModel_msAdLibVolume(struct OPLVolume_t *v);
 
 
+
+/**
+ * @brief Jamie O'Connel's FM Synth driver volume model
+ * @param v [inout] Volume calculation context
+ */
+extern void oplModel_OConnelVolume(struct OPLVolume_t *v);
+
+
+
+
+/***************************************************************
+ *              XG CC74 Brightness scale formula               *
+ ***************************************************************/
+
 /**
  * @brief Converts XG brightness (CC74) controller value into OPL volume for the modulator
  * @param brightness Value of CC74 (0 - 127)
  * @return Converted result (0 - 63)
  */
 extern uint_fast16_t oplModels_xgBrightnessToOPL(uint_fast16_t brightness);
+
 
 
 #ifdef __cplusplus
