@@ -117,7 +117,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
     MidiTrackRow fakePos, *posPrev;
     Position rowPosition, rowBeginPosition;
     MIDI_MarkerEntry marker;
-    const Tempo_t *currentTempo;
+    Tempo_t currentTempo;
     Tempo_t t;
 
     uint64_t shortestDelay = 0, midDelay = 0, postDelay = 0;
@@ -135,7 +135,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
     for(tk = 0; tk < m_tracksCount; ++tk)
     {
         time = 0.0;
-        currentTempo = &m_tempo;
+        currentTempo = m_tempo;
         // uint64_t abs_position = 0;
         tempo_change_index = 0;
 
@@ -177,7 +177,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                     points.clear();
 
                     firstPoint.absPos = posPrev->absPos;
-                    firstPoint.tempo = *currentTempo;
+                    firstPoint.tempo = currentTempo;
                     points.push_back(firstPoint);
 
                     // Collect tempo change points between previous and current events
@@ -204,11 +204,11 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                         // Delay between points
                         midDelay  = points[j].absPos - points[i].absPos;
                         // Time delay between points
-                        tempo_mul(&t, currentTempo, midDelay);
+                        tempo_mul(&t, &currentTempo, midDelay);
                         posPrev->timeDelay += tempo_get(&t);
 
                         // Apply next tempo
-                        currentTempo = &points[j].tempo;
+                        currentTempo = points[j].tempo;
 #ifdef BWMIDI_DEBUG_TIME_CALCULATION
                         tempoChanged = true;
 #endif
@@ -217,7 +217,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                     // Then calculate time between last tempo change point and end point
                     tailTempo = &points.back();
                     postDelay = pos.absPos - tailTempo->absPos;
-                    tempo_mul(&t, currentTempo, postDelay);
+                    tempo_mul(&t, &currentTempo, postDelay);
                     posPrev->timeDelay += tempo_get(&t);
 
                     // Store Common time delay
@@ -226,7 +226,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                 }
             }
 
-            tempo_mul(&t, currentTempo, pos.delay);
+            tempo_mul(&t, &currentTempo, pos.delay);
             pos.timeDelay = tempo_get(&t);
             pos.time = time;
             time += pos.timeDelay;
