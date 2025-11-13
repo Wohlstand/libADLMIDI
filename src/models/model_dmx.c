@@ -153,6 +153,12 @@ uint16_t oplModel_dmxFreq(double tone, uint32_t *mul_offset)
     noteI = (uint_fast32_t)(tone);
     bendDec = tone - (int)tone;
 
+    if(bendDec > 0.5)
+    {
+        noteI += 1;
+        bendDec -= 1.0;
+    }
+
     bendI = (int_fast32_t)((bendDec * 128.0) / 2.0) + 128;
     bendI = bendI >> 1;
 

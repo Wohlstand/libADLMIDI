@@ -129,6 +129,13 @@ uint16_t oplModel_hmiFreq(double tone, uint32_t *mul_offset)
 
     note = (int_fast32_t)(tone);
     bendDec = tone - (int)tone; /* 0.0 ± 1.0 - one halftone */
+
+    if(bendDec > 0.5)
+    {
+        note += 1;
+        bendDec -= 1.0;
+    }
+
     bend = (int_fast32_t)(bendDec * 64.0) + 64;
 
     while(note < 12)

@@ -73,8 +73,14 @@ uint16_t oplModel_apogeeFreq(double tone, uint32_t *mul_offset)
     *mul_offset = 0;
 
     noteI = (uint_fast32_t)(tone >= 12 ? tone - 12 : tone);
-
     bendDec = tone - (int)tone;
+
+    if(bendDec > 0.5)
+    {
+        noteI += 1;
+        bendDec -= 1.0;
+    }
+
     bendI = (int_fast32_t)(bendDec * 32) + 32;
 
     noteI += (bendI / 32);

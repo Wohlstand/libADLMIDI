@@ -98,6 +98,13 @@ uint16_t oplModel_ailFreq(double tone, uint32_t *mul_offset)
 
     note = (int_fast32_t)(tone);
     bendDec = tone - (int)tone; /* 0.0 ± 1.0 - one halftone */
+
+    if(bendDec > 0.5)
+    {
+        note += 1;
+        bendDec -= 1.0;
+    }
+
     pitch = (int_fast32_t)(bendDec * 4096) + 8192; /* convert to MIDI standard value */
     pitch = ((pitch - 0x2000) / 0x20) * 2;
 
