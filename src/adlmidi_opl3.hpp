@@ -29,8 +29,6 @@
 #include "adlmidi_private.hpp"
 #include "adlmidi_bankmap.h"
 
-#define BEND_COEFFICIENT                172.4387
-
 #define OPL3_CHANNELS_MELODIC_BASE      0
 #define OPL3_CHANNELS_RHYTHM_BASE       18
 
@@ -221,11 +219,15 @@ public:
         //! HMI Sound Operating System volume scale model, older variant
         VOLUME_HMI_OLD,
         //! Volume model from the AdLib driver for Windows 3.1
-        VOLUME_MS_ADLIB
+        VOLUME_MS_ADLIB,
+        //! [PRIVATE] Volume model specific to RSXX format playing, should never being refered in WOPL file!
+        VOLUME_RSXX
     } m_volumeScale;
 
     //! Frequency computation function
-    uint32_t (*m_getFreq)(double tone, uint32_t *mul_offset);
+    uint16_t (*m_getFreq)(double tone, uint32_t *mul_offset);
+    //! OPL Volume computation function
+    void (*m_getVolume)(struct OPLVolume_t *v);
 
     //! Channel allocation algorithm
     ADLMIDI_ChannelAlloc m_channelAlloc;

@@ -510,6 +510,8 @@ function(handle_options targetLib)
     endif()
 endfunction()
 
+include(src/models/opl_models.cmake)
+
 set(libADLMIDI_SOURCES
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi.cpp
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi_load.cpp
@@ -517,6 +519,7 @@ set(libADLMIDI_SOURCES
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi_opl3.cpp
     ${libADLMIDI_SOURCE_DIR}/src/adlmidi_private.cpp
     ${libADLMIDI_SOURCE_DIR}/src/wopl/wopl_file.c
+    ${OPL_MODELS_SOURCES}
 )
 
 # Make headers being properly visible at IDEs

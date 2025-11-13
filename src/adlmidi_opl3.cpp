@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <cassert>
 
+#include "models/opl_models.h"
+
 
 #ifdef ENABLE_HW_OPL_DOS
 #   include "chips/dos_hw_opl.h"
@@ -261,789 +263,6 @@ static const uint16_t g_channelsMapFBConn[NUM_OF_CHANNELS] =
 */
 
 
-
-
-
-/***************************************************************
- *                    Volume model tables                      *
- ***************************************************************/
-
-// Mapping from MIDI volume level to OPL level value.
-
-static const uint_fast32_t s_dmx_volume_model[128] =
-{
-    0,  1,  3,  5,  6,  8,  10, 11,
-    13, 14, 16, 17, 19, 20, 22, 23,
-    25, 26, 27, 29, 30, 32, 33, 34,
-    36, 37, 39, 41, 43, 45, 47, 49,
-    50, 52, 54, 55, 57, 59, 60, 61,
-    63, 64, 66, 67, 68, 69, 71, 72,
-    73, 74, 75, 76, 77, 79, 80, 81,
-    82, 83, 84, 84, 85, 86, 87, 88,
-    89, 90, 91, 92, 92, 93, 94, 95,
-    96, 96, 97, 98, 99, 99, 100, 101,
-    101, 102, 103, 103, 104, 105, 105, 106,
-    107, 107, 108, 109, 109, 110, 110, 111,
-    112, 112, 113, 113, 114, 114, 115, 115,
-    116, 117, 117, 118, 118, 119, 119, 120,
-    120, 121, 121, 122, 122, 123, 123, 123,
-    124, 124, 125, 125, 126, 126, 127, 127,
-};
-
-static const uint_fast32_t s_w9x_sb16_volume_model[32] =
-{
-    80, 63, 40, 36, 32, 28, 23, 21,
-    19, 17, 15, 14, 13, 12, 11, 10,
-    9,  8,  7,  6,  5,  5,  4,  4,
-    3,  3,  2,  2,  1,  1,  0,  0
-};
-
-static const uint_fast32_t s_w9x_generic_fm_volume_model[32] =
-{
-    40, 36, 32, 28, 23, 21, 19, 17,
-    15, 14, 13, 12, 11, 10, 9,  8,
-    7,  6,  5,  5,  4,  4,  3,  3,
-    2,  2,  1,  1,  1,  0,  0,  0
-};
-
-static const uint_fast32_t s_ail_vel_graph[16] =
-{
-    82,   85,  88,  91,  94,  97, 100, 103,
-    106, 109, 112, 115, 118, 121, 124, 127
-};
-
-static const uint_fast32_t s_hmi_volume_table[64] =
-{
-    0x3F, 0x3A, 0x35, 0x30, 0x2C, 0x29, 0x25, 0x24,
-    0x23, 0x22, 0x21, 0x20, 0x1F, 0x1E, 0x1D, 0x1C,
-    0x1B, 0x1A, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14,
-    0x13, 0x12, 0x11, 0x10, 0x0F, 0x0E, 0x0E, 0x0D,
-    0x0D, 0x0C, 0x0C, 0x0B, 0x0B, 0x0A, 0x0A, 0x09,
-    0x09, 0x08, 0x08, 0x07, 0x07, 0x06, 0x06, 0x06,
-    0x05, 0x05, 0x05, 0x04, 0x04, 0x04, 0x04, 0x03,
-    0x03, 0x03, 0x02, 0x02, 0x02, 0x01, 0x01, 0x00,
-};
-
-static const uint8_t s_msadlib_volume_table[128] =
-{
-    0,   0,   65,  65,  66,  66,  67,  67,  /* 0 - 7 */
-    68,  68,  69,  69,  70,  70,  71,  71,  /* 8 - 15 */
-    72,  72,  73,  73,  74,  74,  75,  75,  /* 16 - 23 */
-    76,  76,  77,  77,  78,  78,  79,  79,  /* 24 - 31 */
-    80,  80,  81,  81,  82,  82,  83,  83,  /* 32 - 39 */
-    84,  84,  85,  85,  86,  86,  87,  87,  /* 40 - 47 */
-    88,  88,  89,  89,  90,  90,  91,  91,  /* 48 - 55 */
-    92,  92,  93,  93,  94,  94,  95,  95,  /* 56 - 63 */
-    96,  96,  97,  97,  98,  98,  99,  99,  /* 64 - 71 */
-    100, 100, 101, 101, 102, 102, 103, 103,  /* 72 - 79 */
-    104, 104, 105, 105, 106, 106, 107, 107,  /* 80 - 87 */
-    108, 108, 109, 109, 110, 110, 111, 111,  /* 88 - 95 */
-    112, 112, 113, 113, 114, 114, 115, 115,  /* 96 - 103 */
-    116, 116, 117, 117, 118, 118, 119, 119,  /* 104 - 111 */
-    120, 120, 121, 121, 122, 122, 123, 123,  /* 112 - 119 */
-    124, 124, 125, 125, 126, 126, 127, 127   /* 120 - 127 */
-};
-
-
-
-/***************************************************************
- *               Standard frequency formula                    *
- * *************************************************************/
-
-static uint32_t s_commonFreq(double tone, uint32_t *mul_offset)
-{
-    uint32_t octave = 0;
-    double hertz = BEND_COEFFICIENT * std::exp(0.057762265 * tone);
-
-    *mul_offset = 0;
-
-    if(hertz < 0)
-        return 0xC0000000; // Forbidden value
-
-    //Basic range until max of octaves reaching
-    while((hertz >= 1023.5) && (octave < 0x1C00))
-    {
-        hertz /= 2.0;    // Calculate octave
-        octave += 0x400;
-    }
-
-    //Extended range, rely on frequency multiplication increment
-    while(hertz >= 1022.75)
-    {
-        hertz /= 2.0;    // Calculate octave
-        ++(*mul_offset);
-    }
-
-    return octave | static_cast<uint32_t>(hertz);
-}
-
-
-
-
-/***************************************************************
- *                   DMX frequency model                       *
- * *************************************************************/
-
-// DMX volumes table
-static const int_fast32_t s_dmx_freq_table[] =
-{
-    0x0133, 0x0133, 0x0134, 0x0134, 0x0135, 0x0136, 0x0136, 0x0137,
-    0x0137, 0x0138, 0x0138, 0x0139, 0x0139, 0x013A, 0x013B, 0x013B,
-    0x013C, 0x013C, 0x013D, 0x013D, 0x013E, 0x013F, 0x013F, 0x0140,
-    0x0140, 0x0141, 0x0142, 0x0142, 0x0143, 0x0143, 0x0144, 0x0144,
-
-    0x0145, 0x0146, 0x0146, 0x0147, 0x0147, 0x0148, 0x0149, 0x0149,
-    0x014A, 0x014A, 0x014B, 0x014C, 0x014C, 0x014D, 0x014D, 0x014E,
-    0x014F, 0x014F, 0x0150, 0x0150, 0x0151, 0x0152, 0x0152, 0x0153,
-    0x0153, 0x0154, 0x0155, 0x0155, 0x0156, 0x0157, 0x0157, 0x0158,
-
-    0x0158, 0x0159, 0x015A, 0x015A, 0x015B, 0x015B, 0x015C, 0x015D,
-    0x015D, 0x015E, 0x015F, 0x015F, 0x0160, 0x0161, 0x0161, 0x0162,
-    0x0162, 0x0163, 0x0164, 0x0164, 0x0165, 0x0166, 0x0166, 0x0167,
-    0x0168, 0x0168, 0x0169, 0x016A, 0x016A, 0x016B, 0x016C, 0x016C,
-
-    0x016D, 0x016E, 0x016E, 0x016F, 0x0170, 0x0170, 0x0171, 0x0172,
-    0x0172, 0x0173, 0x0174, 0x0174, 0x0175, 0x0176, 0x0176, 0x0177,
-    0x0178, 0x0178, 0x0179, 0x017A, 0x017A, 0x017B, 0x017C, 0x017C,
-    0x017D, 0x017E, 0x017E, 0x017F, 0x0180, 0x0181, 0x0181, 0x0182,
-
-    0x0183, 0x0183, 0x0184, 0x0185, 0x0185, 0x0186, 0x0187, 0x0188,
-    0x0188, 0x0189, 0x018A, 0x018A, 0x018B, 0x018C, 0x018D, 0x018D,
-    0x018E, 0x018F, 0x018F, 0x0190, 0x0191, 0x0192, 0x0192, 0x0193,
-    0x0194, 0x0194, 0x0195, 0x0196, 0x0197, 0x0197, 0x0198, 0x0199,
-
-    0x019A, 0x019A, 0x019B, 0x019C, 0x019D, 0x019D, 0x019E, 0x019F,
-    0x01A0, 0x01A0, 0x01A1, 0x01A2, 0x01A3, 0x01A3, 0x01A4, 0x01A5,
-    0x01A6, 0x01A6, 0x01A7, 0x01A8, 0x01A9, 0x01A9, 0x01AA, 0x01AB,
-    0x01AC, 0x01AD, 0x01AD, 0x01AE, 0x01AF, 0x01B0, 0x01B0, 0x01B1,
-
-    0x01B2, 0x01B3, 0x01B4, 0x01B4, 0x01B5, 0x01B6, 0x01B7, 0x01B8,
-    0x01B8, 0x01B9, 0x01BA, 0x01BB, 0x01BC, 0x01BC, 0x01BD, 0x01BE,
-    0x01BF, 0x01C0, 0x01C0, 0x01C1, 0x01C2, 0x01C3, 0x01C4, 0x01C4,
-    0x01C5, 0x01C6, 0x01C7, 0x01C8, 0x01C9, 0x01C9, 0x01CA, 0x01CB,
-
-    0x01CC, 0x01CD, 0x01CE, 0x01CE, 0x01CF, 0x01D0, 0x01D1, 0x01D2,
-    0x01D3, 0x01D3, 0x01D4, 0x01D5, 0x01D6, 0x01D7, 0x01D8, 0x01D8,
-    0x01D9, 0x01DA, 0x01DB, 0x01DC, 0x01DD, 0x01DE, 0x01DE, 0x01DF,
-    0x01E0, 0x01E1, 0x01E2, 0x01E3, 0x01E4, 0x01E5, 0x01E5, 0x01E6,
-
-    0x01E7, 0x01E8, 0x01E9, 0x01EA, 0x01EB, 0x01EC, 0x01ED, 0x01ED,
-    0x01EE, 0x01EF, 0x01F0, 0x01F1, 0x01F2, 0x01F3, 0x01F4, 0x01F5,
-    0x01F6, 0x01F6, 0x01F7, 0x01F8, 0x01F9, 0x01FA, 0x01FB, 0x01FC,
-    0x01FD, 0x01FE, 0x01FF,
-
-    0x0200, 0x0201, 0x0201, 0x0202, 0x0203, 0x0204, 0x0205, 0x0206,
-    0x0207, 0x0208, 0x0209, 0x020A, 0x020B, 0x020C, 0x020D, 0x020E,
-    0x020F, 0x0210, 0x0210, 0x0211, 0x0212, 0x0213, 0x0214, 0x0215,
-    0x0216, 0x0217, 0x0218, 0x0219, 0x021A, 0x021B, 0x021C, 0x021D,
-
-    0x021E, 0x021F, 0x0220, 0x0221, 0x0222, 0x0223, 0x0224, 0x0225,
-    0x0226, 0x0227, 0x0228, 0x0229, 0x022A, 0x022B, 0x022C, 0x022D,
-    0x022E, 0x022F, 0x0230, 0x0231, 0x0232, 0x0233, 0x0234, 0x0235,
-    0x0236, 0x0237, 0x0238, 0x0239, 0x023A, 0x023B, 0x023C, 0x023D,
-
-    0x023E, 0x023F, 0x0240, 0x0241, 0x0242, 0x0244, 0x0245, 0x0246,
-    0x0247, 0x0248, 0x0249, 0x024A, 0x024B, 0x024C, 0x024D, 0x024E,
-    0x024F, 0x0250, 0x0251, 0x0252, 0x0253, 0x0254, 0x0256, 0x0257,
-    0x0258, 0x0259, 0x025A, 0x025B, 0x025C, 0x025D, 0x025E, 0x025F,
-
-    0x0260, 0x0262, 0x0263, 0x0264, 0x0265, 0x0266, 0x0267, 0x0268,
-    0x0269, 0x026A, 0x026C, 0x026D, 0x026E, 0x026F, 0x0270, 0x0271,
-    0x0272, 0x0273, 0x0275, 0x0276, 0x0277, 0x0278, 0x0279, 0x027A,
-    0x027B, 0x027D, 0x027E, 0x027F, 0x0280, 0x0281, 0x0282, 0x0284,
-
-    0x0285, 0x0286, 0x0287, 0x0288, 0x0289, 0x028B, 0x028C, 0x028D,
-    0x028E, 0x028F, 0x0290, 0x0292, 0x0293, 0x0294, 0x0295, 0x0296,
-    0x0298, 0x0299, 0x029A, 0x029B, 0x029C, 0x029E, 0x029F, 0x02A0,
-    0x02A1, 0x02A2, 0x02A4, 0x02A5, 0x02A6, 0x02A7, 0x02A9, 0x02AA,
-
-    0x02AB, 0x02AC, 0x02AE, 0x02AF, 0x02B0, 0x02B1, 0x02B2, 0x02B4,
-    0x02B5, 0x02B6, 0x02B7, 0x02B9, 0x02BA, 0x02BB, 0x02BD, 0x02BE,
-    0x02BF, 0x02C0, 0x02C2, 0x02C3, 0x02C4, 0x02C5, 0x02C7, 0x02C8,
-    0x02C9, 0x02CB, 0x02CC, 0x02CD, 0x02CE, 0x02D0, 0x02D1, 0x02D2,
-
-    0x02D4, 0x02D5, 0x02D6, 0x02D8, 0x02D9, 0x02DA, 0x02DC, 0x02DD,
-    0x02DE, 0x02E0, 0x02E1, 0x02E2, 0x02E4, 0x02E5, 0x02E6, 0x02E8,
-    0x02E9, 0x02EA, 0x02EC, 0x02ED, 0x02EE, 0x02F0, 0x02F1, 0x02F2,
-    0x02F4, 0x02F5, 0x02F6, 0x02F8, 0x02F9, 0x02FB, 0x02FC, 0x02FD,
-
-    0x02FF, 0x0300, 0x0302, 0x0303, 0x0304, 0x0306, 0x0307, 0x0309,
-    0x030A, 0x030B, 0x030D, 0x030E, 0x0310, 0x0311, 0x0312, 0x0314,
-    0x0315, 0x0317, 0x0318, 0x031A, 0x031B, 0x031C, 0x031E, 0x031F,
-    0x0321, 0x0322, 0x0324, 0x0325, 0x0327, 0x0328, 0x0329, 0x032B,
-
-    0x032C, 0x032E, 0x032F, 0x0331, 0x0332, 0x0334, 0x0335, 0x0337,
-    0x0338, 0x033A, 0x033B, 0x033D, 0x033E, 0x0340, 0x0341, 0x0343,
-    0x0344, 0x0346, 0x0347, 0x0349, 0x034A, 0x034C, 0x034D, 0x034F,
-    0x0350, 0x0352, 0x0353, 0x0355, 0x0357, 0x0358, 0x035A, 0x035B,
-
-    0x035D, 0x035E, 0x0360, 0x0361, 0x0363, 0x0365, 0x0366, 0x0368,
-    0x0369, 0x036B, 0x036C, 0x036E, 0x0370, 0x0371, 0x0373, 0x0374,
-    0x0376, 0x0378, 0x0379, 0x037B, 0x037C, 0x037E, 0x0380, 0x0381,
-    0x0383, 0x0384, 0x0386, 0x0388, 0x0389, 0x038B, 0x038D, 0x038E,
-
-    0x0390, 0x0392, 0x0393, 0x0395, 0x0397, 0x0398, 0x039A, 0x039C,
-    0x039D, 0x039F, 0x03A1, 0x03A2, 0x03A4, 0x03A6, 0x03A7, 0x03A9,
-    0x03AB, 0x03AC, 0x03AE, 0x03B0, 0x03B1, 0x03B3, 0x03B5, 0x03B7,
-    0x03B8, 0x03BA, 0x03BC, 0x03BD, 0x03BF, 0x03C1, 0x03C3, 0x03C4,
-
-    0x03C6, 0x03C8, 0x03CA, 0x03CB, 0x03CD, 0x03CF, 0x03D1, 0x03D2,
-    0x03D4, 0x03D6, 0x03D8, 0x03DA, 0x03DB, 0x03DD, 0x03DF, 0x03E1,
-    0x03E3, 0x03E4, 0x03E6, 0x03E8, 0x03EA, 0x03EC, 0x03ED, 0x03EF,
-    0x03F1, 0x03F3, 0x03F5, 0x03F6, 0x03F8, 0x03FA, 0x03FC, 0x03FE,
-
-    0x036C
-};
-
-static uint32_t s_dmxFreq(double tone, uint32_t *mul_offset)
-{
-    uint_fast32_t noteI;
-    int_fast32_t bendI = 0;
-    int_fast32_t outHz = 0;
-    double bendDec;
-
-    *mul_offset = 0;
-
-    if(tone >= 12)
-        tone -= 12;
-
-    noteI = (uint_fast32_t)(tone);
-    bendDec = tone - (int)tone;
-
-    bendI = (int_fast32_t)((bendDec * 128.0) / 2.0) + 128;
-    bendI = bendI >> 1;
-
-    int_fast32_t oct = 0;
-    int_fast32_t freqIndex = (noteI << 5) + bendI;
-
-#define MAX_FREQ_IDX 283 // 284 - with the DMX side bug
-    if(freqIndex < 0)
-        freqIndex = 0;
-    else if(freqIndex >= MAX_FREQ_IDX)
-    {
-        freqIndex -= MAX_FREQ_IDX;
-        oct = freqIndex / 384;
-        freqIndex = (freqIndex % 384) + MAX_FREQ_IDX;
-    }
-#undef MAX_FREQ_IDX
-
-    outHz = s_dmx_freq_table[freqIndex];
-
-    while(oct > 7)
-    {
-        ++(*mul_offset);
-        --oct;
-    }
-
-    return outHz | (oct << 10);
-}
-
-
-
-
-/***************************************************************
- *             Apogee Sound System frequency model             *
- ***************************************************************/
-
-static const int_fast32_t s_apogee_freq_table[31 + 1][12] =
-{
-    { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x241, 0x263, 0x287 },
-    { 0x157, 0x16b, 0x181, 0x198, 0x1b0, 0x1ca, 0x1e5, 0x202, 0x220, 0x242, 0x264, 0x288 },
-    { 0x158, 0x16c, 0x182, 0x199, 0x1b1, 0x1cb, 0x1e6, 0x203, 0x221, 0x243, 0x265, 0x289 },
-    { 0x158, 0x16c, 0x183, 0x19a, 0x1b2, 0x1cc, 0x1e7, 0x204, 0x222, 0x244, 0x266, 0x28a },
-    { 0x159, 0x16d, 0x183, 0x19a, 0x1b3, 0x1cd, 0x1e8, 0x205, 0x223, 0x245, 0x267, 0x28b },
-    { 0x15a, 0x16e, 0x184, 0x19b, 0x1b3, 0x1ce, 0x1e9, 0x206, 0x224, 0x246, 0x268, 0x28c },
-    { 0x15a, 0x16e, 0x185, 0x19c, 0x1b4, 0x1ce, 0x1ea, 0x207, 0x225, 0x247, 0x269, 0x28e },
-    { 0x15b, 0x16f, 0x185, 0x19d, 0x1b5, 0x1cf, 0x1eb, 0x208, 0x226, 0x248, 0x26a, 0x28f },
-    { 0x15b, 0x170, 0x186, 0x19d, 0x1b6, 0x1d0, 0x1ec, 0x209, 0x227, 0x249, 0x26b, 0x290 },
-    { 0x15c, 0x170, 0x187, 0x19e, 0x1b7, 0x1d1, 0x1ec, 0x20a, 0x228, 0x24a, 0x26d, 0x291 },
-    { 0x15d, 0x171, 0x188, 0x19f, 0x1b7, 0x1d2, 0x1ed, 0x20b, 0x229, 0x24b, 0x26e, 0x292 },
-    { 0x15d, 0x172, 0x188, 0x1a0, 0x1b8, 0x1d3, 0x1ee, 0x20c, 0x22a, 0x24c, 0x26f, 0x293 },
-    { 0x15e, 0x172, 0x189, 0x1a0, 0x1b9, 0x1d4, 0x1ef, 0x20d, 0x22b, 0x24d, 0x270, 0x295 },
-    { 0x15f, 0x173, 0x18a, 0x1a1, 0x1ba, 0x1d4, 0x1f0, 0x20e, 0x22c, 0x24e, 0x271, 0x296 },
-    { 0x15f, 0x174, 0x18a, 0x1a2, 0x1bb, 0x1d5, 0x1f1, 0x20f, 0x22d, 0x24f, 0x272, 0x297 },
-    { 0x160, 0x174, 0x18b, 0x1a3, 0x1bb, 0x1d6, 0x1f2, 0x210, 0x22e, 0x250, 0x273, 0x298 },
-    { 0x161, 0x175, 0x18c, 0x1a3, 0x1bc, 0x1d7, 0x1f3, 0x211, 0x22f, 0x251, 0x274, 0x299 },
-    { 0x161, 0x176, 0x18c, 0x1a4, 0x1bd, 0x1d8, 0x1f4, 0x212, 0x230, 0x252, 0x276, 0x29b },
-    { 0x162, 0x176, 0x18d, 0x1a5, 0x1be, 0x1d9, 0x1f5, 0x212, 0x231, 0x254, 0x277, 0x29c },
-    { 0x162, 0x177, 0x18e, 0x1a6, 0x1bf, 0x1d9, 0x1f5, 0x213, 0x232, 0x255, 0x278, 0x29d },
-    { 0x163, 0x178, 0x18f, 0x1a6, 0x1bf, 0x1da, 0x1f6, 0x214, 0x233, 0x256, 0x279, 0x29e },
-    { 0x164, 0x179, 0x18f, 0x1a7, 0x1c0, 0x1db, 0x1f7, 0x215, 0x235, 0x257, 0x27a, 0x29f },
-    { 0x164, 0x179, 0x190, 0x1a8, 0x1c1, 0x1dc, 0x1f8, 0x216, 0x236, 0x258, 0x27b, 0x2a1 },
-    { 0x165, 0x17a, 0x191, 0x1a9, 0x1c2, 0x1dd, 0x1f9, 0x217, 0x237, 0x259, 0x27c, 0x2a2 },
-    { 0x166, 0x17b, 0x192, 0x1aa, 0x1c3, 0x1de, 0x1fa, 0x218, 0x238, 0x25a, 0x27e, 0x2a3 },
-    { 0x166, 0x17b, 0x192, 0x1aa, 0x1c3, 0x1df, 0x1fb, 0x219, 0x239, 0x25b, 0x27f, 0x2a4 },
-    { 0x167, 0x17c, 0x193, 0x1ab, 0x1c4, 0x1e0, 0x1fc, 0x21a, 0x23a, 0x25c, 0x280, 0x2a6 },
-    { 0x168, 0x17d, 0x194, 0x1ac, 0x1c5, 0x1e0, 0x1fd, 0x21b, 0x23b, 0x25d, 0x281, 0x2a7 },
-    { 0x168, 0x17d, 0x194, 0x1ad, 0x1c6, 0x1e1, 0x1fe, 0x21c, 0x23c, 0x25e, 0x282, 0x2a8 },
-    { 0x169, 0x17e, 0x195, 0x1ad, 0x1c7, 0x1e2, 0x1ff, 0x21d, 0x23d, 0x260, 0x283, 0x2a9 },
-    { 0x16a, 0x17f, 0x196, 0x1ae, 0x1c8, 0x1e3, 0x1ff, 0x21e, 0x23e, 0x261, 0x284, 0x2ab },
-    { 0x16a, 0x17f, 0x197, 0x1af, 0x1c8, 0x1e4, 0x200, 0x21f, 0x23f, 0x262, 0x286, 0x2ac }
-};
-
-static uint32_t s_apogeeFreq(double tone, uint32_t *mul_offset)
-{
-    uint_fast32_t noteI;
-    int_fast32_t bendI = 0, outHz = 0, octave, scaleNote;
-    double bendDec;
-
-    *mul_offset = 0;
-
-    noteI = (uint_fast32_t)(tone >= 12 ? tone - 12 : tone);
-
-    bendDec = tone - (int)tone;
-    bendI = (int_fast32_t)(bendDec * 32) + 32;
-
-    noteI += (bendI / 32);
-    noteI -= 1;
-
-    scaleNote = noteI % 12;
-    octave = noteI / 12;
-
-    outHz = s_apogee_freq_table[bendI % 32][scaleNote];
-
-    while(octave > 7)
-    {
-        ++(*mul_offset);
-        --octave;
-    }
-
-    return outHz | (octave << 10);
-}
-
-
-
-
-/***************************************************************
- *            Windows 9x FM drivers frequency model            *
- ***************************************************************/
-
-//static const double s_9x_opl_samplerate = 50000.0;
-//static const double s_9x_opl_tune = 440.0;
-static const uint_fast8_t s_9x_opl_pitchfrac = 8;
-
-static const uint_fast32_t s_9x_opl_freq[12] =
-{
-    0xAB7, 0xB5A, 0xC07, 0xCBE, 0xD80, 0xE4D, 0xF27, 0x100E, 0x1102, 0x1205, 0x1318, 0x143A
-};
-
-static const int32_t s_9x_opl_uppitch = 31;
-static const int32_t s_9x_opl_downpitch = 27;
-
-static uint_fast32_t s_9x_opl_applypitch(uint_fast32_t freq, int_fast32_t pitch)
-{
-    int32_t diff;
-
-    if(pitch > 0)
-    {
-        diff = (pitch * s_9x_opl_uppitch) >> s_9x_opl_pitchfrac;
-        freq += (diff * freq) >> 15;
-    }
-    else if (pitch < 0)
-    {
-        diff = (-pitch * s_9x_opl_downpitch) >> s_9x_opl_pitchfrac;
-        freq -= (diff * freq) >> 15;
-    }
-
-    return freq;
-}
-
-static uint32_t s_9xFreq(double tone, uint32_t *mul_offset)
-{
-    uint_fast32_t note, freq, freqpitched, octave, block, bendMsb, bendLsb;
-    int_fast32_t bend;
-    double bendDec;
-
-    *mul_offset = 0;
-
-    note = (uint_fast32_t)(tone >= 12 ? tone - 12 : tone);
-    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
-
-    bend = (int_fast32_t)(bendDec * 4096) + 8192; // convert to MIDI standard value
-
-    bendMsb = (bend >> 7) & 0x7F;
-    bendLsb = (bend & 0x7F);
-
-    bend = (bendMsb << 9) | (bendLsb << 2);
-    bend = (int16_t)(uint16_t)(bend + 0x8000);
-
-    octave = note / 12;
-    freq = s_9x_opl_freq[note % 12];
-    if(octave < 5)
-        freq >>= (5 - octave);
-    else if (octave > 5)
-        freq <<= (octave - 5);
-
-    freqpitched = s_9x_opl_applypitch(freq, bend);
-    freqpitched *= 2;
-
-    block = 1;
-    while(freqpitched > 0x3ff)
-    {
-        freqpitched /= 2;
-        ++block;
-    }
-
-    while(block > 7)
-    {
-        ++(*mul_offset);
-        --block;
-    }
-
-    return freqpitched | (block << 10);
-}
-
-
-
-
-/***************************************************************
- *         HMI Sound Operating System frequency model          *
- ***************************************************************/
-
-const size_t s_hmi_freqtable_size = 103;
-static uint_fast32_t s_hmi_freqtable[s_hmi_freqtable_size] =
-{
-    0x0157, 0x016B, 0x0181, 0x0198, 0x01B0, 0x01CA, 0x01E5, 0x0202, 0x0220, 0x0241, 0x0263, 0x0287,
-    0x0557, 0x056B, 0x0581, 0x0598, 0x05B0, 0x05CA, 0x05E5, 0x0602, 0x0620, 0x0641, 0x0663, 0x0687,
-    0x0957, 0x096B, 0x0981, 0x0998, 0x09B0, 0x09CA, 0x09E5, 0x0A02, 0x0A20, 0x0A41, 0x0A63, 0x0A87,
-    0x0D57, 0x0D6B, 0x0D81, 0x0D98, 0x0DB0, 0x0DCA, 0x0DE5, 0x0E02, 0x0E20, 0x0E41, 0x0E63, 0x0E87,
-    0x1157, 0x116B, 0x1181, 0x1198, 0x11B0, 0x11CA, 0x11E5, 0x1202, 0x1220, 0x1241, 0x1263, 0x1287,
-    0x1557, 0x156B, 0x1581, 0x1598, 0x15B0, 0x15CA, 0x15E5, 0x1602, 0x1620, 0x1641, 0x1663, 0x1687,
-    0x1957, 0x196B, 0x1981, 0x1998, 0x19B0, 0x19CA, 0x19E5, 0x1A02, 0x1A20, 0x1A41, 0x1A63, 0x1A87,
-    0x1D57, 0x1D6B, 0x1D81, 0x1D98, 0x1DB0, 0x1DCA, 0x1DE5, 0x1E02, 0x1E20, 0x1E41, 0x1E63, 0x1E87,
-    0x1EAE, 0x1EB7, 0x1F02, 0x1F30, 0x1F60, 0x1F94, 0x1FCA
-};
-
-const size_t s_hmi_bendtable_size = 12;
-static uint_fast32_t s_hmi_bendtable[s_hmi_bendtable_size] =
-{
-    0x144, 0x132, 0x121, 0x110, 0x101, 0xf8, 0xe5, 0xd8, 0xcc, 0xc1, 0xb6, 0xac
-};
-
-#define hmi_range_fix(formula, maxVal) \
-    ( \
-        (formula) < 0 ? \
-        0 : \
-        ( \
-            (formula) >= (int32_t)maxVal ? \
-            (int32_t)maxVal : \
-            (formula) \
-        )\
-    )
-
-static uint_fast32_t s_hmi_bend_calc(uint_fast32_t bend, int_fast32_t note)
-{
-    const int_fast32_t midi_bend_range = 1;
-    uint_fast32_t bendFactor, outFreq, fmOctave, fmFreq, newFreq, idx;
-    int_fast32_t noteMod12;
-
-    note -= 12;
-//    while(doNote >= 12) // ugly way to MOD 12
-//        doNote -= 12;
-    noteMod12 = (note % 12);
-
-    outFreq = s_hmi_freqtable[note];
-
-    fmOctave = outFreq & 0x1c00;
-    fmFreq = outFreq & 0x3ff;
-
-    if(bend < 64)
-    {
-        bendFactor = ((63 - bend) * 1000) >> 6;
-
-        idx = hmi_range_fix(note - midi_bend_range, s_hmi_freqtable_size);
-        newFreq = outFreq - s_hmi_freqtable[idx];
-
-        if(newFreq > 719)
-        {
-            newFreq = fmFreq - s_hmi_bendtable[midi_bend_range - 1];
-            newFreq &= 0x3ff;
-        }
-
-        newFreq = (newFreq * bendFactor) / 1000;
-        outFreq -= newFreq;
-    }
-    else
-    {
-        bendFactor = ((bend - 64) * 1000) >> 6;
-
-        idx = hmi_range_fix(note + midi_bend_range, s_hmi_freqtable_size);
-        newFreq = s_hmi_freqtable[idx] - outFreq;
-
-        if(newFreq > 719)
-        {
-            idx = hmi_range_fix(11 - noteMod12, s_hmi_bendtable_size);
-            fmFreq = s_hmi_bendtable[idx];
-            outFreq = (fmOctave + 1024) | fmFreq;
-
-            idx = hmi_range_fix(note + midi_bend_range, s_hmi_freqtable_size);
-            newFreq = s_hmi_freqtable[idx] - outFreq;
-        }
-
-        newFreq = (newFreq * bendFactor) / 1000;
-        outFreq += newFreq;
-    }
-
-    return outFreq;
-}
-#undef hmi_range_fix
-
-static uint32_t s_hmiFreq(double tone, uint32_t *mul_offset)
-{
-    int_fast32_t note, bend, octave, octaveOffset = 0;
-    uint_fast32_t inFreq, freq;
-    double bendDec;
-
-    *mul_offset = 0;
-
-    note = (int_fast32_t)(tone);
-    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
-    bend = (int_fast32_t)(bendDec * 64.0) + 64;
-
-    while(note < 12)
-    {
-        octaveOffset--;
-        note += 12;
-    }
-
-    while(note > 114)
-    {
-        octaveOffset++;
-        note -= 12;
-    }
-
-    if(bend == 64)
-        inFreq = s_hmi_freqtable[note - 12];
-    else
-        inFreq = s_hmi_bend_calc(bend, note);
-
-    freq = inFreq & 0x3FF;
-    octave = (inFreq >> 10) & 0x07;
-    octave += octaveOffset;
-
-    while(octave > 7)
-    {
-        ++(*mul_offset);
-        --octave;
-    }
-
-    return freq | (octave << 10);
-}
-
-
-
-
-/***************************************************************
- *          Audio Interface Library frequency model            *
- ***************************************************************/
-
-static const uint_fast16_t s_ail_freqtable[] =
-{
-    0x02b2, 0x02b4, 0x02b7, 0x02b9, 0x02bc, 0x02be, 0x02c1, 0x02c3,
-    0x02c6, 0x02c9, 0x02cb, 0x02ce, 0x02d0, 0x02d3, 0x02d6, 0x02d8,
-    0x02db, 0x02dd, 0x02e0, 0x02e3, 0x02e5, 0x02e8, 0x02eb, 0x02ed,
-    0x02f0, 0x02f3, 0x02f6, 0x02f8, 0x02fb, 0x02fe, 0x0301, 0x0303,
-    0x0306, 0x0309, 0x030c, 0x030f, 0x0311, 0x0314, 0x0317, 0x031a,
-    0x031d, 0x0320, 0x0323, 0x0326, 0x0329, 0x032b, 0x032e, 0x0331,
-    0x0334, 0x0337, 0x033a, 0x033d, 0x0340, 0x0343, 0x0346, 0x0349,
-    0x034c, 0x034f, 0x0352, 0x0356, 0x0359, 0x035c, 0x035f, 0x0362,
-    0x0365, 0x0368, 0x036b, 0x036f, 0x0372, 0x0375, 0x0378, 0x037b,
-    0x037f, 0x0382, 0x0385, 0x0388, 0x038c, 0x038f, 0x0392, 0x0395,
-    0x0399, 0x039c, 0x039f, 0x03a3, 0x03a6, 0x03a9, 0x03ad, 0x03b0,
-    0x03b4, 0x03b7, 0x03bb, 0x03be, 0x03c1, 0x03c5, 0x03c8, 0x03cc,
-    0x03cf, 0x03d3, 0x03d7, 0x03da, 0x03de, 0x03e1, 0x03e5, 0x03e8,
-    0x03ec, 0x03f0, 0x03f3, 0x03f7, 0x03fb, 0x03fe, 0xfe01, 0xfe03,
-    0xfe05, 0xfe07, 0xfe08, 0xfe0a, 0xfe0c, 0xfe0e, 0xfe10, 0xfe12,
-    0xfe14, 0xfe16, 0xfe18, 0xfe1a, 0xfe1c, 0xfe1e, 0xfe20, 0xfe21,
-    0xfe23, 0xfe25, 0xfe27, 0xfe29, 0xfe2b, 0xfe2d, 0xfe2f, 0xfe31,
-    0xfe34, 0xfe36, 0xfe38, 0xfe3a, 0xfe3c, 0xfe3e, 0xfe40, 0xfe42,
-    0xfe44, 0xfe46, 0xfe48, 0xfe4a, 0xfe4c, 0xfe4f, 0xfe51, 0xfe53,
-    0xfe55, 0xfe57, 0xfe59, 0xfe5c, 0xfe5e, 0xfe60, 0xfe62, 0xfe64,
-    0xfe67, 0xfe69, 0xfe6b, 0xfe6d, 0xfe6f, 0xfe72, 0xfe74, 0xfe76,
-    0xfe79, 0xfe7b, 0xfe7d, 0xfe7f, 0xfe82, 0xfe84, 0xfe86, 0xfe89,
-    0xfe8b, 0xfe8d, 0xfe90, 0xfe92, 0xfe95, 0xfe97, 0xfe99, 0xfe9c,
-    0xfe9e, 0xfea1, 0xfea3, 0xfea5, 0xfea8, 0xfeaa, 0xfead, 0xfeaf
-};
-
-static const uint_fast8_t s_ail_note_octave[] =
-{
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01,
-    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-    0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
-    0x02, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03,
-    0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
-    0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
-    0x04, 0x04, 0x04, 0x04, 0x05, 0x05, 0x05, 0x05,
-    0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
-    0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06,
-    0x06, 0x06, 0x06, 0x06, 0x07, 0x07, 0x07, 0x07,
-    0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07
-};
-
-static const uint_fast8_t s_ail_note_halftone[] =
-{
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x00, 0x01, 0x02, 0x03,
-    0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x00, 0x01, 0x02, 0x03,
-    0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x00, 0x01, 0x02, 0x03,
-    0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x00, 0x01, 0x02, 0x03,
-    0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b
-};
-
-static uint32_t s_ailFreq(double tone, uint32_t *mul_offset)
-{
-    uint_fast16_t freq, halftones;
-    int_fast32_t note, pitch, octave, octaveOffset = 0;
-    double bendDec;
-
-    *mul_offset = 0;
-
-    note = (int_fast32_t)(tone);
-    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
-    pitch = (int_fast32_t)(bendDec * 4096) + 8192; // convert to MIDI standard value
-    pitch = ((pitch - 0x2000) / 0x20) * 2;
-
-    note -= 12;
-
-    while(note < 0)
-    {
-        octaveOffset--;
-        note += 12;
-    }
-
-    while(note > 95)
-    {
-        octaveOffset++;
-        note -= 12;
-    }
-
-    pitch += (((uint_fast8_t)note) << 8) + 8;
-    pitch /= 16;
-
-    while(pitch < 12 * 16)
-        pitch += 12 * 16;
-
-    while(pitch > 96 * 16 - 1)
-        pitch -= 12 * 16;
-
-    halftones = (s_ail_note_halftone[pitch >> 4] << 4) + (pitch & 0x0f);
-    freq = s_ail_freqtable[halftones];
-    octave = s_ail_note_octave[pitch >> 4];
-
-    if((freq & 0x8000) == 0)
-    {
-        if (octave > 0)
-            octave--;
-        else
-            freq /= 2;
-    }
-
-    freq &= 0x3FF;
-
-    octave += octaveOffset;
-
-    while(octave > 7)
-    {
-        ++(*mul_offset);
-        --octave;
-    }
-
-    return freq | (octave << 10);
-}
-
-
-/***************************************************************
- *                  MS AdLib frequency model                   *
- ***************************************************************/
-
-static uint16_t s_msAdLibFreqTable[25][12] =
-{
-    {0x157, 0x16C, 0x181, 0x198, 0x1B1, 0x1CB, 0x1E6, 0x203, 0x222, 0x243, 0x266, 0x28A},
-    {0x158, 0x16D, 0x183, 0x19A, 0x1B2, 0x1CC, 0x1E8, 0x205, 0x224, 0x245, 0x267, 0x28C},
-    {0x159, 0x16D, 0x183, 0x19A, 0x1B3, 0x1CD, 0x1E9, 0x206, 0x225, 0x246, 0x269, 0x28D},
-    {0x15A, 0x16E, 0x184, 0x19B, 0x1B4, 0x1CE, 0x1EA, 0x207, 0x226, 0x247, 0x26A, 0x28F},
-    {0x15A, 0x16F, 0x185, 0x19C, 0x1B5, 0x1CF, 0x1EB, 0x208, 0x227, 0x248, 0x26B, 0x291},
-    {0x15B, 0x170, 0x186, 0x19D, 0x1B6, 0x1D0, 0x1EC, 0x20A, 0x229, 0x24A, 0x26D, 0x292},
-    {0x15C, 0x171, 0x187, 0x19F, 0x1B7, 0x1D2, 0x1ED, 0x20B, 0x22A, 0x24B, 0x26E, 0x294},
-    {0x15D, 0x172, 0x188, 0x19F, 0x1B8, 0x1D3, 0x1EF, 0x20C, 0x22C, 0x24D, 0x270, 0x295},
-    {0x15E, 0x173, 0x189, 0x1A0, 0x1B9, 0x1D4, 0x1F0, 0x20D, 0x22D, 0x24E, 0x271, 0x297},
-    {0x15F, 0x174, 0x18A, 0x1A1, 0x1BA, 0x1D5, 0x1F1, 0x20F, 0x22E, 0x250, 0x273, 0x299},
-    {0x15F, 0x174, 0x18B, 0x1A2, 0x1BB, 0x1D6, 0x1F2, 0x210, 0x22F, 0x251, 0x274, 0x29A},
-    {0x160, 0x175, 0x18C, 0x1A3, 0x1BC, 0x1D7, 0x1F3, 0x211, 0x231, 0x252, 0x276, 0x29C},
-    {0x161, 0x176, 0x18D, 0x1A4, 0x1BD, 0x1D8, 0x1F4, 0x212, 0x232, 0x254, 0x277, 0x29D},
-    {0x162, 0x177, 0x18E, 0x1A5, 0x1BF, 0x1D9, 0x1F6, 0x214, 0x234, 0x255, 0x279, 0x29F},
-    {0x163, 0x178, 0x18E, 0x1A6, 0x1C0, 0x1DA, 0x1F7, 0x215, 0x235, 0x257, 0x27A, 0x2A0},
-    {0x164, 0x179, 0x18F, 0x1A7, 0x1C1, 0x1DB, 0x1F8, 0x216, 0x236, 0x258, 0x27C, 0x2A2},
-    {0x164, 0x17A, 0x190, 0x1A8, 0x1C2, 0x1DD, 0x1F9, 0x217, 0x237, 0x259, 0x27D, 0x2A3},
-    {0x165, 0x17B, 0x191, 0x1A9, 0x1C3, 0x1DE, 0x1FA, 0x219, 0x239, 0x25B, 0x27F, 0x2A5},
-    {0x166, 0x17B, 0x192, 0x1AA, 0x1C4, 0x1DF, 0x1FB, 0x21A, 0x23A, 0x25C, 0x280, 0x2A7},
-    {0x167, 0x17C, 0x193, 0x1AB, 0x1C5, 0x1E0, 0x1FD, 0x21B, 0x23B, 0x25E, 0x282, 0x2A8},
-    {0x168, 0x17D, 0x194, 0x1AC, 0x1C6, 0x1E1, 0x1FE, 0x21C, 0x23C, 0x25F, 0x283, 0x2AA},
-    {0x168, 0x17E, 0x195, 0x1AD, 0x1C7, 0x1E2, 0x1FF, 0x21D, 0x23E, 0x260, 0x285, 0x2AB},
-    {0x169, 0x17F, 0x196, 0x1AE, 0x1C8, 0x1E3, 0x200, 0x21F, 0x23F, 0x262, 0x286, 0x2AD},
-    {0x16A, 0x180, 0x197, 0x1AF, 0x1C9, 0x1E4, 0x201, 0x220, 0x241, 0x263, 0x288, 0x2AF},
-    {0x16B, 0x181, 0x198, 0x1B0, 0x1CA, 0x1E5, 0x202, 0x221, 0x242, 0x264, 0x289, 0x2B0},
-};
-
-static const uint32_t MSADLIB_NR_STEP_PITCH = 25;
-static const uint32_t MSADLIB_PRANGE = 50;
-
-static uint32_t s_msAdLibFreq(double tone, uint32_t *mul_offset)
-{
-    uint_fast32_t bend, freq;
-    int_fast32_t note, halfToneoffset, octave, t1, t2, delta;
-    double bendDec;
-
-    *mul_offset = 0;
-
-    note = (int_fast32_t)(tone);
-    bendDec = tone - (int)tone; // 0.0 ± 1.0 - one halftone
-
-    bend = (int_fast32_t)(bendDec * 4096) + 8192; // convert to MIDI standard value
-
-    if(note < 12)
-        note = 0;
-    else
-        note -= 12;
-
-    bend = (uint32_t)((int_fast64_t)((int_fast32_t)bend - 0x2000) * MSADLIB_PRANGE);
-    t1 = (int32_t)((((bend >> 16) & 0xFF) << 8) | ((bend >> 8) & 0xFF)) >> 5;
-
-    if(t1 < 0)
-    {
-        t2 = MSADLIB_NR_STEP_PITCH - 1 - t1;
-        halfToneoffset = -(t2 / MSADLIB_NR_STEP_PITCH);
-        delta = (t2 - MSADLIB_NR_STEP_PITCH + 1) % MSADLIB_NR_STEP_PITCH;
-        if(delta)
-            delta = MSADLIB_NR_STEP_PITCH - delta;
-    }
-    else
-    {
-        halfToneoffset = t1 / MSADLIB_NR_STEP_PITCH;
-        delta = t1 % MSADLIB_NR_STEP_PITCH;
-    }
-
-    note += halfToneoffset;
-    freq = s_msAdLibFreqTable[delta][note % 12];
-    octave = note / 12;
-
-    while(octave > 7)
-    {
-        ++(*mul_offset);
-        --octave;
-    }
-
-    return freq | (octave << 10);
-}
-
-
 enum
 {
     MasterVolumeDefault = 127
@@ -1055,7 +274,6 @@ enum
     OPL_PANNING_RIGHT = 0x20,
     OPL_PANNING_BOTH  = 0x30
 };
-
 
 
 static OplInstMeta makeEmptyInstrument()
@@ -1086,7 +304,8 @@ OPL3::OPL3() :
     m_masterVolume(MasterVolumeDefault),
     m_musicMode(MODE_MIDI),
     m_volumeScale(VOLUME_Generic),
-    m_getFreq(&s_commonFreq),
+    m_getFreq(&oplModel_genericFreq),
+    m_getVolume(&oplModel_genericVolume),
     m_channelAlloc(ADLMIDI_ChanAlloc_AUTO)
 {
     m_insBankSetup.volumeModel = OPL3::VOLUME_Generic;
@@ -1130,35 +349,68 @@ void OPL3::setFrequencyModel(VolumesScale model)
     switch(m_volumeScale)
     {
     case VOLUME_DMX:
+        m_getFreq = &oplModel_dmxFreq;
+        m_getVolume = &oplModel_dmxOrigVolume;
+        break;
+
     case VOLUME_DMX_FIXED:
-        m_getFreq = &s_dmxFreq;
+        m_getFreq = &oplModel_dmxFreq;
+        m_getVolume = &oplModel_dmxFixedVolume;
         break;
 
     case VOLUME_APOGEE:
+        m_getFreq = &oplModel_apogeeFreq;
+        m_getVolume = &oplModel_apogeeOrigVolume;
+        break;
+
     case VOLUME_APOGEE_FIXED:
-        m_getFreq = &s_apogeeFreq;
+        m_getFreq = &oplModel_apogeeFreq;
+        m_getVolume = &oplModel_apogeeFixedVolume;
         break;
 
     case VOLUME_9X:
+        m_getFreq = &oplModel_9xFreq;
+        m_getVolume = &oplModel_9xSB16Volume;
+        break;
+
     case VOLUME_9X_GENERIC_FM:
-        m_getFreq = &s_9xFreq;
+        m_getFreq = &oplModel_9xFreq;
+        m_getVolume = &oplModel_9xGenericVolume;
         break;
 
     case VOLUME_HMI:
+        m_getFreq = &oplModel_hmiFreq;
+        m_getVolume = &oplModel_sosNewVolume;
+        break;
+
     case VOLUME_HMI_OLD:
-        m_getFreq = &s_hmiFreq;
+        m_getFreq = &oplModel_hmiFreq;
+        m_getVolume = &oplModel_sosOldVolume;
         break;
 
     case VOLUME_AIL:
-        m_getFreq = &s_ailFreq;
+        m_getFreq = &oplModel_ailFreq;
+        m_getVolume = &oplModel_ailVolume;
         break;
 
     case VOLUME_MS_ADLIB:
-        m_getFreq = &s_msAdLibFreq;
+        m_getFreq = &oplModel_msAdLibFreq;
+        m_getVolume = &oplModel_msAdLibVolume;
+        break;
+
+    case VOLUME_NATIVE:
+        m_getFreq = &oplModel_genericFreq;
+        m_getVolume = &oplModel_nativeVolume;
+        break;
+
+    case VOLUME_RSXX:
+        m_getFreq = &oplModel_genericFreq;
+        m_getVolume = &oplModel_rsxxVolume;
         break;
 
     default:
-        m_getFreq = &s_commonFreq;
+        m_getFreq = &oplModel_genericFreq;
+        m_getVolume = &oplModel_genericVolume;
     }
 }
 
@@ -1256,8 +508,9 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
 {
     size_t chip = c1 / NUM_OF_CHANNELS, cc1 = c1 % NUM_OF_CHANNELS, cc2 = c2 % NUM_OF_CHANNELS;
     size_t chan2 = c2 < m_insCache.size() ? c2 : 0;
-    uint32_t ftone = 0, mul_offset = 0;
     uint32_t chn = m_musicMode == MODE_CMF ? g_channelsMapPan[cc1] : g_channelsMap[cc1];
+    uint32_t mul_offset = 0;
+    uint16_t ftone = 0;
     const OplTimbre *patch1 = m_insCache[c1];
     const OplTimbre *patch2 = m_insCache[chan2];
 
@@ -1334,13 +587,6 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     }
 }
 
-static inline uint_fast32_t brightnessToOPL(uint_fast32_t brightness)
-{
-    double b = static_cast<double>(brightness);
-    double ret = ::round(127.0 * ::sqrt(b * (1.0 / 127.0))) / 2.0;
-    return static_cast<uint_fast32_t>(ret);
-}
-
 void OPL3::touchNote(size_t c,
                      uint_fast32_t velocity,
                      uint_fast32_t channelVolume,
@@ -1355,21 +601,25 @@ void OPL3::touchNote(size_t c,
     uint16_t o2 = g_operatorsMap[cc * 2 + 1 + cmf_offset];
     uint8_t  srcMod = adli.modulator_40,
              srcCar = adli.carrier_40;
-    uint32_t mode = 1; // 2-op AM
+    const uint_fast8_t kslMod = srcMod & 0xC0;
+    const uint_fast8_t kslCar = srcCar & 0xC0;
+    OPLVolume_t vol =
+    {
+        (uint_fast8_t)(velocity & 0x7F),
+        (uint_fast8_t)(channelVolume & 0x7F),
+        (uint_fast8_t)(channelExpression & 0x7F),
+        (uint_fast8_t)(m_masterVolume & 0x7F),
+        1, // 2-op AM
+        (uint_fast8_t)adli.feedconn,
+        (uint_fast8_t)(srcMod & 0x3F),
+        (uint_fast8_t)(srcCar & 0x3F),
+        0, // Do Modulator
+        0, // Do Carrier
+        (unsigned int)isDrum
+    };
 
-    const uint_fast32_t kslMod = srcMod & 0xC0;
-    const uint_fast32_t kslCar = srcCar & 0xC0;
-    uint_fast32_t tlMod = srcMod & 0x3F;
-    uint_fast32_t tlCar = srcCar & 0x3F;
-
-    uint_fast32_t modulator;
-    uint_fast32_t carrier;
-
-    uint_fast32_t volume = 0;
-    uint_fast32_t midiVolume = 0;
-
-    bool do_modulator = false;
-    bool do_carrier = true;
+    uint_fast8_t modulator;
+    uint_fast8_t carrier;
 
     static const bool do_ops[10][2] =
     {
@@ -1388,125 +638,10 @@ void OPL3::touchNote(size_t c,
     if(m_currentChipType == OPLChipBase::CHIPTYPE_OPL2 && m_channelCategory[c] == ChanCat_None)
         return; // Do nothing
 
-    // ------ Mix volumes and compute average ------
-
-    switch(m_volumeScale)
-    {
-    default:
-    case VOLUME_Generic:
-    {
-        volume = velocity * m_masterVolume *
-                 channelVolume * channelExpression;
-
-        /* If the channel has arpeggio, the effective volume of
-             * *this* instrument is actually lower due to timesharing.
-             * To compensate, add extra volume that corresponds to the
-             * time this note is *not* heard.
-             * Empirical tests however show that a full equal-proportion
-             * increment sounds wrong. Therefore, using the square root.
-             */
-        //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
-        const double c1 = 11.541560327111707;
-        const double c2 = 1.601379199767093e+02;
-        const uint_fast32_t minVolume = 1108075; // 8725 * 127
-
-        // The formula below: SOLVE(V=127^4 * 2^( (A-63.49999) / 8), A)
-        if(volume > minVolume)
-        {
-            double lv = std::log(static_cast<double>(volume));
-            volume = static_cast<uint_fast32_t>(lv * c1 - c2);
-        }
-        else
-            volume = 0;
-    }
-    break;
-
-    case VOLUME_NATIVE:
-    {
-        volume = velocity * channelVolume * channelExpression;
-        // 4096766 = (127 * 127 * 127) / 2
-        volume = (volume * m_masterVolume) / 4096766;
-    }
-    break;
-
-    case VOLUME_DMX:
-    case VOLUME_DMX_FIXED:
-    {
-        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        volume = (s_dmx_volume_model[volume] + 1) << 1;
-        volume = (s_dmx_volume_model[(velocity < 128) ? velocity : 127] * volume) >> 9;
-    }
-    break;
-
-    case VOLUME_APOGEE:
-    case VOLUME_APOGEE_FIXED:
-    {
-        midiVolume = (channelVolume * channelExpression * m_masterVolume / 16129);
-    }
-    break;
-
-    case VOLUME_9X:
-    {
-        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        volume = s_w9x_sb16_volume_model[volume >> 2];
-    }
-    break;
-
-    case VOLUME_9X_GENERIC_FM:
-    {
-        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        volume = s_w9x_generic_fm_volume_model[volume >> 2];
-    }
-    break;
-
-    case VOLUME_AIL:
-    {
-        midiVolume = (channelVolume * channelExpression) * 2;
-        midiVolume >>= 8;
-        if(midiVolume != 0)
-            midiVolume++;
-
-        velocity = (velocity & 0x7F) >> 3;
-        velocity = s_ail_vel_graph[velocity];
-
-        midiVolume = (midiVolume * velocity) * 2;
-        midiVolume >>= 8;
-        if(midiVolume != 0)
-            midiVolume++;
-
-        if(m_masterVolume < 127)
-            midiVolume = (midiVolume * m_masterVolume) / 127;
-    }
-    break;
-
-    case VOLUME_HMI:
-    case VOLUME_HMI_OLD:
-    {
-        volume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        volume = (((volume * 128) / 127) * velocity) >> 7;
-        volume = s_hmi_volume_table[volume >> 1];
-    }
-    break;
-
-    case VOLUME_MS_ADLIB:
-    {
-        midiVolume = (channelVolume * channelExpression * m_masterVolume) / 16129;
-        midiVolume = s_msadlib_volume_table[midiVolume];
-    }
-    break;
-    }
-
-    if(volume > 63)
-        volume = 63;
-
-    if(midiVolume > 127)
-        midiVolume = 127;
-
-
     if(m_channelCategory[c] == ChanCat_Regular ||
        m_channelCategory[c] == ChanCat_Rhythm_Bass)
     {
-        mode = adli.feedconn & 1; // 2-op FM or 2-op AM
+        vol.voiceMode = adli.feedconn & 1; // 2-op FM or 2-op AM
     }
     else if(m_channelCategory[c] == ChanCat_4op_First ||
             m_channelCategory[c] == ChanCat_4op_Second)
@@ -1517,199 +652,43 @@ void OPL3::touchNote(size_t c,
         {
             i0 = &adli;
             i1 = m_insCache[c + 3];
-            mode = 2; // 4-op xx-xx ops 1&2
+            vol.voiceMode = OPLVoice_MODE_4op_1_2_FM_FM; // 4-op xx-xx ops 1&2
         }
         else
         {
             i0 = m_insCache[c - 3];
             i1 = &adli;
-            mode = 6; // 4-op xx-xx ops 3&4
+            vol.voiceMode = OPLVoice_MODE_4op_3_4_FM_FM; // 4-op xx-xx ops 3&4
         }
 
-        mode += (i0->feedconn & 1) + (i1->feedconn & 1) * 2;
+        vol.voiceMode += (i0->feedconn & 1) + (i1->feedconn & 1) * 2;
     }
 
-    do_modulator = do_ops[mode][0] || m_scaleModulators;
-    do_carrier   = do_ops[mode][1] || m_scaleModulators;
+    vol.doMod = do_ops[vol.voiceMode][0] || m_scaleModulators;
+    vol.doCar = do_ops[vol.voiceMode][1] || m_scaleModulators;
 
-    // ------ Compute the total level register output data ------
-
-    if(m_musicMode == MODE_RSXX)
-    {
-        tlCar -= volume / 2;
-    }
-    else if(m_volumeScale == Synth::VOLUME_APOGEE ||
-            m_volumeScale == Synth::VOLUME_APOGEE_FIXED)
-    {
-        // volume = ((64 * (velocity + 0x80)) * volume) >> 15;
-
-        if(do_carrier)
-        {
-            tlCar = 63 - tlCar;
-            tlCar *= velocity + 0x80;
-            tlCar = (midiVolume * tlCar) >> 15;
-            tlCar = tlCar ^ 63;
-        }
-
-        if(do_modulator)
-        {
-            uint_fast32_t mod = tlCar;
-
-            tlMod = 63 - tlMod;
-            tlMod *= velocity + 0x80;
-
-            if(m_volumeScale == Synth::VOLUME_APOGEE_FIXED || mode > 1)
-                mod = tlMod; // Fix the AM voices bug
-
-            // NOTE: Here is a bug of Apogee Sound System that makes modulator
-            // to not work properly on AM instruments. The fix of this bug, you
-            // need to replace the tlCar with tmMod in this formula.
-            // Don't do the bug on 4-op voices.
-            tlMod = (midiVolume * mod) >> 15;
-
-            tlMod ^= 63;
-        }
-    }
-    else if(m_volumeScale == Synth::VOLUME_DMX && mode <= 1)
-    {
-        tlCar = (63 - volume);
-
-        if(do_modulator)
-        {
-            if(tlMod < tlCar)
-                tlMod = tlCar;
-        }
-    }
-    else if(m_volumeScale == Synth::VOLUME_9X)
-    {
-        if(do_carrier)
-            tlCar += volume + s_w9x_sb16_volume_model[velocity >> 2];
-        if(do_modulator)
-            tlMod += volume + s_w9x_sb16_volume_model[velocity >> 2];
-
-        if(tlCar > 0x3F)
-            tlCar = 0x3F;
-        if(tlMod > 0x3F)
-            tlMod = 0x3F;
-    }
-    else if(m_volumeScale == Synth::VOLUME_9X_GENERIC_FM)
-    {
-        if(do_carrier)
-            tlCar += volume + s_w9x_generic_fm_volume_model[velocity >> 2];
-        if(do_modulator)
-            tlMod += volume + s_w9x_generic_fm_volume_model[velocity >> 2];
-
-        if(tlCar > 0x3F)
-            tlCar = 0x3F;
-        if(tlMod > 0x3F)
-            tlMod = 0x3F;
-    }
-    else if(m_volumeScale == Synth::VOLUME_AIL)
-    {
-        uint_fast32_t v0_val = (~srcMod) & 0x3f;
-        uint_fast32_t v1_val = (~srcCar) & 0x3f;
-
-        if(do_modulator)
-            v0_val = (v0_val * midiVolume) / 127;
-        if(do_carrier)
-            v1_val = (v1_val * midiVolume) / 127;
-
-        tlMod = (~v0_val) & 0x3F;
-        tlCar = (~v1_val) & 0x3F;
-    }
-    else if(m_volumeScale == Synth::VOLUME_HMI)
-    {
-        uint_fast32_t vol;
-
-        if(do_modulator)
-        {
-            vol = (64 - volume) << 1;
-            vol *= (64 - tlMod);
-            tlMod = (8192 - vol) >> 7;
-        }
-
-        if(do_carrier)
-        {
-            vol = (64 - volume) << 1;
-            vol *= (64 - tlCar);
-            tlCar = (8192 - vol) >> 7;
-        }
-    }
-    else if(m_volumeScale == Synth::VOLUME_HMI_OLD)
-    {
-        uint_fast32_t vol;
-
-        if(adli.feedconn == 0 && !isDrum)
-        {
-            vol = (channelVolume * channelExpression * 64) / 16129;
-            vol = (((vol * 128) / 127) * velocity) >> 7;
-            vol = s_hmi_volume_table[vol >> 1];
-
-            vol = (64 - vol) << 1;
-            vol *= (64 - tlCar);
-            tlMod = (8192 - vol) >> 7;
-        }
-
-        if(isDrum) // TODO: VERIFY A CORRECTNESS OF THIS!!!
-            vol = (64 - s_hmi_volume_table[velocity >> 1]) << 1;
-        else
-            vol = (64 - volume) << 1;
-
-        vol *= (64 - tlCar);
-        tlCar = (8192 - vol) >> 7;
-    }
-    else if(m_volumeScale == Synth::VOLUME_MS_ADLIB)
-    {
-        uint_fast32_t vol;
-
-        if(do_modulator)
-        {
-            vol = 63 - (tlMod & 0x3f);
-            vol *= midiVolume;
-            vol += (vol + 0x7F);
-            tlMod = 63 - vol / (2 * 0x7F);
-        }
-
-        if(do_carrier)
-        {
-            vol = 63 - (tlCar & 0x3f);
-            vol *= midiVolume;
-            vol += (vol + 0x7F);
-            tlCar = 63 - vol / (2 * 0x7F);
-        }
-    }
-    else
-    {
-        if(do_modulator)
-            tlMod = 63 - volume + (volume * tlMod) / 63;
-
-        if(do_carrier)
-            tlCar = 63 - volume + (volume * tlCar) / 63;
-    }
+    // ------ Mix volumes and compute average ------
+    m_getVolume(&vol);
 
     if(brightness != 127 && !isDrum)
     {
-        brightness = brightnessToOPL(brightness);
-        if(!do_modulator)
-            tlMod = 63 - brightness + (brightness * tlMod) / 63;
-        if(!do_carrier)
-            tlCar = 63 - brightness + (brightness * tlCar) / 63;
+        brightness = oplModels_xgBrightnessToOPL(brightness);
+
+        if(!vol.doMod)
+            vol.tlMod = 63 - brightness + (brightness * vol.tlMod) / 63;
+
+        if(!vol.doCar)
+            vol.tlCar = 63 - brightness + (brightness * vol.tlCar) / 63;
     }
 
-    modulator = (kslMod & 0xC0) | (tlMod & 63);
-    carrier = (kslCar & 0xC0) | (tlCar & 63);
+    modulator = (kslMod & 0xC0) | (vol.tlMod & 63);
+    carrier = (kslCar & 0xC0) | (vol.tlCar & 63);
 
     if(o1 != 0xFFF)
         writeRegI(chip, 0x40 + o1, modulator);
+
     if(o2 != 0xFFF)
         writeRegI(chip, 0x40 + o2, carrier);
-
-    // Correct formula (ST3, AdPlug):
-    //   63-((63-(instrvol))/63)*chanvol
-    // Reduces to (tested identical):
-    //   63 - chanvol + chanvol*instrvol/63
-    // Also (slower, floats):
-    //   63 + chanvol * (instrvol / 63.0 - 1)
 }
 
 void OPL3::setPatch(size_t c, const OplTimbre *instrument)
@@ -2003,6 +982,7 @@ ADLMIDI_VolumeModels OPL3::getVolumeScaleModel()
     default:
     case OPL3::VOLUME_Generic:
         return ADLMIDI_VolumeModel_Generic;
+    case OPL3::VOLUME_RSXX:
     case OPL3::VOLUME_NATIVE:
         return ADLMIDI_VolumeModel_NativeOPL3;
     case OPL3::VOLUME_DMX:

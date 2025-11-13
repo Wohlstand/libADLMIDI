@@ -238,7 +238,7 @@ bool MIDIplay::LoadMIDI_post()
     else if(format == MidiSequencer::Format_RSXX)
     {
         synth.m_musicMode     = Synth::MODE_RSXX;
-        synth.setFrequencyModel(Synth::VOLUME_NATIVE);
+        synth.setFrequencyModel(Synth::VOLUME_RSXX);
 
         synth.m_numChips = 1;
         synth.m_numFourOps = 0;
