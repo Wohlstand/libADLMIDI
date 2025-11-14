@@ -25,7 +25,7 @@ bool BankFormats::LoadIBK(BanksDump &db, const char *fn, unsigned bank,
 
     uint_fast16_t bankSetup = mt32 ?
                               BanksDump::BankEntry::SETUP_IBK_MT32 :
-                              BanksDump::BankEntry::SETUP_Generic;
+                              BanksDump::BankEntry::SETUP_IBK;
     size_t bankDb = db.initBank(bank, bankTitle, bankSetup);
     BanksDump::MidiBank bnk;
 

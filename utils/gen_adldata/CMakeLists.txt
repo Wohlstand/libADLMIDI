@@ -20,8 +20,23 @@ set(GEN_ADLDATA_SRC)
 list(APPEND GEN_ADLDATA_SRC
     gen_adldata.cc
     progs_cache.cpp
+    progs_cache.h
     measurer.cpp
+    measurer.h
+    midi_inst_list.h
     ini/ini_processing.cpp
+    ini/ini_processing.h
+    file_formats/common.h
+    file_formats/load_ail.h
+    file_formats/load_bisqwit.h
+    file_formats/load_bnk.h
+    file_formats/load_bnk2.h
+    file_formats/load_ea.h
+    file_formats/load_ibk.h
+    file_formats/load_jv.h
+    file_formats/load_op2.h
+    file_formats/load_tmb.h
+    file_formats/load_wopl.h
 )
 
 option(WITH_GENADLDATA_DEEPDEBUG "Enable deep debug mode of gen_adldata with dumping every voice into WAV file" OFF)
