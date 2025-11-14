@@ -57,19 +57,25 @@ static uint16_t s_msAdLibFreqTable[25][12] =
     {0x16B, 0x181, 0x198, 0x1B0, 0x1CA, 0x1E5, 0x202, 0x221, 0x242, 0x264, 0x289, 0x2B0},
 };
 
-static const uint32_t MSADLIB_NR_STEP_PITCH = 25;
-static const uint32_t MSADLIB_PRANGE = 50;
+static const int32_t MSADLIB_NR_STEP_PITCH = 25;
+static const int32_t MSADLIB_PRANGE = 50;
+
+#define OPL_HIWORD(x)  ((uint16_t)((((uint32_t)x) >> 16) & 0xFFFF))
+#define OPL_LOWORD(x)  ((uint16_t)((uint32_t)x & 0xFFFF))
+#define OPL_LOBYTE(x)  ((uint8_t)((uint16_t)x & 0xFF))
+#define OPL_HIBYTE(x)  ((uint8_t)(((uint16_t)x >> 8) & 0xFF))
 
 uint16_t oplModel_msAdLibFreq(double tone, uint32_t *mul_offset)
 {
-    uint_fast32_t bend, freq;
     int_fast32_t note, halfToneoffset, octave, t1, t2, delta;
+    uint32_t dw;
+    uint16_t bend, freq;
     double bendDec;
 
     *mul_offset = 0;
 
     note = (int_fast32_t)(tone);
-    bendDec = tone - (int)tone; /* 0.0 ± 1.0 - one halftone */
+    bendDec = tone - (int_fast32_t)tone; /* 0.0 ± 1.0 - one halftone */
 
     if(bendDec > 0.5)
     {
@@ -77,15 +83,15 @@ uint16_t oplModel_msAdLibFreq(double tone, uint32_t *mul_offset)
         bendDec -= 1.0;
     }
 
-    bend = (int_fast32_t)(bendDec * 4096) + 8192; /* convert to MIDI standard value */
+    bend = (uint16_t)((bendDec * 4096) + 8192); /* convert to MIDI standard value */
 
     if(note < 12)
         note = 0;
     else
         note -= 12;
 
-    bend = (uint32_t)((int_fast64_t)((int_fast32_t)bend - 0x2000) * MSADLIB_PRANGE);
-    t1 = (int32_t)((((bend >> 16) & 0xFF) << 8) | ((bend >> 8) & 0xFF)) >> 5;
+    dw = (uint32_t)((int32_t)((int16_t)bend - 0x2000) * MSADLIB_PRANGE);
+    t1 = (int16_t)((OPL_LOBYTE(OPL_HIWORD(dw)) << 8) | OPL_HIBYTE(OPL_LOWORD(dw))) >> 5;
 
     if(t1 < 0)
     {
