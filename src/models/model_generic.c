@@ -305,8 +305,8 @@ void oplModel_nativeVolume(struct OPLVolume_t *v)
 {
     uint_fast32_t volume = 0;
 
-    volume = v->vel * v->masterVolume * v->chVol * v->chExpr;
-    /* 4096766 = (127 * 127 * 127) / 2 */
+    volume = v->vel * v->chVol * v->chExpr;
+    /* 4096766 = (127 * 127 * 127) * 2 */
     volume = (volume * v->masterVolume) / 4096766;
 
     if(volume > 63)
