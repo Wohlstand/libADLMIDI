@@ -139,6 +139,9 @@ static const char * const volume_models_descriptions[] =
     N_("Win9x Generic FM driver"),
     N_("HMI Sound Operating System"),
     N_("HMI Sound Operating System (Old)"),
+    N_("MS AdLib (Win3x driver)"),
+    N_("IMF Creator"),
+    N_("Jammie O'Connel's FM Synth"),
     NULL
 };
 

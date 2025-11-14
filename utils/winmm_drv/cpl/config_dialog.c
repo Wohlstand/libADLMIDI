@@ -38,6 +38,9 @@ static const char *const volume_models_descriptions[] =
     "Win9x Generic FM driver",
     "HMI Sound Operating System",
     "HMI Sound Operating System (Old)",
+    "MS AdLib (Win3x driver)",
+    "IMF Creator",
+    "Jammie O'Connel's FM Synth",
     NULL
 };
 
