@@ -205,9 +205,8 @@ static void str2time(double time, char *timeBuff, size_t timeBuffSize)
 
 bool BW_MidiSequencer::debugDumpContents(const std::string &outFile)
 {
+    bool ret;
     FILE *out;
-    char delayBuff[100];
-    char timeBuff[100];
 
     if(m_tracksCount == 0)
     {
@@ -219,6 +218,33 @@ bool BW_MidiSequencer::debugDumpContents(const std::string &outFile)
     if(!out)
     {
         m_errorString.setFmt("Can't open file %s for write: ", outFile.c_str());
+#ifndef _WIN32
+        m_errorString.appendFmt("%s\n", std::strerror(errno));
+#endif
+        return false;
+    }
+
+    ret = debugDumpContents(out);
+
+    fclose(out);
+
+    return ret;
+}
+
+bool BW_MidiSequencer::debugDumpContents(FILE *out)
+{
+    char delayBuff[100];
+    char timeBuff[100];
+
+    if(m_tracksCount == 0)
+    {
+        m_errorString.setFmt("Song is not loaded!");
+        return false;
+    }
+
+    if(!out)
+    {
+        m_errorString.setFmt("Invalid input stream!");
 #ifndef _WIN32
         m_errorString.appendFmt("%s\n", std::strerror(errno));
 #endif
@@ -288,9 +314,7 @@ bool BW_MidiSequencer::debugDumpContents(const std::string &outFile)
         fflush(out);
     }
 
-    fclose(out);
-
-    return false;
+    return true;
 }
 
 #endif /* BWMIDI_ENABLE_DEBUG_SONG_DUMP */

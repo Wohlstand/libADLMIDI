@@ -267,6 +267,7 @@ option(VLC_PLUGIN_NOINSTALL "Don't install VLC plugin into VLC directory" OFF)
 option(WITH_OLD_UTILS       "Build also old utilities" OFF)
 option(WITH_MUS2MID         "Build a MUS to MIDI converter" OFF)
 option(WITH_XMI2MID         "Build a XMI to MIDI converter" OFF)
+option(WITH_MIDIDUMP        "Build a MIDI dumper tool" OFF)
 option(EXAMPLE_SDL2_AUDIO   "Build also a simple SDL2 demo MIDI player" OFF)
 
 option(DEBUG_SONG_DUMP      "Enable debug dumps of all events from the loaded song into .dump.txt text file" OFF)
@@ -641,6 +642,10 @@ endif()
 
 if(WITH_XMI2MID)
     add_subdirectory(utils/xmi2mid)
+endif()
+
+if(WITH_MIDIDUMP)
+    add_subdirectory(utils/mididump)
 endif()
 
 if(EXAMPLE_SDL2_AUDIO AND NOT ADLMIDI_DOS)

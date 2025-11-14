@@ -30,7 +30,7 @@
 #include "midiseq/midi_sequencer_impl.hpp"
 
 #include "adlmidi_midiplay.hpp"
-#include "adlmidi_opl3.hpp"
+// #include "adlmidi_opl3.hpp"
 #include "adlmidi_private.hpp"
 
 /****************************************************

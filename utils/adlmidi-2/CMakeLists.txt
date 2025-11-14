@@ -16,7 +16,7 @@ endif()
 try_compile(HAS_TERMIO ${CMAKE_BINARY_DIR}/compile_tests "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-termio.c")
 try_compile(HAS_TERMIOS ${CMAKE_BINARY_DIR}/compile_tests "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-termios.c")
 
-include(../midiplay/utf8main.cmake)
+include(../common/utf8main.cmake)
 
 set(adlmidi2_src)
 list(APPEND adlmidi2_src

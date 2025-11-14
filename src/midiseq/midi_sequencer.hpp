@@ -1450,6 +1450,7 @@ public:
      * @return true on success, false on any error occurred
      */
     bool debugDumpContents(const std::string &outFile);
+    bool debugDumpContents(FILE *output);
 
     friend const char *evtName(BW_MidiSequencer::MidiEvent::Types type, BW_MidiSequencer::MidiEvent::SubTypes subType);
 #endif

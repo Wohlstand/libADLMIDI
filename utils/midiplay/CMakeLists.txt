@@ -7,7 +7,7 @@ if(NOT ADLMIDI_DOS AND NOT MIDIPLAY_WAVE_ONLY)
     endif()
 endif()
 
-include(utf8main.cmake)
+include(../common/utf8main.cmake)
 
 set(ADLMIDI_PLAY_SRC
     adlmidiplay.cpp
