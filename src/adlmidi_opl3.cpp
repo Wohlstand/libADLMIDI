@@ -530,10 +530,6 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     // Use different frequency formulas in depend on a volume model
     ftone = m_getFreq(tone, &mul_offset);
 
-    if((ftone & 0xC0000000) != 0)
-        return; // Invalid value!
-
-
     if(cc1 < OPL3_CHANNELS_RHYTHM_BASE)
     {
         ftone |= 0x2000u; /* Key-ON [KON] */

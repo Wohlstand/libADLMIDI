@@ -140,13 +140,13 @@ uint16_t oplModel_hmiFreq(double tone, uint32_t *mul_offset)
 
     while(note < 12)
     {
-        octaveOffset--;
+        --octaveOffset;
         note += 12;
     }
 
     while(note > 114)
     {
-        octaveOffset++;
+        ++octaveOffset;
         note -= 12;
     }
 
@@ -158,6 +158,9 @@ uint16_t oplModel_hmiFreq(double tone, uint32_t *mul_offset)
     freq = inFreq & 0x3FF;
     octave = (inFreq >> 10) & 0x07;
     octave += octaveOffset;
+
+    if(octave < 0)
+        octave = 0; /* Don't wrap everything to top! */
 
     while(octave > 7)
     {
