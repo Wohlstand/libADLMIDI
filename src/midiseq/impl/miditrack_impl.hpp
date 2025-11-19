@@ -31,7 +31,68 @@
 #include "../midi_sequencer.hpp"
 
 /**********************************************************************************
- *                             MidiTrackRow                                       *
+ *                                 Position                                       *
+ **********************************************************************************/
+
+BW_MidiSequencer::Position::TrackInfo::TrackInfo() :
+    delay(0),
+    lastHandledEvent(0)
+{
+    std::memset(&state, 0, sizeof(state));
+    std::memset(&state.cc_values, 0xFF, sizeof(state.cc_values));
+    std::memset(&state.reserve_note_att, 0xFF, sizeof(state.reserve_note_att));
+    state.reserve_patch = 0xFF;
+    state.reserve_wheel[0] = 0xFF;
+    state.reserve_wheel[1] = 0xFF;
+    state.reserve_channel_att = 0xFF;
+}
+
+BW_MidiSequencer::Position::TrackInfo::TrackInfo(const TrackInfo &o) :
+    pos(o.pos),
+    delay(o.delay),
+    lastHandledEvent(o.lastHandledEvent)
+{
+    std::memcpy(&state, &o.state, sizeof(state));
+}
+
+BW_MidiSequencer::Position::TrackInfo &BW_MidiSequencer::Position::TrackInfo::operator=(const TrackInfo &o)
+{
+    pos = o.pos;
+    delay = o.delay;
+    lastHandledEvent = o.lastHandledEvent;
+    std::memcpy(&state, &o.state, sizeof(state));
+    return *this;
+}
+
+BW_MidiSequencer::Position::Position():
+    wait(0.0),
+    absTimePosition(0.0),
+    absTickPosition(0),
+    began(false),
+    track()
+{}
+
+void BW_MidiSequencer::Position::clear()
+{
+    wait = 0.0;
+    began = false;
+    absTimePosition = 0.0;
+    absTickPosition = 0;
+    track.clear();
+}
+
+void BW_MidiSequencer::Position::assignOneTrack(const Position *o, size_t tk)
+{
+    absTimePosition = o->absTimePosition;
+    wait = o->wait;
+    began = o->began;
+    absTickPosition = o->absTickPosition;
+    track.clear();
+    track.push_back(o->track[tk]);
+}
+
+/**********************************************************************************
+ *                                 MidiTrackRow                                   *
  **********************************************************************************/
 
 
@@ -257,10 +318,19 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
 
 BW_MidiSequencer::MidiTrackState::MidiTrackState() :
     deviceMask(BW_MidiSequencer::Device_ANY),
-    disabled(false)
+    disabled(false),
+    stateRestoreSetup(TRACK_RESTORE_DEFAULT)
 {
     loop.reset();
     loop.invalidLoop = false;
+
+    std::memset(&state, 0, sizeof(state));
+    std::memset(&state.cc_values, 0xFF, sizeof(state.cc_values));
+    std::memset(&state.reserve_note_att, 0xFF, sizeof(state.reserve_note_att));
+    state.reserve_patch = 0xFF;
+    state.reserve_wheel[0] = 0xFF;
+    state.reserve_wheel[1] = 0xFF;
+    state.reserve_channel_att = 0xFF;
 
     std::memset(&duratedNotes, 0, sizeof(DuratedNotesCache));
 }

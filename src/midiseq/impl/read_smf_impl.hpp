@@ -99,7 +99,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     uint64_t abs_position = 0;
     int status = 0;
     const size_t end = fr.tell() + track_size;
-    bool ok = false;
+    bool ok = false, trackChannelNeeded = false, trackChannelHas = false;
 
     //! Caches note on/off states.
     bool noteStates[0x7FF]; // [ccc|cnnnnnnn] - c = channel, n = note
@@ -137,6 +137,11 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     m_trackData[track_idx].push_back(evtPos);
     evtPos.clear();
 
+    m_trackState[track_idx].state.track_channel = 0xFF;
+
+    if((m_format == Format_MIDI && m_smfFormat == 1 && track_idx > 0) || m_format == Format_HMI)
+        trackChannelNeeded = true;
+
     do
     {
         event = smf_parseEvent(fr, end, status);
@@ -147,6 +152,12 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
         }
 
         addEventToBank(evtPos, event);
+
+        if(trackChannelNeeded && !trackChannelHas && event.type > 0x00 && event.type < 0xF0)
+        {
+            m_trackState[track_idx].state.track_channel = event.channel;
+            trackChannelHas = true;
+        }
 
         if(event.type == MidiEvent::T_SPECIAL)
         {
@@ -187,12 +198,8 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 
         if((evtPos.delay > 0) || loopState.gotLoopEventsInThisRow > 0 || (event.subtype == MidiEvent::ST_ENDTRACK))
         {
-            evtPos.absPos = abs_position;
-            abs_position += evtPos.delay;
             evtPos.sortEvents(m_eventBank, noteStates);
-            m_trackData[track_idx].push_back(evtPos);
-            evtPos.clear();
-            loopState.gotLoopEventsInThisRow = 0;
+            smf_flushRow(evtPos, abs_position, track_idx, loopState);
         }
     }
     while((fr.tell() <= end) && (event.subtype != MidiEvent::ST_ENDTRACK));
@@ -678,6 +685,19 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
     return evt;
 }
 
+void BW_MidiSequencer::smf_flushRow(MidiTrackRow &evtPos, uint64_t &abs_position, size_t track_num, LoopPointParseState &loopState, bool finish)
+{
+    evtPos.absPos = abs_position;
+
+    if(finish)
+        evtPos.delay = 0;
+    else
+        abs_position += evtPos.delay;
+
+    m_trackData[track_num].push_back(evtPos);
+    evtPos.clear();
+    loopState.gotLoopEventsInThisRow = 0;
+}
 
 bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
 {
@@ -712,6 +732,7 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     m_invDeltaTicks.denom = 1000000l * deltaTicks;
     m_tempo.nom = 1;
     m_tempo.denom = deltaTicks * 2;
+    m_smfFormat = smfFormat;
 
     size_t totalGotten = 0;
     size_t tracks_begin = fr.tell();
@@ -761,7 +782,6 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
         return false;
     }
 
-    m_smfFormat = smfFormat;
     m_loop.stackLevel   = -1;
 
     return true;

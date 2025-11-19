@@ -108,7 +108,12 @@ void BW_MidiSequencer::LoopState::stackDown(int count)
 BW_MidiSequencer::LoopStackEntry &BW_MidiSequencer::LoopState::getCurStack()
 {
     if((stackLevel >= 0) && (stackLevel < static_cast<int>(stackDepth)))
-        return stack[static_cast<size_t>(stackLevel)];
+    {
+        if(stackLevel >= static_cast<int>(LoopState::stackDepthMax))
+            return stack[LoopState::stackDepthMax - 1];
+        else
+            return stack[static_cast<size_t>(stackLevel)];
+    }
 
     if(stackDepth == 0)
     {
@@ -204,6 +209,32 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
                             break;
                         case MidiEvent::ST_ENDTRACK:
                             track.lastHandledEvent = -1;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if(track.state.track_channel != evt.channel)
+                            track.state.track_channel = evt.channel;
+
+                        switch(evt.type)
+                        {
+                        case MidiEvent::T_CTRLCHANGE:
+                            if(evt.data_loc[0] < 102)
+                                track.state.cc_values[evt.data_loc[0]] = evt.data_loc[1];
+                            break;
+                        case MidiEvent::T_PATCHCHANGE:
+                            track.state.reserve_patch = evt.data_loc[0];
+                            break;
+                        case MidiEvent::T_WHEEL:
+                            track.state.reserve_wheel[0] = evt.data_loc[0];
+                            track.state.reserve_wheel[1] = evt.data_loc[1];
+                            break;
+                        case MidiEvent::T_CHANAFTTOUCH:
+                            track.state.reserve_channel_att = evt.data_loc[0];
+                            break;
+                        case MidiEvent::T_NOTETOUCH:
+                            track.state.reserve_note_att[evt.data_loc[0] & 0x7F] = evt.data_loc[1];
                             break;
                         }
                     }

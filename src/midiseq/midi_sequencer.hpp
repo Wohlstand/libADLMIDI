@@ -451,105 +451,22 @@ private:
     };
 
     /**
-     * @brief Song position context
-     */
-    struct Position
-    {
-        //! Waiting time before next event in seconds
-        double wait;
-        //! Absolute time position on the track in seconds
-        double absTimePosition;
-        //! Absolute MIDI tick position on the song
-        uint64_t absTickPosition;
-        //! Was track began playing
-        bool began;
-
-        //! Track information
-        struct TrackInfo
-        {
-            //! MIDI Events queue position iterator
-            MidiTrackQueue::iterator pos;
-            //! Delay to next event in a track
-            uint64_t delay;
-            //! Last handled event type
-            int32_t lastHandledEvent;
-
-            TrackInfo() :
-                delay(0),
-                lastHandledEvent(0)
-            {}
-        };
-
-        std::vector<TrackInfo> track;
-
-        Position():
-            wait(0.0),
-            absTimePosition(0.0),
-            absTickPosition(0),
-            began(false),
-            track()
-        {}
-
-        inline void clear()
-        {
-            wait = 0.0;
-            began = false;
-            absTimePosition = 0.0;
-            absTickPosition = 0;
-            track.clear();
-        }
-
-        inline void assignOneTrack(const Position *o, size_t tk)
-        {
-            absTimePosition = o->absTimePosition;
-            wait = o->wait;
-            began = o->began;
-            absTickPosition = o->absTickPosition;
-            track.clear();
-            track.push_back(o->track[tk]);
-        }
-    };
-
-    struct SequencerTime
-    {
-        //! Time buffer
-        double   timeRest;
-        //! Sample rate
-        uint32_t sampleRate;
-        //! Size of one frame in bytes
-        uint32_t frameSize;
-        //! Minimum possible delay, granuality
-        double minDelay;
-        //! Last delay
-        double delay;
-
-        void init()
-        {
-            sampleRate = 44100;
-            frameSize = 2;
-            reset();
-        }
-
-        void reset()
-        {
-            timeRest = 0.0;
-            minDelay = 1.0 / static_cast<double>(sampleRate);
-            delay = 0.0;
-        }
-    };
-
-    /**
      * @brief The TrackStateRestore class
      */
     enum TrackRestoreSetup
     {
+        TRACK_RESTORE_NONE        = 0x00,
         TRACK_RESTORE_CC          = 0x01,
         TRACK_RESTORE_NOTEOFFS    = 0x02,
         TRACK_RESTORE_PATCH       = 0x04,
         TRACK_RESTORE_WHEEL       = 0x08,
         TRACK_RESTORE_NOTE_ATT    = 0x10,
         TRACK_RESTORE_CHAN_ATT    = 0x20,
-        TRACK_RESTORE_ALL_CC      = 0x40
+        TRACK_RESTORE_ALL_CC      = 0x40,
+
+        TRACK_RESTORE_DEFAULT     = TRACK_RESTORE_NOTEOFFS,
+        TRACK_RESTORE_DEFAULT_HMI = TRACK_RESTORE_ALL_CC|TRACK_RESTORE_NOTEOFFS|TRACK_RESTORE_PATCH|
+                                    TRACK_RESTORE_WHEEL|TRACK_RESTORE_NOTE_ATT|TRACK_RESTORE_CHAN_ATT
     };
 
     /**
@@ -570,7 +487,64 @@ private:
         //! Reserved note after-touch
         uint8_t reserve_note_att[128];
         //! Reserved channel after-touch
-        uint8_t reserve_note_cc;
+        uint8_t reserve_channel_att;
+    };
+
+    /**
+     * @brief Song position context
+     */
+    struct Position
+    {
+        //! Track information
+        struct TrackInfo
+        {
+            //! MIDI Events queue position iterator
+            MidiTrackQueue::iterator pos;
+            //! Delay to next event in a track
+            uint64_t delay;
+            //! Last handled event type
+            int32_t lastHandledEvent;
+            //! Track's local state
+            TrackStateSaved state;
+
+            TrackInfo();
+
+            TrackInfo(const TrackInfo &o);
+
+            TrackInfo &operator=(const TrackInfo &o);
+        };
+
+        //! Waiting time before next event in seconds
+        double wait;
+        //! Absolute time position on the track in seconds
+        double absTimePosition;
+        //! Absolute MIDI tick position on the song
+        uint64_t absTickPosition;
+        //! Was track began playing
+        bool began;
+        //! Per-track info remembered by the position state
+        std::vector<TrackInfo> track;
+
+        Position();
+        void clear();
+        void assignOneTrack(const Position *o, size_t tk);
+    };
+
+    struct SequencerTime
+    {
+        //! Time buffer
+        double   timeRest;
+        //! Sample rate
+        uint32_t sampleRate;
+        //! Size of one frame in bytes
+        uint32_t frameSize;
+        //! Minimum possible delay, granuality
+        double minDelay;
+        //! Last delay
+        double delay;
+
+        void init();
+        void reset();
     };
 
     enum LoopTypes
@@ -746,6 +720,10 @@ private:
         uint32_t deviceMask;
         //! Disable handling of this track
         bool disabled;
+        //! Track's current state (gets captured on the fly)
+        TrackStateSaved state;
+        //! Track's state restore setup
+        uint32_t stateRestoreSetup;
 
         //! Constructor to initialize member variables
         MidiTrackState();
@@ -813,6 +791,9 @@ private:
 
     //! List of available branches
     std::vector<BranchEntry> m_branches;
+
+    //! Song-wide on-loop state restore setup
+    uint32_t m_stateRestoreSetup;
 
     //! Current count of MIDI tracks
     size_t m_tracksCount;
@@ -1039,6 +1020,10 @@ private:
      */
     bool processLoopPoints(LoopRuntimeState &state, LoopState &loop, bool glob, size_t tk, const Position &pos);
 
+    void restoreSongState();
+
+    void restoreTrackState(size_t track);
+
     /**
      * @brief Changes current playback position to the state of `pos`
      * @param track Track number to change position or 0xFFFFFFFF of entire song
@@ -1100,6 +1085,8 @@ private:
      * @return Parsed MIDI event entry
      */
     MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status);
+
+    void smf_flushRow(MidiTrackRow &evtPos, uint64_t &abs_position, size_t track_num, LoopPointParseState &loopState, bool finish = false);
 
     /**
      * @brief Load file as Standard MIDI file

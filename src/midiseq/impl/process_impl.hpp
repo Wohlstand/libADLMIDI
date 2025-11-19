@@ -89,6 +89,9 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
         status = evt.type;
     }
 
+    if(tk.state.track_channel != midCh)
+        tk.state.track_channel = midCh; // Remember track's current channel if changed
+
     switch(evt.type)
     {
     case MidiEvent::T_SYSEX:
@@ -257,6 +260,63 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                 loop->dstBranchId = readLEint16(evt.data_loc, evt.data_loc_size);
             }
             return;
+
+        case MidiEvent::ST_ENABLE_RESTORE_CC_ON_LOOP:
+            tk.state.cc_to_restore[evt.data_loc[0]] = 1;
+            m_stateRestoreSetup |= TRACK_RESTORE_CC;
+            break;
+
+        case MidiEvent::ST_DISABLE_RESTORE_CC_ON_LOOP:
+            tk.state.cc_to_restore[evt.data_loc[0]] = 0;
+            break;
+
+        case MidiEvent::ST_ENABLE_NOTEOFF_ON_LOOP:
+            m_stateRestoreSetup |= TRACK_RESTORE_NOTEOFFS;
+            break;
+
+        case MidiEvent::ST_DISABLE_NOTEOFF_ON_LOOP:
+            m_stateRestoreSetup &= ~TRACK_RESTORE_NOTEOFFS;
+            break;
+
+        case MidiEvent::ST_ENABLE_RESTORE_PATCH_ON_LOOP:
+            m_stateRestoreSetup |= TRACK_RESTORE_PATCH;
+            break;
+
+        case MidiEvent::ST_DISABLE_RESTORE_PATCH_ON_LOOP:
+            m_stateRestoreSetup &= ~TRACK_RESTORE_PATCH;
+            break;
+
+        case MidiEvent::ST_ENABLE_RESTORE_WHEEL_ON_LOOP:
+            m_stateRestoreSetup |= TRACK_RESTORE_WHEEL;
+            break;
+
+        case MidiEvent::ST_DISABLE_RESTORE_WHEEL_ON_LOOP:
+            m_stateRestoreSetup &= ~TRACK_RESTORE_WHEEL;
+            break;
+
+        case MidiEvent::ST_ENABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP:
+            m_stateRestoreSetup |= TRACK_RESTORE_NOTE_ATT;
+            break;
+
+        case MidiEvent::ST_DISABLE_RESTORE_NOTEAFTERTOUCH_ON_LOOP:
+            m_stateRestoreSetup &= ~TRACK_RESTORE_NOTE_ATT;
+            break;
+
+        case MidiEvent::ST_ENABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP:
+            m_stateRestoreSetup |= TRACK_RESTORE_CHAN_ATT;
+            break;
+
+        case MidiEvent::ST_DISABLE_RESTORE_CHANAFTERTOUCH_ON_LOOP:
+            m_stateRestoreSetup &= ~TRACK_RESTORE_CHAN_ATT;
+            break;
+
+        case MidiEvent::ST_ENABLE_RESTORE_ALL_CC_ON_LOOP:
+            m_stateRestoreSetup |= TRACK_RESTORE_ALL_CC;
+            break;
+
+        case MidiEvent::ST_DISABLE_RESTORE_ALL_CC_ON_LOOP:
+            m_stateRestoreSetup &= ~TRACK_RESTORE_ALL_CC;
+            break;
         }
 
         return;
@@ -293,22 +353,29 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
 
     case MidiEvent::T_NOTETOUCH: // Note touch
         m_interface->rt_noteAfterTouch(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+        tk.state.reserve_note_att[evt.data_loc[0]] = evt.data_loc[1];
         return;
 
     case MidiEvent::T_CTRLCHANGE: // Controller change
         m_interface->rt_controllerChange(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0], evt.data_loc[1]);
+        if(evt.data_loc[0] < 102)
+            tk.state.cc_values[evt.data_loc[0]] = evt.data_loc[1];
         return;
 
     case MidiEvent::T_PATCHCHANGE: // Patch change
         m_interface->rt_patchChange(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0]);
+        tk.state.reserve_patch = evt.data_loc[0];
         return;
 
     case MidiEvent::T_CHANAFTTOUCH: // Channel after-touch
         m_interface->rt_channelAfterTouch(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[0]);
+        tk.state.reserve_channel_att = evt.data_loc[0];
         return;
 
     case MidiEvent::T_WHEEL: // Wheel/pitch bend
         m_interface->rt_pitchBend(m_interface->rtUserData, static_cast<uint8_t>(midCh), evt.data_loc[1], evt.data_loc[0]);
+        tk.state.reserve_wheel[0] = evt.data_loc[0];
+        tk.state.reserve_wheel[1] = evt.data_loc[1];
         return;
 
     default:
@@ -490,16 +557,75 @@ bool BW_MidiSequencer::processLoopPoints(LoopRuntimeState &state, LoopState &loo
     return false;
 }
 
+void BW_MidiSequencer::restoreSongState()
+{
+    for(size_t track = 0; track < m_tracksCount; track++)
+    {
+        std::memcpy(&m_trackState[track].state, &m_currentPosition.track[track].state, sizeof(TrackStateSaved));
+        restoreTrackState(track);
+    }
+}
+
+void BW_MidiSequencer::restoreTrackState(size_t track)
+{
+    MidiTrackState &state = m_trackState[track];
+    uint8_t chan = state.state.track_channel;
+
+    if((m_stateRestoreSetup & TRACK_RESTORE_NOTEOFFS) != 0)
+    {
+        if(m_format == Format_MIDI && m_smfFormat == 0)
+        {
+            for(uint8_t c = 0; c < 16; c++)
+                m_interface->rt_controllerChange(m_interface->rtUserData, c, 123, 0);
+        }
+        else if(chan != 0xFF)
+            m_interface->rt_controllerChange(m_interface->rtUserData, chan, 123, 0);
+
+        state.duratedNotes.notes_count = 0;
+    }
+
+    if((m_stateRestoreSetup & TRACK_RESTORE_ALL_CC) != 0)
+    {
+        for(size_t i = 0; i < 102; ++i)
+        {
+            if(state.state.cc_values[i] <= 127)
+                m_interface->rt_controllerChange(m_interface->rtUserData, chan, i, state.state.cc_values[i]);
+        }
+    }
+    else if((m_stateRestoreSetup & TRACK_RESTORE_CC) != 0)
+    {
+        for(size_t i = 0; i < 102; ++i)
+        {
+            if(state.state.cc_to_restore[i] && state.state.cc_values[i] <= 127)
+                m_interface->rt_controllerChange(m_interface->rtUserData, chan, i, state.state.cc_values[i]);
+        }
+    }
+
+    if((m_stateRestoreSetup & TRACK_RESTORE_PATCH) != 0 && state.state.reserve_patch <= 127)
+        m_interface->rt_patchChange(m_interface->rtUserData, chan, state.state.reserve_patch);
+
+    if((m_stateRestoreSetup & TRACK_RESTORE_WHEEL) != 0 && state.state.reserve_wheel[0] <= 127)
+        m_interface->rt_pitchBend(m_interface->rtUserData, chan, state.state.reserve_wheel[1], state.state.reserve_wheel[0]);
+
+    if((m_stateRestoreSetup & TRACK_RESTORE_NOTE_ATT) != 0)
+    {
+        for(size_t i = 0; i < 128; ++i)
+        {
+            if(state.state.reserve_note_att[i] <= 127)
+                m_interface->rt_noteAfterTouch(m_interface->rtUserData, chan, i, state.state.reserve_note_att[i]);
+        }
+    }
+
+    if((m_stateRestoreSetup & TRACK_RESTORE_CHAN_ATT) != 0 && state.state.reserve_channel_att <= 127)
+        m_interface->rt_channelAfterTouch(m_interface->rtUserData, chan, state.state.reserve_channel_att);
+}
+
 void BW_MidiSequencer::jumpToPosition(size_t track, const Position *pos)
 {
     if(track == BRANCH_GLOBAL_TRACK)
     {
         m_currentPosition = *pos;
-
-        // Do all notes off on loop
-        // FIXME: Implement handling of state restore assigned to every individual position
-        for(uint8_t i = 0; i < 16; i++)
-            m_interface->rt_controllerChange(m_interface->rtUserData, i, 123, 0);
+        restoreSongState();
     }
     else
     {
@@ -507,6 +633,8 @@ void BW_MidiSequencer::jumpToPosition(size_t track, const Position *pos)
         // Reset the time (lesser evil than time going to infinite!)
         m_currentPosition.absTickPosition = pos->absTickPosition;
         m_currentPosition.absTimePosition = pos->absTimePosition;
+        std::memcpy(&m_trackState[track].state, &m_currentPosition.track[track].state, sizeof(TrackStateSaved));
+        restoreTrackState(track);
     }
 }
 

@@ -225,6 +225,7 @@ void BW_MidiSequencer::rewind()
 
     // Clear any hanging timed notes
     duratedNoteClear();
+    restoreSongState();
 }
 
 bool BW_MidiSequencer::positionAtEnd()

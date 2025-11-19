@@ -49,6 +49,7 @@
 
 void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 {
+    m_stateRestoreSetup = TRACK_RESTORE_DEFAULT;
     m_tracksCount = trackCount;
     m_fullSongTimeLength = 0.0;
     m_loopStartTime = -1.0;
@@ -100,6 +101,7 @@ void BW_MidiSequencer::initTracksBegin(size_t track)
         // Some events doesn't begin at zero!
         m_trackBeginPosition.track[track].delay = pos->absPos;
         m_trackBeginPosition.track[track].lastHandledEvent = 0;
+        std::memcpy(&m_trackBeginPosition.track[track].state, &m_trackState[track].state, sizeof(TrackStateSaved));
     }
     else
     {
