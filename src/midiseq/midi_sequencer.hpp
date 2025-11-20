@@ -1086,6 +1086,14 @@ private:
      */
     MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status);
 
+    /**
+     * @brief Finalize the MIDI track row and start a new one, additionally increase the abs_position by delay
+     * @param evtPos MIDI track row entry prepared to be saved
+     * @param abs_position Absolute position counter
+     * @param track_num Number of track for which this row is
+     * @param loopState Parse loop state
+     * @param finish Is this a final row for the track?
+     */
     void smf_flushRow(MidiTrackRow &evtPos, uint64_t &abs_position, size_t track_num, LoopPointParseState &loopState, bool finish = false);
 
     /**

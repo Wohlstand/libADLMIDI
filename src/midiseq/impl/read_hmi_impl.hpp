@@ -875,7 +875,8 @@ bool BW_MidiSequencer::hmi_parseEvent(const HMIData &hmi_data, const HMITrackDir
 bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 {
     char readBuf[20];
-    size_t fsize, file_size, totalGotten, abs_position;
+    size_t fsize, file_size, totalGotten;
+    uint64_t abs_position;
     HMIData hmi_data;
     bool ok = false;
     int status = 0;
