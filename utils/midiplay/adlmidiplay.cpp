@@ -988,7 +988,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 #endif
 
     size_t got;
-    uint8_t buff[16384];
+    uint8_t buff[4096];
 
     audio_start();
 
@@ -998,7 +998,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 
     while(!stop)
     {
-        got = (size_t)adl_playFormat(myDevice, 4096,
+        got = (size_t)adl_playFormat(myDevice, 1024,
                                      buff,
                                      buff + g_audioFormat.containerSize,
                                      &g_audioFormat) * g_audioFormat.containerSize;
@@ -1428,7 +1428,7 @@ static struct Args
     // How long is SDL buffer, in seconds?
     // The smaller the value, the more often SDL_AudioCallBack()
     // is called.
-    const double    AudioBufferLength;
+    // const double    AudioBufferLength;
 
     AudioOutputSpec spec;
 #endif
@@ -1482,9 +1482,9 @@ static struct Args
 
         , sampleRate(44100)
 
-#if !defined(ADLMIDI_ENABLE_HW_DOS) && !defined(OUTPUT_WAVE_ONLY)
-        , AudioBufferLength(0.08)
-#endif
+// #if !defined(ADLMIDI_ENABLE_HW_DOS) && !defined(OUTPUT_WAVE_ONLY)
+//         , AudioBufferLength(0.08)
+// #endif
 
 #ifdef ADLMIDI_ENABLE_HW_DOS
         , setHwAddress(0)
@@ -1513,7 +1513,7 @@ static struct Args
         spec.format   = ADLMIDI_SampleType_S16;
         spec.is_msb   = 0;
         spec.channels = 2;
-        spec.samples  = uint16_t((double)spec.freq * AudioBufferLength);
+        spec.samples  = 1024; //uint16_t((double)spec.freq * AudioBufferLength);
 #endif
     }
 
