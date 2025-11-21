@@ -1276,6 +1276,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     {
         const HMITrackDir &d = dir[tk];
         MidiTrackState &trackState = m_trackState[tk_v];
+        bool trackChannelHas = false;
 
         if(d.len == 0)
             continue; // This track is broken
@@ -1364,7 +1365,16 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
                 return false; // Error value already written
 
             if(event.isValid)
+            {
                 addEventToBank(evtPos, event);
+
+                if(!trackChannelHas && event.type > 0x00 && event.type < 0xF0)
+                {
+                    trackState.state.track_channel = event.channel;
+                    if(event.channel != 0) // If it's always zero channel, sounds like something wrong
+                        trackChannelHas = true;
+                }
+            }
 
             if(event.type != MidiEvent::T_SPECIAL || event.subtype != MidiEvent::ST_ENDTRACK)
             {
