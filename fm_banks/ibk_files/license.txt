@@ -1,0 +1,23 @@
+Original source:
+http://midiox.com/html/ibk.htm
+
+== SBTimbre 3.50 IBK Files ==
+
+-- Description --
+
+IBK files are FM Sound banks. The can be created and edited by SBTimbre. They
+can be loaded and used by the FM Synth driver.
+
+All of the IBK files have been provided for use with SBTimbre. There is
+no royalty requirement for using any of these sounds in other products,
+and you may use them freely, as long as the product itself is not a
+collection of Timbres.
+
+
+-- Contact--
+You can reach me at:
+    JamieOConnell@_REMOVE_midiox.com
+
+-- DISCLAIMER--
+This program is provided without any warranty, expressed or implied, including
+but not limited to fitness for a particular purpose.
