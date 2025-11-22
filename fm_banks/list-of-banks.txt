@@ -1,0 +1,282 @@
+This is a directory that contains bank files used during the building of the
+inst_db.cpp database of embedded banks for libADLMIDI. This file explains
+what each bank is and its origins.
+
+
+
+
+== ail ==
+Banks designed for Miles Sound System / IBM Audio Interfaces Library.
+
+Many of these banks are often modifications over MT32-style example bank that
+appears in the open-source release of AIL library by John Miles with the custom
+permissive license, or modifications of banks made by "The Fat Man",
+i.e. by K. Weston Phelan and George Alistair Sanger.
+
+* Banks at the "dupes" directory are duplicates of existing banks in the root directory.
+* Banks at the "Unused" are banks that are totally unused to build libADLMIDI's inst_db.cpp at all.
+* Other directories and files are described below:
+
+
+- AdvancedCivilization.opl      - The bank released with the Advanced Civilization game
+- BubbleBobble.opl              - The modified MegaPatch by LoudMouth Inc. made by Probe Ent.
+- DeathGate.opl                 - The bank released with Death Gate game.
+- Discworld.opl                 - The modified 2-op bank by "The Fat Man".
+- FIFAInternationalSoccer.opl   - The modified 2-op bank by "The Fat Man".
+- Guilty.opl                    - The modified 2-op bank by "The Fat Man".
+- LittleBigAdventure.opl        - The modified 4-op bank by "The Fat Man".
+- master_of_magic.wopl          - The modified 4-op bank by "The Fat Man".
+- master_of_magic_standard.opl  - The modified 4-op bank by "The Fat Man".
+- master_of_magic_orchestral.opl- The modified 4-op bank by "The Fat Man".
+- MonopolyDeluxe.ad             - The bank released with Monopoly Deluxe game.
+- NationalHockeyLeaguePA.opl    - The modified "MegaPatch" bank by "LoudMouth Inc.".
+- nemesis.opl                   - The bank released with Nemesis game, similar to Death Gate.
+- simfarm.ad                    - The modified 2-op bank by "The Fat Man".
+- simfarm.opl                   - The modified 4-op bank by "The Fat Man".
+- star_control_3.opl            - The default 2-op bank inside AIL by John Miles
+                                  (released as open-source package with the custom
+                                  permissive license), bank itself made by "The Fat Man".
+- StarshipInvasion.opl          - The modified 2-op bank by "The Fat Man".
+- SuperStreetFighter2.opl       - The modified 4-op bank by "The Fat Man".
+- Syndicate.opl                 - The modified default MT-32-style bank based on
+                                  the example released with open-source release of AIL2
+                                  by John Miles with the custom permissive license.
+- SyndicateWars.opl             - The modified default MT-32-style bank based on
+                                  the example released with open-source release of AIL2
+                                  by John Miles with the custom permissive license.
+- SystemShock.opl               - The modified 4-op bank by "The Fat Man".
+- ThemeHospital.opl             - The deeply modified bank based on example AIL2 bank.
+- UltimateSoccerManager.opl     - The messy bank from the Ultimate Soccer Manager game.
+- warcraft2.ad                  - The deeply modified 2-op bank by "The Fat Man".
+- non-gm/AirBucks.ad            - The modified default MT-32-style bank based on
+                                  the example released with open-source release of AIL2
+                                  by John Miles with the custom permissive license.
+- non-gm/BattleChess4000.opl    - The 4-op MT-32 style bank released with the Battle Chess 4000 game.
+- non-gm/HeroesOfMightAndMagic2.opl - The modified default MT-32-style bank based on
+                                      the example released with open-source release of AIL2
+                                      by John Miles with the custom permissive license.
+- non-gm/InteritTheEarth.opl    - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
+- non-gm/InteritTheEarth2.opl   - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
+- non-gm/JaggedAlliance.opl     - The modified default MT-32-style bank based on
+                                  the example released with open-source release of AIL2
+                                  by John Miles with the custom permissive license.
+- non-gm/KasparovGambit.opl     - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
+- non-gm/lost-vikings.opl       - The 2-op and 4-op bank released with the "The Lost Vikings" game.
+- non-gm/MagicCarpet2.opl       - The modified default MT-32-style bank based on
+                                  the example released with open-source release of AIL2
+                                  by John Miles with the custom permissive license.
+- non-gm/ReturnToZork.opl       - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
+- non-gm/UltimaUnderworld2.opl  - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
+- non-gm/warcraft1.opl          - The bank released with the first "Warcraft" game.
+- miss-inst/BardsTaleConstruction.opl  - The bank from "Bards Tale Construction", contains only few instruments.
+- miss-inst/Caesar2.opl         - The bank from the "Caesar 2" game, contains only few instruments.
+- miss-inst/HighSeasTrader.opl  - The modified default MT-32-style bank based on
+                                  the example released with open-source release of AIL2
+                                  by John Miles with the custom permissive license.
+- miss-inst/LordsOfTheRealm.opl - The bank from the "Lords of The Realm", contains only few instruments.
+- miss-inst/WhenTwoWorldsWar.opl - The bank from the "When two words war", contains only few instruments.
+
+
+
+
+
+== bnk_files ==
+Banks in format released with the AdLib Gold SDK for the OPL3 chip that includes
+4-operator synthesis support.
+
+These files are totally unused for the libADLMIDI itself, they are stored for
+historical purposes.
+
+- grassman1.bnk and grassman2.bnk   - Some unknown Korean banks obtained
+                                      by Joel Yiliuloma from unknown sources.
+                                      mostly a large collections of random
+                                      instruments. Inside of these banks some
+                                      vulgar jokes might appear.
+- master_of_magic.bnk               - The modified bank by "The Fat Man". Used to
+                                      create the different bank `ail/master_of_magic.wopl`
+                                      and `ail/master_of_magic_orchestral.opl`.
+- themepark.tmb                     - Slightly modified Theme Park bank and re-saved as TMB format
+                                      by Vitaliy Novichkov for some early debugs of libADLMIDI.
+
+
+
+
+
+== dmx ==
+Banks in the OP2 format designed for the DMX library developed by Paul Radek.
+
+- DMXOPL-by-sneakernets-old.op2 - An old bank made by Sneakernets and released
+                                  under MIT license.
+
+- doom1.op2                     - The modified Paul Radek's bank by Bobby Prince
+                                  for the Doom 1 game.
+- doom2.op2                     - The modified Paul Radek's bank by Bobby Prince
+                                  for the Doom 2 game.
+- heretic.op2                   - Default DMX bank made by Paul Radek.
+- raptor.op2                    - The modified Paul Radek's bank by Scott Host
+                                  for the Raptor: Call of the Shadows game.
+- strife.op2                    - The modified Paul Radek's bank for the Strife
+                                  game release.
+
+
+
+
+== hmi ==
+Banks directly based on original AdLib's BNK format released with their original
+SDK for early AdLib cards with the OPL2 chip. Unlike AdLib's BNK, these files
+has slightly different specification, and they contain only 127 instruments,
+and they are used with the HMI Sound Operating System audio library.
+
+These banks are always saved as a pair of melodic and drum banks with 128 entries.
+
+- 3d_Table_Sports       - The "MegaPatch" bank by LoudMouth Inc.
+- Aces_of_the_Deep      - Mixture of instruments taken from various banks
+                          including MegaPatch, AdLib SDK, Creative's sample bank, etc.
+- Anvil_of_Dawn         - The modified 2-op bank by "The Fat Man".
+- Descent               - A set of 4 different  banks released with the Descent game.
+                          The pair of "melodic.bnk" and "drum.bnk" is also used
+                          with the Asterix and Obelix game. Lots of instruments
+                          are modded from the bank by "The Fat Man" and mixed with
+                          AdLib Inc's.
+- Descent_2             - The bank released with the Descent 2 game. Built from
+                          modified instruments origined from The Fat Man and the
+                          AdLib Inc's SDK sample banks.
+- Earthsiege            - The deeply modified "MegaPatch" bank by LoudMouth Inc.
+- Normality             - The modified 2-op bank by "The Fat Man".
+- Shattered_Steel       - The bank released with the Shattered Steel game.
+- Theme_Park            - The MT-32-style bank based on AdLib SDK example
+                          instruments, and also based on the default MT-32 style
+                          bank from the AIL library package that was been released
+                          as an open-source package by John Miles with the custom
+                          permissive license.
+
+
+
+
+== ibk_files ==
+Instrument bank files in format designed by Jammie O'Connel for his SBTimbre and
+FM Synth driver for Windows 3.x and 9x. These files were shipped with binaries
+for free use by everyone. And recently, Jammie O'Connel released the source
+code for his FM Synth driver under MIT license:
+https://github.com/Jamie-MIDIOX/FMSynth
+
+Also, included IBK files except of some are MIT licensed, do have their license
+that explicitly tells:
+---------------------------------------------------------------
+All of the IBK files have been provided for use with SBTimbre.
+There is no royalty requirement for using any of these sounds
+in other products, and you may use them freely, as long as the
+product itself is not a collection of Timbres.
+---------------------------------------------------------------
+- game.ibk                  - A minor mod of the fmsymth_internal_melodic.ibk bank.
+- gmopl_wohl_mod.ibk        - Modified version of `ibk_files/ibk/gmopl.ibk`.
+- gmopl_wohl_mod-drums.ibk  - Originally made by Vitaliy Novichkov to compensate
+                              lack of drums for the first bank.
+- mt_fm.ibk                 - Slightly modified version of `ibk_files/ibk/mt32.ibk`.
+- nightmare_3d.ibk          - Modded version of `ibk_files/ibk/FMTIMBRE.IBK` bank.
+- soccer-genmidi.ibk        - A messy bank assembled from instruments taken from
+                              `ibk_files/ibk/` directory.
+- soccer-percs.ibk          - Same.
+
+
+These banks are licensed as MIT, a part of source release of FM Synth:
+- fmsymth_internal_melodic.ibk
+- fmsymth_internal_drum.ibk
+- JOconnel.IBK
+- JOconnel-DRUM.IBK
+
+
+
+
+
+== junglevision ==
+Banks taken from the Junglevision Sound Drive demo and reverse-engined. The demo
+is supposed for showcasing of Junglevision's audio library for DOS that can be
+used for the development.
+
+- fat2.op3, fat4.op3  - General MIDI timbres for Yamaha OPL-2 and OPL-3 based
+                        sound cards were produced by The Fat Man (TM) and
+                        developed by K. Weston Phelan and George Alistair Sanger.
+                        Copyright 1993, The Fat Man (TM)
+
+- fat4-fixed.wopl     - Fixed version of fat4.op3 where some instruments adjusted
+                        to prevent triggering chip's messy behaviour such as junk
+                        tones after zero attack or release rates.
+
+- jv_2op.op3          - General MIDI timbres for Yamaha OPL-2 and OPL-3 based
+                        sound cards were developed by Junglevision Software.
+                        (c) Copyright 1994, Junglevision software.
+                        All rights reserved.
+
+- wallace.op3         - General MIDI timbres for Yamaha OPL-2 and OPL-3 based
+                        sound cards were developed by Rob Wallace of
+                        Wallace Music & Sound, Inc.
+
+
+
+== misc_files ==
+Banks of the custom formats that are not connected to anything also.
+
+- bisqwit.adlraw      - General-MIDI bank made by Bisqwit, the author of original
+                        adlmidi project, and was been released with his adlmidi
+                        project under GPLv3+ license.
+
+- cartooners-adlib-decrypted.dat - Reverse-engined bank data from the Cartooners
+                                   game released in 1989. Samples are mostly taken
+                                   from the AdLib Inc.'s sample files released
+                                   for everyone's use.
+
+
+
+== tmb_files ==
+Banks in the format for Apogee Sound System. The library itself has been
+released under GPLv2 in a set of Rise of the Triades source code game release
+and included with the Duke Nukem 3D source code release. Bank files were been
+included too.
+
+Many of these banks literally based on IBK files released here under GPLv2 license:
+https://github.com/videogamepreservation/dukenukem3d/tree/master/audiolib/PUBLIC/PM
+(Original IBK files included inside "TIMBRES.ZIP" file)
+
+- apogee_duke3d99.tmb   - Bank originally released for one of Duke Nukem 3D game versions.
+- apogee_xenophage.tmb  - A slightly modified version of Duke Nukem 3D's bank.
+- bloodtmb.tmb          - The modified LoudMouth's bank file released with the Blood game.
+- d3dtimbr.tmb          - The primary bank released with the Duke Nukem 3D game.
+- default.tmb           - The default bank for Apogee Audio System, built from files
+                          GENMIDI.IBK and PERCUS.IBK. It's included into source file
+                          as a data structure with the explicit license header.
+                          The buildtmb.c file is used to generate `default.tmb` file.
+- nam.tmb               - Minor modification of the Duke Nukem 3D's bank.
+- rott.tmb              - The bank built from LEE.IBK and LEEDRUMS.IBK which are
+                          released with the Apogee Sound System source and licensed
+                          under terms of GPLv2+.
+- swtimbr.tmb           - Another modification of the Duke Nukem 3D's bank.
+
+
+
+
+== wopl_files ==
+Banks saved in the libADLMIDI's native WOPL format invented by Vitaliy Novichkov
+known as "Wohlstand".
+
+- Apogee-IMF-90.wopl - A General-MIDI formatted bank made by Vitaliy Novichkov
+                       with instruments captured from OPL2 stream of various DOS
+                       games that used IMF format to play. De-facto, all these
+                       instruments were came from Jammie O'Connel's
+                       `ibk_files/ibk/mt32.ibk` file.
+
+- DMXOPL3-by-sneakernets-GS.wopl - The GS-style bank created by Sneakernets and
+                                   released under MIT license.
+
+- fat2.wopl          - The bank that contains instruments from the "The Fat Man"
+                       originally made by K. Weston Phelan and George Alistair Sanger.
+
+- GM-By-J.A.Nguyen-and-Wohlstand.wopl - Custom 4-operator bank developed by Vitaliy Novichkov
+                                        and by J.A. Nguyen, originally for the modded GPL-licensed
+                                        driver for the Windows that was initially made by Alexkey Khokholov.
+
+- msadlib.wopl       - The bank based on Creative's example bank which is used
+                       in the Windows 3.1 drivers for AdLib and SoundBlaster 1/2 cards.
+
+- Wohlstand's-modded-FatMan.wopl - The deeply modified bank by "The Fat Man" made
+                                   by Vitaliy Novichkov.
