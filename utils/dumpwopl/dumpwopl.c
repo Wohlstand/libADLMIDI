@@ -78,7 +78,7 @@ static void dump_instrument(const WOPLInstrument *inst, uint16_t i, int is_drum)
     {
         printf(" FB=%u", (inst->fb_conn1_C0 >> 1) & 0x07);
         printf(" Conn=%u", inst->fb_conn1_C0 & 0x01);
-        printf(" 4-OP");
+        printf(" 2-OP");
     }
 
     printf(" Operators:\n");
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
         bank = &wopl->banks_percussive[b];
         printf("== Percussion bank #%u (Name=%s, LSB=%u, MSB=%u) ==\n", b, bank->bank_name, bank->bank_midi_msb, bank->bank_midi_lsb);
         for(i = 0; i < 127; ++i)
-            dump_instrument(&bank->ins[i], i, 0);
+            dump_instrument(&bank->ins[i], i, 1);
 
         printf("\n\n");
     }
