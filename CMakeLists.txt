@@ -622,6 +622,8 @@ if(WITH_OLD_UTILS)
     add_subdirectory(utils/dumpbank)
     # Old utility to dump AIL bank files
     add_subdirectory(utils/dumpmiles)
+    # A special utility to dump the WOPL bank content
+    add_subdirectory(utils/dumpwopl)
 endif()
 
 if(WITH_EMBEDDED_BANKS AND WITH_GENADLDATA AND NOT ADLMIDI_DOS)
