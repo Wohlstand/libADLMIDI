@@ -10,8 +10,9 @@ Banks designed for Miles Sound System / IBM Audio Interfaces Library.
 
 Many of these banks are often modifications over MT32-style example bank that
 appears in the open-source release of AIL library by John Miles with the custom
-permissive license, or modifications of banks made by "The Fat Man",
-i.e. by K. Weston Phelan and George Alistair Sanger.
+permissive license (available at the LICENSE-AIL2.txt file), or modifications of
+banks made by "The Fat Man", i.e. by K. Weston Phelan and George Alistair Sanger
+(Now these banks licensed under terms of the MIT license, see LICENSE-TheFatMan.txt).
 
 * Banks at the "dupes" directory are duplicates of existing banks in the root directory.
 * Banks at the "Unused" are banks that are totally unused to build libADLMIDI's inst_db.cpp at all.
@@ -35,15 +36,18 @@ i.e. by K. Weston Phelan and George Alistair Sanger.
 - simfarm.opl                   - The modified 4-op bank by "The Fat Man".
 - star_control_3.opl            - The default 2-op bank inside AIL by John Miles
                                   (released as open-source package with the custom
-                                  permissive license), bank itself made by "The Fat Man".
+                                  permissive license described at the LICENSE-AIL2.txt),
+                                  bank itself made by "The Fat Man" (See LICENSE-TheFatMan.txt).
 - StarshipInvasion.opl          - The modified 2-op bank by "The Fat Man".
 - SuperStreetFighter2.opl       - The modified 4-op bank by "The Fat Man".
 - Syndicate.opl                 - The modified default MT-32-style bank based on
                                   the example released with open-source release of AIL2
                                   by John Miles with the custom permissive license.
+                                  (See LICENSE-AIL2.txt)
 - SyndicateWars.opl             - The modified default MT-32-style bank based on
                                   the example released with open-source release of AIL2
                                   by John Miles with the custom permissive license.
+                                  (See LICENSE-AIL2.txt)
 - SystemShock.opl               - The modified 4-op bank by "The Fat Man".
 - ThemeHospital.opl             - The deeply modified bank based on example AIL2 bank.
 - UltimateSoccerManager.opl     - The messy bank from the Ultimate Soccer Manager game.
@@ -51,20 +55,24 @@ i.e. by K. Weston Phelan and George Alistair Sanger.
 - non-gm/AirBucks.ad            - The modified default MT-32-style bank based on
                                   the example released with open-source release of AIL2
                                   by John Miles with the custom permissive license.
+                                  (See LICENSE-AIL2.txt)
 - non-gm/BattleChess4000.opl    - The 4-op MT-32 style bank released with the Battle Chess 4000 game.
 - non-gm/HeroesOfMightAndMagic2.opl - The modified default MT-32-style bank based on
                                       the example released with open-source release of AIL2
                                       by John Miles with the custom permissive license.
+                                      (See LICENSE-AIL2.txt)
 - non-gm/InteritTheEarth.opl    - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
 - non-gm/InteritTheEarth2.opl   - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
 - non-gm/JaggedAlliance.opl     - The modified default MT-32-style bank based on
                                   the example released with open-source release of AIL2
                                   by John Miles with the custom permissive license.
+                                  (See LICENSE-AIL2.txt)
 - non-gm/KasparovGambit.opl     - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
 - non-gm/lost-vikings.opl       - The 2-op and 4-op bank released with the "The Lost Vikings" game.
 - non-gm/MagicCarpet2.opl       - The modified default MT-32-style bank based on
                                   the example released with open-source release of AIL2
                                   by John Miles with the custom permissive license.
+                                  (See LICENSE-AIL2.txt)
 - non-gm/ReturnToZork.opl       - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
 - non-gm/UltimaUnderworld2.opl  - The modified 2-op bank by "The Fat Man" turned into MT-32 style.
 - non-gm/warcraft1.opl          - The bank released with the first "Warcraft" game.
@@ -73,6 +81,7 @@ i.e. by K. Weston Phelan and George Alistair Sanger.
 - miss-inst/HighSeasTrader.opl  - The modified default MT-32-style bank based on
                                   the example released with open-source release of AIL2
                                   by John Miles with the custom permissive license.
+                                  (See LICENSE-AIL2.txt)
 - miss-inst/LordsOfTheRealm.opl - The bank from the "Lords of The Realm", contains only few instruments.
 - miss-inst/WhenTwoWorldsWar.opl - The bank from the "When two words war", contains only few instruments.
 
@@ -106,7 +115,7 @@ historical purposes.
 Banks in the OP2 format designed for the DMX library developed by Paul Radek.
 
 - DMXOPL-by-sneakernets-old.op2 - An old bank made by Sneakernets and released
-                                  under MIT license.
+                                  under MIT license (See LICENSE-DMXOPL.txt).
 
 - doom1.op2                     - The modified Paul Radek's bank by Bobby Prince
                                   for the Doom 1 game.
@@ -148,7 +157,7 @@ These banks are always saved as a pair of melodic and drum banks with 128 entrie
                           instruments, and also based on the default MT-32 style
                           bank from the AIL library package that was been released
                           as an open-source package by John Miles with the custom
-                          permissive license.
+                          permissive license. (See LICENSE-AIL2.txt).
 
 
 
@@ -157,7 +166,7 @@ These banks are always saved as a pair of melodic and drum banks with 128 entrie
 Instrument bank files in format designed by Jammie O'Connel for his SBTimbre and
 FM Synth driver for Windows 3.x and 9x. These files were shipped with binaries
 for free use by everyone. And recently, Jammie O'Connel released the source
-code for his FM Synth driver under MIT license:
+code for his FM Synth driver under MIT license (See LICENSE-FMSynth.txt):
 https://github.com/Jamie-MIDIOX/FMSynth
 
 Also, included IBK files except of some are MIT licensed, do have their license
@@ -197,7 +206,9 @@ used for the development.
 - fat2.op3, fat4.op3  - General MIDI timbres for Yamaha OPL-2 and OPL-3 based
                         sound cards were produced by The Fat Man (TM) and
                         developed by K. Weston Phelan and George Alistair Sanger.
-                        Copyright 1993, The Fat Man (TM)
+                        Copyright 1993, The Fat Man (TM).
+                        Licensed under terms of MIT license.
+                        (See "LICENSE-TheFatMan.txt")
 
 - fat4-fixed.wopl     - Fixed version of fat4.op3 where some instruments adjusted
                         to prevent triggering chip's messy behaviour such as junk
@@ -246,6 +257,8 @@ https://github.com/videogamepreservation/dukenukem3d/tree/master/audiolib/PUBLIC
                           GENMIDI.IBK and PERCUS.IBK. It's included into source file
                           as a data structure with the explicit license header.
                           The buildtmb.c file is used to generate `default.tmb` file.
+                          Basically the slightly damaged copy of "The Fat Man" which
+                          is now licensed under MIT license terms (See "LICENSE-TheFatMan.txt")
 - nam.tmb               - Minor modification of the Duke Nukem 3D's bank.
 - rott.tmb              - The bank built from LEE.IBK and LEEDRUMS.IBK which are
                           released with the Apogee Sound System source and licensed
@@ -266,10 +279,11 @@ known as "Wohlstand".
                        `ibk_files/ibk/mt32.ibk` file.
 
 - DMXOPL3-by-sneakernets-GS.wopl - The GS-style bank created by Sneakernets and
-                                   released under MIT license.
+                                   released under MIT license (See LICENSE-DMXOPL.txt).
 
 - fat2.wopl          - The bank that contains instruments from the "The Fat Man"
                        originally made by K. Weston Phelan and George Alistair Sanger.
+                       Licensed under terms of MIT license (See "LICENSE-TheFatMan.txt")
 
 - GM-By-J.A.Nguyen-and-Wohlstand.wopl - Custom 4-operator bank developed by Vitaliy Novichkov
                                         and by J.A. Nguyen, originally for the modded GPL-licensed
