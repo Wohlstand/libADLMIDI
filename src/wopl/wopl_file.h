@@ -90,12 +90,14 @@ typedef enum WOPL_InstrumentFlags
     WOPL_Ins_Pseudo4op  = 0x02,
     /* Is a blank instrument entry */
     WOPL_Ins_IsBlank    = 0x04,
+    /* Should melodic note play a fixed tone? */
+    WOPL_Ins_FixedNote  = 0x40,
 
     /* RythmMode flags mask */
-    WOPL_RhythmModeMask  = 0x38,
+    WOPL_RhythmModeMask = 0x38,
 
     /* Mask of the flags range */
-    WOPL_Ins_ALL_MASK   = 0x07
+    WOPL_Ins_ALL_MASK   = 0x47
 } WOPL_InstrumentFlags;
 
 typedef enum WOPL_RhythmMode

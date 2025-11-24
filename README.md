@@ -194,6 +194,7 @@ To build that example you will need to have installed SDL2 library.
  * Added MS Adlib driver's for Win3x volume model.
  * Added IMF Creator's volume model.
  * Added Jammie O'Connel's FM Synth volume model.
+ * Added support for DMX OP2's Fixed Note feature for melodic instruments.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.

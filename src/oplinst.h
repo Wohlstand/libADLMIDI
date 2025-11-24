@@ -64,7 +64,8 @@ struct OplInstMeta
     {
         Flag_Pseudo4op = 0x01,
         Flag_NoSound = 0x02,
-        Flag_Real4op = 0x04
+        Flag_Real4op = 0x04,
+        Flag_FixedTone = 0x40
     };
 
     enum

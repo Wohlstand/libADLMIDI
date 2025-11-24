@@ -459,7 +459,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         }
     }
 
-    if(ains->drumTone)
+    if((isPercussion || (ains->flags & OplInstMeta::Flag_FixedTone) != 0) && ains->drumTone)
     {
         if(ains->drumTone >= 128)
             tone = ains->drumTone - 128;

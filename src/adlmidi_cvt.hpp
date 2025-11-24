@@ -42,7 +42,8 @@ static void cvt_generic_to_FMIns(OplInstMeta &ins, const WOPLI &in)
     ins.flags = (in.inst_flags & WOPL_Ins_4op) && (in.inst_flags & WOPL_Ins_Pseudo4op) ? OplInstMeta::Flag_Pseudo4op : 0;
     ins.flags|= (in.inst_flags & WOPL_Ins_4op) && ((in.inst_flags & WOPL_Ins_Pseudo4op) == 0) ? OplInstMeta::Flag_Real4op : 0;
     ins.flags|= (in.inst_flags & WOPL_Ins_IsBlank) ? OplInstMeta::Flag_NoSound : 0;
-    ins.flags|= in.inst_flags & WOPL_RhythmModeMask;
+    ins.flags|= (in.inst_flags & WOPL_Ins_FixedNote) ? OplInstMeta::Flag_FixedTone : 0;
+    ins.flags |= in.inst_flags & WOPL_RhythmModeMask;
 
     for(size_t op = 0, slt = 0; op < 4; op++, slt++)
     {
@@ -90,6 +91,7 @@ static void cvt_FMIns_to_generic(WOPLI &ins, const OplInstMeta &in)
     ins.inst_flags = (in.flags & (OplInstMeta::Flag_Pseudo4op|OplInstMeta::Flag_Real4op)) ? WOPL_Ins_4op : 0;
     ins.inst_flags|= (in.flags & OplInstMeta::Flag_Pseudo4op) ? WOPL_Ins_Pseudo4op : 0;
     ins.inst_flags|= (in.flags & OplInstMeta::Flag_NoSound) ? WOPL_Ins_IsBlank : 0;
+    ins.inst_flags|= (in.flags & OplInstMeta::Flag_FixedTone) ? WOPL_Ins_FixedNote : 0;
     ins.inst_flags |= in.flags & OplInstMeta::Mask_RhythmMode;
 
     for(size_t op = 0; op < 4; op++)
