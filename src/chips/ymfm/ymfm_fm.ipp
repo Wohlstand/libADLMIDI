@@ -848,6 +848,8 @@ void fm_channel<RegisterType>::keyonoff(uint32_t states, keyon_type type, uint32
 		for (uint32_t opnum = 0; opnum < array_size(m_op); opnum++)
 			if (m_op[opnum] != nullptr)
 				debug::log_keyon("%c%s\n", bitfield(states, opnum) ? '+' : '-', m_regs.log_keyon(m_choffs, m_op[opnum]->opoffs()).c_str());
+#else
+	(void)chnum;
 #endif
 }
 
