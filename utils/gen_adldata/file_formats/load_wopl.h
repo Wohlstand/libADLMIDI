@@ -16,6 +16,7 @@ enum class WOPL_Flags
     Mode_4op         = 0x01,
     Mode_DoubleVoice = 0x02,
     WOPL_RhythmModeMask = 0x38,
+    Mode_FixedNote   = 0x40
 };
 
 bool BankFormats::LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix)

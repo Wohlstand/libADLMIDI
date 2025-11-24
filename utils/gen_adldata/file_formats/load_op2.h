@@ -142,6 +142,10 @@ bool BankFormats::LoadDoom(BanksDump &db, const char *fn, unsigned bank, const s
 
         if((flags & FL_DOUBLE_VOICE) != 0)
             inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_4op | BanksDump::InstrumentEntry::WOPL_Ins_Pseudo4op;
+
+        if((flags & FL_FIXED_PITCH) != 0)
+            inst.instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_FixedNote;
+
         inst.percussionKeyNumber = notenum;
         inst.secondVoiceDetune = static_cast<char>(static_cast<int>(ins.finetune) - 128);
 
