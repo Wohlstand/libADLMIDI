@@ -291,6 +291,7 @@ public:
                                           (int)portPath.size(),
                                           (wchar_t *)wportPath.c_str(),
                                           (int)wportPath.size());
+        wportPath.resize(newSize);
         m_port = CreateFile2(wportPath.c_str(), GENERIC_WRITE, 0, OPEN_EXISTING, NULL);
 #else
         m_port = CreateFileA(portPath.c_str(), GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);

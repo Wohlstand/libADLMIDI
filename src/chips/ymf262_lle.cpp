@@ -19,7 +19,6 @@
  */
 
 #include "ymf262_lle.h"
-#include "ymf262_lle/nuked_fmopl3.h"
 #include "ymf262_lle/nopl3.h"
 #include <cstring>
 
@@ -32,8 +31,7 @@ Ymf262LLEOPL3::Ymf262LLEOPL3() :
 
 Ymf262LLEOPL3::~Ymf262LLEOPL3()
 {
-    fmopl3_t *chip_r = reinterpret_cast<fmopl3_t*>(m_chip);
-    nopl3_shutdown(chip_r);
+    nopl3_shutdown(m_chip);
 }
 
 void Ymf262LLEOPL3::setRate(uint32_t rate)

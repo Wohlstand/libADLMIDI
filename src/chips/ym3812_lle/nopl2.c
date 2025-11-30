@@ -40,9 +40,9 @@ typedef struct {
     fmopl2_t chip;
 
     int sample;
-    int o_sy;
-    int shifter;
-    int o_sh;
+    uint_fast32_t o_sy;
+    uint_fast32_t shifter;
+    uint_fast32_t o_sh;
 
     int32_t rateratio;
 
@@ -64,7 +64,6 @@ static void nopl2_cycle(nopl2_t *chip)
 
         if (!chip->o_sy && chip->chip.o_sy)
         {
-
             if (chip->o_sh && !chip->chip.o_sh)
             {
                 mant = chip->shifter & 0x3ff;
@@ -78,8 +77,8 @@ static void nopl2_cycle(nopl2_t *chip)
                     chip->sample = mant << shift;
                 }
             }
-            chip->shifter = (chip->shifter >> 1) | (chip->chip.o_mo << 12);
 
+            chip->shifter = (chip->shifter >> 1) | (chip->chip.o_mo << 12);
             chip->o_sh = chip->chip.o_sh;
         }
 
@@ -131,7 +130,7 @@ void nopl2_reset(void *chip)
         nopl2_cycle(chip2);
 }
 
-void nopl2_write2(nopl2_t *chip, int port, int val)
+static void nopl2_write2(nopl2_t *chip, uint_fast32_t port, uint_fast32_t val)
 {
     chip->chip.input.address = port;
     chip->chip.input.data_i = val;
