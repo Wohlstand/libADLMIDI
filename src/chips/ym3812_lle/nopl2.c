@@ -70,6 +70,8 @@ static void nopl2_cycle(nopl2_t *chip)
             {
                 writebuf->reg &= 1;
                 nopl2_write2(chip, writebuf->reg, writebuf->data);
+
+                chip->writebuf_cycle = 32;
             }
             else
             {
@@ -78,9 +80,9 @@ static void nopl2_cycle(nopl2_t *chip)
 
                 chip->writebuf_cur = (chip->writebuf_cur + 1) % OPL_WRITEBUF_SIZE;
                 --chip->writebuf_size;
-            }
 
-            chip->writebuf_cycle += 168;
+                chip->writebuf_cycle = 168;
+            }
         }
 
         if (chip->writebuf_cycle > 0)
@@ -194,6 +196,7 @@ void nopl2_write_buf(void *chip, unsigned short addr, unsigned char val)
         nopl2_cycle(chip2);
 
         nopl2_write2(chip2, writebuf->reg_2 & 1, writebuf->data_2);
+        nopl2_cycle(chip2);
         nopl2_cycle(chip2);
 
         chip2->writebuf_cur = (writebuf_last + 1) % OPL_WRITEBUF_SIZE;
