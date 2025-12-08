@@ -7,7 +7,9 @@ and early games developed by Id Software.
 
 Bank assembled by Vitaliy Novichkov, based on settings captured from various
 IMF music files from various DOS games and redone to implement the General MIDI
-standard set.
+standard set. Several instruments matching to these are can be found at the
+MT32.IBK file from Jamie O'Connell's pack, now licensed under terms of the MIT
+license.
 ---------------------------
 MIT License
 
