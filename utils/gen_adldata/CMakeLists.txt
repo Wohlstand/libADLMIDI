@@ -123,8 +123,6 @@ else()
     set(ADLDATA_CACHE_FILE "${CMAKE_BINARY_DIR}/instdb/adldata-cache.dat")
 endif()
 
-option(WITH_GENADLDATA_RUN "Automatically run the gen_adldata during the build process. Disable this if you want to debug gen_adldata itself." ON)
-
 if(WITH_GENADLDATA_RUN)
     add_custom_target(gen-adldata-run #OUTPUT ${ADLDATA_DATABASE}
         COMMAND gen_adldata "${ADLDATA_INI_FILE}" "${ADLDATA_DATABASE}" "${ADLDATA_CACHE_FILE}"

@@ -257,6 +257,7 @@ option(USE_HW_SERIAL        "Use the hardware OPL3 chip via Serial on modern sys
 
 option(WITH_GENADLDATA      "Build and run full rebuild of embedded banks cache" OFF)
 option(WITH_GENADLDATA_COMMENTS "Enable comments in a generated embedded instruments cache file" OFF)
+option(WITH_GENADLDATA_RUN "Automatically run the gen_adldata during the build process. Disable this if you want to debug gen_adldata itself." ON)
 set(GENADLDATA_CUSTOM_BANKLIST "" CACHE PATH "Use the custom INI file to build the database")
 
 option(WITH_MIDIPLAY        "Build also demo MIDI player" OFF)
@@ -476,7 +477,7 @@ function(handle_options targetLib)
 
     if(WITH_EMBEDDED_BANKS)
         target_sources(${targetLib} PRIVATE ${ADLDATA_DATABASE})
-        if(WITH_GENADLDATA)
+        if(WITH_GENADLDATA AND WITH_GENADLDATA_RUN)
             set_property(SOURCE "${ADLDATA_DATABASE}" PROPERTY INCLUDE_DIRECTORIES "${libADLMIDI_SOURCE_DIR}/src")
             if(NOT "${GENADLDATA_CUSTOM_BANKLIST}" STREQUAL "")
                 set_property(SOURCE "${ADLDATA_DATABASE}" PROPERTY GENERATED TRUE)
