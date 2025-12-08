@@ -25,16 +25,11 @@
 #ifndef PROGS_H
 #define PROGS_H
 
-#include <map>
-#include <set>
 #include <utility>
-#include <memory>
 #include <cstring>
-#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <limits>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
