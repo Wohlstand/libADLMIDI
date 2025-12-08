@@ -20,7 +20,7 @@
 #include <sys/exceptn.h>
 #include <dos.h>
 #include <stdlib.h>
-#include "dos_tman.h"
+#include "../midiplay/dos_tman.h"
 #define BIOStimer _farpeekl(_dos_ds, 0x46C)
 #elif !defined(_WIN32) || defined(__CYGWIN__)
 # include <termios.h>
