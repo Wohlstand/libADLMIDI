@@ -37,6 +37,7 @@ list(APPEND GEN_ADLDATA_SRC
     file_formats/load_op2.h
     file_formats/load_tmb.h
     file_formats/load_wopl.h
+    file_formats/load_woplx.h
 )
 
 option(WITH_GENADLDATA_DEEPDEBUG "Enable deep debug mode of gen_adldata with dumping every voice into WAV file" OFF)
@@ -122,11 +123,15 @@ else()
     set(ADLDATA_CACHE_FILE "${CMAKE_BINARY_DIR}/instdb/adldata-cache.dat")
 endif()
 
-add_custom_target(gen-adldata-run #OUTPUT ${ADLDATA_DATABASE}
-    COMMAND gen_adldata "${ADLDATA_INI_FILE}" "${ADLDATA_DATABASE}" "${ADLDATA_CACHE_FILE}"
-    WORKING_DIRECTORY ${libADLMIDI_SOURCE_DIR}
-    DEPENDS gen_adldata
-    COMMENT "Running Embedded FM banks database generation"
-    VERBATIM
-    BYPRODUCTS "${ADLDATA_DATABASE}"
-)
+option(WITH_GENADLDATA_RUN "Automatically run the gen_adldata during the build process. Disable this if you want to debug gen_adldata itself." ON)
+
+if(WITH_GENADLDATA_RUN)
+    add_custom_target(gen-adldata-run #OUTPUT ${ADLDATA_DATABASE}
+        COMMAND gen_adldata "${ADLDATA_INI_FILE}" "${ADLDATA_DATABASE}" "${ADLDATA_CACHE_FILE}"
+        WORKING_DIRECTORY ${libADLMIDI_SOURCE_DIR}
+        DEPENDS gen_adldata
+        COMMENT "Running Embedded FM banks database generation"
+        VERBATIM
+        BYPRODUCTS "${ADLDATA_DATABASE}"
+    )
+endif()

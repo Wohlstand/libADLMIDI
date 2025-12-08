@@ -490,7 +490,7 @@ function(handle_options targetLib)
         target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_MIDI_SEQUENCER)
     endif()
 
-    if(WITH_EMBEDDED_BANKS AND WITH_GENADLDATA AND NOT ADLMIDI_DOS)
+    if(WITH_EMBEDDED_BANKS AND WITH_GENADLDATA AND NOT ADLMIDI_DOS AND WITH_GENADLDATA_RUN)
         if("${GENADLDATA_CUSTOM_BANKLIST}" STREQUAL "")
             add_dependencies(${targetLib} gen-adldata-run)
         endif()
