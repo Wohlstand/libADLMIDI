@@ -54,7 +54,7 @@ static const uint8_t s_velocTbl[128] =
 };
 
 
-uint16_t oplModel_OConnelFreq(double tone, uint32_t *mul_offset)
+uint16_t oplModel_OConnellFreq(double tone, uint32_t *mul_offset)
 {
     uint16_t wOctv, wFreq, wNewFreq, bRange = 2;
     uint_fast32_t note, idx, wAmt;
@@ -139,7 +139,7 @@ uint16_t oplModel_OConnelFreq(double tone, uint32_t *mul_offset)
 }
 
 
-void oplModel_OConnelVolume(struct OPLVolume_t *v)
+void oplModel_OConnellVolume(struct OPLVolume_t *v)
 {
     uint_fast32_t volume = 0, work;
 

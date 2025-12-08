@@ -6,6 +6,6 @@ set(OPL_MODELS_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/model_generic.c
     ${CMAKE_CURRENT_LIST_DIR}/model_hmi_sos.c
     ${CMAKE_CURRENT_LIST_DIR}/model_msadlib.c
-    ${CMAKE_CURRENT_LIST_DIR}/model_oconnel.c
+    ${CMAKE_CURRENT_LIST_DIR}/model_oconnell.c
     ${CMAKE_CURRENT_LIST_DIR}/model_win9x.c
 )

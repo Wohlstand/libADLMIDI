@@ -130,8 +130,8 @@ enum ADLMIDI_VolumeModels
     ADLMIDI_VolumeModel_MS_ADLIB = 12,
     /*! Volume model used by IMF Creator utility */
     ADLMIDI_VolumeModel_IMF_Creator = 13,
-    /*! Volume model used by Jammie O'Connel's FM Synth driver for Windows 3.x */
-    ADLMIDI_VolumeModel_OConnel = 14,
+    /*! Volume model used by Jamie O'Connell's FM Synth driver for Windows 3.x */
+    ADLMIDI_VolumeModel_OConnell = 14,
     /*! Count of available volume model modes */
     ADLMIDI_VolumeModel_Count
 };

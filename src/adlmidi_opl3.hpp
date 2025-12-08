@@ -222,8 +222,8 @@ public:
         VOLUME_MS_ADLIB,
         //! Uses DMX fixed volume model and "same-instrument" channel allocation
         VOLUME_IMF_CREATOR,
-        //! Jamie O'Connel's FM Synth driver
-        VOLUME_OCONNEL,
+        //! Jamie O'Connell's FM Synth driver
+        VOLUME_OCONNELL,
 
         /* !! Insert new PUBLIC enum leafs to HERE, NOT BELOW! !! */
 

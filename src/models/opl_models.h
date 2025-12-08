@@ -99,7 +99,7 @@ extern uint16_t oplModel_msAdLibFreq(double tone, uint32_t *mul_offset);
  * @param mul_offset !REQUIRED! A pointer to the frequency multiplier offset if note is too high
  * @return FNum+Block value compatible to OPL chips
  */
-extern uint16_t oplModel_OConnelFreq(double tone, uint32_t *mul_offset);
+extern uint16_t oplModel_OConnellFreq(double tone, uint32_t *mul_offset);
 
 
 /***************************************************************
@@ -239,10 +239,10 @@ extern void oplModel_msAdLibVolume(struct OPLVolume_t *v);
 
 
 /**
- * @brief Jamie O'Connel's FM Synth driver volume model
+ * @brief Jamie O'Connell's FM Synth driver volume model
  * @param v [inout] Volume calculation context
  */
-extern void oplModel_OConnelVolume(struct OPLVolume_t *v);
+extern void oplModel_OConnellVolume(struct OPLVolume_t *v);
 
 
 

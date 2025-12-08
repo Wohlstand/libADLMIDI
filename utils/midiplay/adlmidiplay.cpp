@@ -463,7 +463,7 @@ const char* volume_model_to_str(int vm)
         return "MS AdLib";
     case ADLMIDI_VolumeModel_IMF_Creator:
         return "IMF Creator";
-    case ADLMIDI_VolumeModel_OConnel:
+    case ADLMIDI_VolumeModel_OConnell:
         return "Jammie O'Connel's FM Synth";
     }
 }
