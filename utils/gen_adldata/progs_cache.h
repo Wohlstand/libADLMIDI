@@ -374,6 +374,7 @@ bool LoadJunglevision(BanksDump &db, const char *fn, unsigned bank, const std::s
 bool LoadDoom(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadTMB(BanksDump &db, const char *fn, unsigned bank, const std::string &bankTitle, const char *prefix);
 bool LoadWopl(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix);
+bool LoadWoplX(BanksDump &db, const char *fn, unsigned bank, const std::string bankTitle, const char *prefix);
 
 }
 

@@ -105,6 +105,15 @@ static int processBank(IniProcessing &ini, const std::string &banksRoot, BanksDu
         }
     }
     else
+    if(format == "WOPLX")
+    {
+        if(!BankFormats::LoadWoplX(db, filepath.c_str(), bank_id, bank_name, prefix.c_str()))
+        {
+            std::fprintf(stderr, "Failed to load bank %u, file %s!\n", (unsigned)bank_id, filepath.c_str());
+            return 1;
+        }
+    }
+    else
     if(format == "OP2")
     {
         if(!BankFormats::LoadDoom(db, filepath.c_str(), bank_id, bank_name, prefix.c_str()))

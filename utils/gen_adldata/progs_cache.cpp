@@ -35,6 +35,7 @@
 #include "file_formats/load_op2.h"
 #include "file_formats/load_tmb.h"
 #include "file_formats/load_wopl.h"
+#include "file_formats/load_woplx.h"
 #include "file_formats/load_ea.h"
 // IWYU pragma: end_exports
 
