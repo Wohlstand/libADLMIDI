@@ -4,15 +4,15 @@ BANK_INFO:
 ----------------------------
 This bank made by James Alan Nguyen for his OPL3 Synth Driver:
 
-https://bitbucket.org/djtubig-malicex/opl3-synth-driver
+https://github.com/djtuBIG-MaliceX/opl3-synth-driver
 
 and then, it was saved as header file which was converted by Vitaliy Novichkov
 and later modded with replacements of many instruments and common polishing.
 Some percussion instruments are was taken from Sneakernets's bank.
 This bank is mainly 4-op while DMXOPL is Double-2op to be compatible with DMX.
 ----------------------------
-Original project licensed under terms of GNU GPLv2+ license and directly
-based on the project by NukeYKT:
+Original project licensed under terms of GNU LGPLv2.1+ and GPLv2+ licenses and
+directly based on the project by NukeYKT:
 
 https://github.com/nukeykt/WinOPL3Driver
 ----------------------------
