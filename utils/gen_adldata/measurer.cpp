@@ -750,6 +750,7 @@ void MeasureThreaded::printFinal()
 void MeasureThreaded::run(BanksDump &bd, BanksDump::InstrumentEntry &e)
 {
     m_semaphore.wait();
+
     if(m_threads.size() > 0)
     {
         for(std::vector<destData *>::iterator it = m_threads.begin(); it != m_threads.end();)
@@ -769,6 +770,7 @@ void MeasureThreaded::run(BanksDump &bd, BanksDump::InstrumentEntry &e)
     dd->bd_ins = &e;
     dd->myself = this;
     dd->start();
+
     m_threads.push_back(dd);
 #ifdef ADL_GENDATA_PRINT_PROGRESS
     printProgress();
@@ -806,7 +808,9 @@ void MeasureThreaded::destData::callback(void *myself)
                        static_cast<int_fast32_t>(s->bd_ins->percussionKeyNumber),
                        static_cast<int_fast32_t>(s->bd_ins->instFlags),
                        static_cast<int_fast32_t>(s->bd_ins->secondVoiceDetune)};
+
     s->myself->m_durationInfo_mx.lock();
+
     DurationInfoCacheX::iterator cachedEntry = s->myself->m_durationInfo.find(ok);
     bool atEnd = cachedEntry == s->myself->m_durationInfo.end();
     s->myself->m_durationInfo_mx.unlock();
@@ -816,11 +820,14 @@ void MeasureThreaded::destData::callback(void *myself)
         const DurationInfo &di = cachedEntry->second;
         s->bd_ins->delay_on_ms = di.ms_sound_kon;
         s->bd_ins->delay_off_ms = di.ms_sound_koff;
+
         if(di.nosound)
             s->bd_ins->instFlags |= BanksDump::InstrumentEntry::WOPL_Ins_IsBlank;
+
         s->myself->m_cache_matches++;
         goto endWork;
     }
+
     info = MeasureDurations(*s->bd, *s->bd_ins, &chip);
     s->myself->m_durationInfo_mx.lock();
     s->myself->m_durationInfo.insert({ok, info});
