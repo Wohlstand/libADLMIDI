@@ -573,7 +573,7 @@ void BW_MidiSequencer::restoreTrackState(size_t track)
 
     if((m_stateRestoreSetup & TRACK_RESTORE_NOTEOFFS) != 0)
     {
-        if(m_format == Format_MIDI && m_smfFormat == 0)
+        if((m_format == Format_MIDI && m_smfFormat == 0) || m_format == Format_XMIDI)
         {
             for(uint8_t c = 0; c < 16; c++)
                 m_interface->rt_controllerChange(m_interface->rtUserData, c, 123, 0);
