@@ -321,24 +321,14 @@ void oplModel_nativeVolume(struct OPLVolume_t *v)
 
 void oplModel_rsxxVolume(struct OPLVolume_t *v)
 {
-    const double c1 = 11.541560327111707;
-    const double c2 = 1.601379199767093e+02;
-    const uint_fast32_t minVolume = 1108075; /* 8725 * 127 */
-    double lv;
     uint_fast32_t volume = 0;
 
-    volume = v->vel * v->masterVolume * v->chVol * v->chExpr;
+    volume = v->vel * v->chVol * v->chExpr;
+    /* 4096766 = (127 * 127 * 127) * 2 */
+    volume = (volume * v->masterVolume) / 4096766;
 
-    if(volume > minVolume)
-    {
-        lv = log((double)volume);
-        volume = (uint_fast32_t)(lv * c1 - c2);
-
-        if(volume > 63)
-            volume = 63;
-    }
-    else
-        volume = 0;
+    if(volume > 63)
+        volume = 63;
 
     v->tlCar -= volume / 2;
 }
