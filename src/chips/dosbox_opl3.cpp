@@ -75,8 +75,15 @@ void DosBoxOPL3::writePan(uint16_t addr, uint8_t data)
 void DosBoxOPL3::nativeGenerateN(int16_t *output, size_t frames)
 {
     DBOPL::Handler *chip_r = reinterpret_cast<DBOPL::Handler*>(m_chip);
-    Bitu frames_i = frames;
-    chip_r->GenerateArr(output, &frames_i);
+    Bitu frames_i;
+
+    while(frames > 0)
+    {
+        frames_i = frames;
+        chip_r->GenerateArr(output, &frames_i);
+        frames -= frames_i;
+        output += frames_i;
+    }
 }
 
 const char *DosBoxOPL3::emulatorName()
