@@ -1,8 +1,13 @@
 
 if(NOT ADLMIDI_DOS AND NOT MIDIPLAY_WAVE_ONLY)
     if(NOT WIN32)
-        libADLMIDI_find_SDL2()
-        set(USE_SDL2_AUDIO 1)
+        libADLMIDI_find_SDL3()
+        if(TARGET ADLMIDI_SDL3)
+            set(USE_SDL3_AUDIO 1)
+        else()
+            libADLMIDI_find_SDL2()
+            set(USE_SDL2_AUDIO 1)
+        endif()
     else()
     endif()
 endif()
@@ -17,13 +22,13 @@ set(ADLMIDI_PLAY_SRC
     ${UTF8MAIN_SRCS}
 )
 
-if(USE_SDL2_AUDIO)
+if(USE_SDL2_AUDIO OR USE_SDL3_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
         audio_sdl.c
     )
 endif()
 
-if(WIN32 AND NOT USE_SDL2_AUDIO)
+if(WIN32 AND NOT USE_SDL2_AUDIO AND NOT USE_SDL3_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
         audio_winmm.c
     )
@@ -42,7 +47,10 @@ option(TERMINAL_USE_NCURSES  "Enable use of ncurses library to handle keyboard a
 
 add_executable(adlmidiplay ${ADLMIDI_PLAY_SRC})
 
-if(USE_SDL2_AUDIO)
+if(USE_SDL3_AUDIO)
+    target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL3)
+    target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL3)
+elseif(USE_SDL2_AUDIO)
     target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL2)
     target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL2)
 elseif(WIN32)

@@ -42,8 +42,12 @@
 #endif
 
 #if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
-#   ifdef ADLMIDI_USE_SDL2
-#   include <SDL2/SDL_timer.h>
+#   if defined(ADLMIDI_USE_SDL2) || defined(ADLMIDI_USE_SDL3)
+#       ifdef ADLMIDI_USE_SDL3
+#           include <SDL3/SDL_timer.h>
+#       elif defined(ADLMIDI_USE_SDL2)
+#           include <SDL2/SDL_timer.h>
+#       endif
 #ifdef __APPLE__
 #   include <unistd.h>
 #endif
@@ -51,7 +55,11 @@
 #   define HAS_S_GETTIME
 static inline double s_getTime()
 {
+#ifdef ADLMIDI_USE_SDL3
+    return SDL_GetTicks() / 1000.0;
+#else
     return SDL_GetTicks64() / 1000.0;
+#endif
 }
 
 static inline void s_sleepU(double s)
@@ -395,6 +403,22 @@ static void SDL_AudioCallbackX(void *, uint8_t *stream, int len)
     audio_lock();
     //short *target = (short *) stream;
     g_audioBuffer_lock.Lock();
+
+    if(g_audioBuffer.empty()) // Just in a case, if queue is blank, just zero the output
+    {
+        switch(g_audioFormat.type)
+        {
+        case ADLMIDI_SampleType_S8:
+            std::memset(stream, 0x7f, len);
+            break;
+        case ADLMIDI_SampleType_U16:
+            for(size_t i = 0; i < (size_t)len; i += 2)
+                *(uint32_t*)(stream + i) = 0x7FFF;
+            break;
+        default:
+            std::memset(stream, 0, len);
+        }
+    }
 
     if(ate > g_audioBuffer.size())
         ate = (unsigned)g_audioBuffer.size();
