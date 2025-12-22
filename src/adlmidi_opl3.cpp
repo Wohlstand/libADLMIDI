@@ -523,6 +523,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     uint16_t ftone = 0;
     const OplTimbre *patch1 = m_insCache[c1];
     const OplTimbre *patch2 = m_insCache[chan2];
+    bool cacheModded[2] = {m_insCacheModified[c1], m_insCacheModified[chan2]};
 
     if(tone < 0.0)
         tone = 0.0; // Lower than 0 is impossible!
@@ -570,7 +571,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
                 writeRegI(chip, 0x20 + op_addr[op],  (dt | (mul + mul_offset)) & 0xFF);
                 m_insCacheModified[modIdx] = true;
             }
-            else if(m_insCacheModified[modIdx])
+            else if(cacheModded[op > 1 ? 1 : 0])
             {
                 writeRegI(chip, 0x20 + op_addr[op],  ops[op] & 0xFF);
                 m_insCacheModified[modIdx] = false;
