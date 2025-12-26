@@ -394,7 +394,7 @@ function(handle_options targetLib)
                 ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm.h
             )
 
-            if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CC_COMPILER_VERSION STREQUAL "7.5.0" AND CMAKE_BUILD_TYPE_LOWER STREQUAL "minsizerel")
+            if((CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX) AND CMAKE_C_COMPILER_VERSION STREQUAL "7.5.0" AND CMAKE_BUILD_TYPE_LOWER STREQUAL "minsizerel")
                 # Workaround to build on GCC 7.5.0
                 set_source_files_properties("${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm.c" COMPILE_FLAGS "-fomit-frame-pointer")
             endif()
