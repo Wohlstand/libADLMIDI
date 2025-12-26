@@ -393,6 +393,11 @@ function(handle_options targetLib)
                 ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm_registers.c
                 ${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm.h
             )
+
+            if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CC_COMPILER_VERSION STREQUAL "7.5.0" AND CMAKE_BUILD_TYPE_LOWER STREQUAL "minsizerel")
+                # Workaround to build on GCC 7.5.0
+                set_source_files_properties("${libADLMIDI_SOURCE_DIR}/src/chips/esfmu/esfm.c" COMPILE_FLAGS "-fomit-frame-pointer")
+            endif()
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_ESFMU_EMULATOR)
         endif()
