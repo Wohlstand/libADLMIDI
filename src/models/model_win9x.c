@@ -1,7 +1,7 @@
 /*
  * OPL2/OPL3 models library - a set of various conversion models for OPL-family chips
  *
- * Copyright (c) 2025-2025 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2025-2026 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),

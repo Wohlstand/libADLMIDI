@@ -1,7 +1,7 @@
 /*
  * Task manager with timer for DOS
  *
- * Copyright (c) 2025-2025 Vitaly Novichkov (Wohlstand)
+ * Copyright (c) 2025-2026 Vitaly Novichkov (Wohlstand)
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),

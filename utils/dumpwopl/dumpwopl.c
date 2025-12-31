@@ -2,7 +2,7 @@
  * WOPL dumper tool - prints the content of OPL2/OPL3 bank of WOPL format as
  * a text data with all the descriptions attached.
  *
- * Copyright (c) 2025-2025 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2025-2026 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
