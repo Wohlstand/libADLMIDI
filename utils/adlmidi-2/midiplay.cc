@@ -1898,6 +1898,7 @@ int main(int argc, char **argv)
             " -fp             Enables full-panning stereo support\n"
             " --emu-nuked     Uses Nuked OPL3 v 1.8 emulator\n"
             " --emu-nuked7    Uses Nuked OPL3 v 1.7.4 emulator\n"
+            " --emu-nuked-opl2 Uses Nuked OPL2 Lite emulator\n"
             " --emu-dosbox    Uses DosBox 0.74 OPL3 emulator\n"
 #endif
         );
@@ -1973,6 +1974,8 @@ int main(int argc, char **argv)
             emulator = ADLMIDI_EMU_NUKED;
         else if(!std::strcmp("--emu-nuked7", argv[2]))
             emulator = ADLMIDI_EMU_NUKED_174;
+        else if(!std::strcmp("--emu-nuked-opl2", argv[2]))
+            emulator = ADLMIDI_EMU_NUKED_OPL2_LITE;
         else if(!std::strcmp("--emu-dosbox", argv[2]))
             emulator = ADLMIDI_EMU_DOSBOX;
 #endif

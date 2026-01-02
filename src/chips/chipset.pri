@@ -11,6 +11,8 @@ SOURCES+= \
     $$PWD/opal/opal.c \
     $$PWD/nuked/nukedopl3.c \
     $$PWD/dosbox/dbopl.cpp \
+    $$PWD/nuked_opl2.cpp \
+    $$PWD/nuked/nukedopl2.c \
     $$PWD/nuked_opl3_v174.cpp \
     $$PWD/nuked/nukedopl3_174.c \
     $$PWD/ymf262_lle.cpp \
@@ -28,12 +30,14 @@ HEADERS+= \
     $$PWD/java_opl3.h \
     $$PWD/mame_opl2.h \
     $$PWD/mame/opl.h \
+    $$PWD/nuked_opl2.h \
     $$PWD/nuked_opl3.h \
     $$PWD/opal_opl3.h \
     $$PWD/opal/opal.h \
     $$PWD/opl_chip_base.h \
     $$PWD/esfmu/esfm.h \
     $$PWD/java/JavaOPL3.hpp \
+    $$PWD/nuked/nukedopl2.h \
     $$PWD/nuked/nukedopl3.h \
     $$PWD/dosbox/dbopl.h \
     $$PWD/nuked_opl3_v174.h \

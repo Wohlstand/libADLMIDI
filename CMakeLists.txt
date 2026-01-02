@@ -358,6 +358,10 @@ function(handle_options targetLib)
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3_174.c
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3_174.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl2.cpp       # OPL2 Lite
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl2.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl2.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl2.h
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_NUKED_EMULATOR)

@@ -198,6 +198,10 @@ static const int emulator_type_values[] =
 #ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
     (int)ADLMIDI_EMU_NUKED_OPL3_LLE,
 #endif
+
+#ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
+    (int)ADLMIDI_EMU_NUKED_OPL2_LITE
+#endif
 };
 static const char * const emulator_type_descriptions[] =
 {
@@ -237,6 +241,10 @@ static const char * const emulator_type_descriptions[] =
 
 #ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
     N_("Nuked OPL3-LLE [!EXTRA HEAVY!]"),
+#endif
+
+#ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
+    N_("Nuked OPL2 Lite"),
 #endif
 
     NULL

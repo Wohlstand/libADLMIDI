@@ -49,6 +49,7 @@
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
 #       include "chips/nuked_opl3.h"
 #       include "chips/nuked_opl3_v174.h"
+#       include "chips/nuked_opl2.h"
 #   endif
 
 // DosBox 0.74 OPL3 emulator, Well-accurate and fast
@@ -101,7 +102,7 @@
 static const unsigned adl_emulatorSupport = 0
 #ifndef ENABLE_HW_OPL_DOS
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
-    | (1u << ADLMIDI_EMU_NUKED) | (1u << ADLMIDI_EMU_NUKED_174)
+    | (1u << ADLMIDI_EMU_NUKED) | (1u << ADLMIDI_EMU_NUKED_174) | (1u << ADLMIDI_EMU_NUKED_OPL2_LITE)
 #   endif
 
 #   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
@@ -1127,6 +1128,9 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             break;
         case ADLMIDI_EMU_NUKED_174: /* Old Nuked OPL3 1.4.7 modified and optimized */
             chip = new NukedOPL3v174;
+            break;
+        case ADLMIDI_EMU_NUKED_OPL2_LITE: /* Nuked OPL2 Lite */
+            chip = new NukedOPL2;
             break;
 #endif
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
