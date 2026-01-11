@@ -116,8 +116,6 @@ bool MIDIplay::LoadBank(FileAndMemReader &fr)
 
     Synth &synth = *m_synth;
 
-    synth.setEmbeddedBank(m_setup.bankId);
-
     synth.m_insBankSetup.scaleModulators = false;
     synth.m_insBankSetup.deepTremolo = (wopl->opl_flags & WOPL_FLAG_DEEP_TREMOLO) != 0;
     synth.m_insBankSetup.deepVibrato = (wopl->opl_flags & WOPL_FLAG_DEEP_VIBRATO) != 0;
@@ -129,6 +127,8 @@ bool MIDIplay::LoadBank(FileAndMemReader &fr)
 
     uint16_t slots_counts[2] = {wopl->banks_count_melodic, wopl->banks_count_percussion};
     WOPLBank *slots_src_ins[2] = { wopl->banks_melodic, wopl->banks_percussive };
+
+    synth.m_insBanks.clear();
 
     for(size_t ss = 0; ss < 2; ss++)
     {
@@ -147,6 +147,8 @@ bool MIDIplay::LoadBank(FileAndMemReader &fr)
             }
         }
     }
+
+    synth.clearInstCache();
 
     synth.m_embeddedBank = Synth::CustomBankTag; // Use dynamic banks!
     //Percussion offset is count of instruments multipled to count of melodic banks

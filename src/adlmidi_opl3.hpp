@@ -310,6 +310,11 @@ public:
     void setEmbeddedBank(uint32_t bank);
 
     /**
+     * @brief Clears the selected instruments cache
+     */
+    void clearInstCache();
+
+    /**
      * @brief Write data to OPL3 chip register
      * @param chip Index of emulated chip. In hardware OPL3 builds, this parameter is ignored
      * @param address Register address to write

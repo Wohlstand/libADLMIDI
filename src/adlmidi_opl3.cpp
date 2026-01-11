@@ -471,12 +471,17 @@ void OPL3::setEmbeddedBank(uint32_t bank)
     }
 
     // Reset caches once bank is changed
-    adl_fill_vector<const OplTimbre*>(m_insCache, &c_defaultInsCache);
-    adl_fill_vector<bool>(m_insCacheModified, false);
+    clearInstCache();
 
 #else
     ADL_UNUSED(bank);
 #endif
+}
+
+void OPL3::clearInstCache()
+{
+    adl_fill_vector<const OplTimbre*>(m_insCache, &c_defaultInsCache);
+    adl_fill_vector<bool>(m_insCacheModified, false);
 }
 
 void OPL3::writeReg(size_t chip, uint16_t address, uint8_t value)
