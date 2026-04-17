@@ -90,7 +90,7 @@ static void rtSysEx(void *userdata, const uint8_t *msg, size_t size)
 static void rtRawOPL(void *userdata, uint8_t reg, uint8_t value)
 {
     MIDIplay *context = reinterpret_cast<MIDIplay *>(userdata);
-    return context->realTime_rawOPL(reg, value);
+    return context->realTime_rawOPL2(reg, value);
 }
 
 static void rtDeviceSwitch(void *userdata, size_t track, const char *data, size_t length)
