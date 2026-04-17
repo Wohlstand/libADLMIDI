@@ -187,8 +187,10 @@ void MIDIplay::partialReset()
     chipReset();
     m_chipChannels.clear();
     m_chipChannels.resize((size_t)synth.m_numChannels);
+
     if(m_reservedChipChannels.size() < synth.m_numChips)
         m_reservedChipChannels.resize(synth.m_numChips, 0u);
+
     resetMIDIDefaults();
 }
 
@@ -559,13 +561,12 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
             // ^ Don't use the same channel for primary&secondary
 
             // Skip chip channels reserved by the user for raw OPL writes.
-            {
-                size_t chipIdx = a / NUM_OF_CHANNELS;
-                size_t localCh = a % NUM_OF_CHANNELS;
-                if(chipIdx < m_reservedChipChannels.size() &&
-                   (m_reservedChipChannels[chipIdx] >> localCh) & 1u)
-                    continue;
-            }
+            size_t chipIdx = a / NUM_OF_CHANNELS;
+            size_t localCh = a % NUM_OF_CHANNELS;
+
+            if(chipIdx < m_reservedChipChannels.size() &&
+               (m_reservedChipChannels[chipIdx] >> localCh) & 1u)
+                continue;
 
             if(is_2op || pseudo_4op)
             {
@@ -1217,24 +1218,27 @@ size_t MIDIplay::realTime_currentDevice(size_t track)
     return m_currentMidiDevice[track];
 }
 
-void MIDIplay::realTime_rawOPL(uint8_t reg, uint8_t value)
+void MIDIplay::realTime_rawOPL2(uint8_t reg, uint8_t value)
 {
     Synth &synth = *m_synth;
+
     if((reg & 0xF0) == 0xC0)
         value |= 0x30;
+
     //std::printf("OPL poke %02X, %02X\n", reg, value);
     //std::fflush(stdout);
     synth.writeReg(0, reg, value);
 }
 
-int MIDIplay::realTime_rawOPL_Chip(size_t chipId, uint16_t reg, uint8_t value)
+int MIDIplay::realTime_rawOPL3_Chip(size_t chipId, uint16_t reg, uint8_t value)
 {
     Synth &synth = *m_synth;
+
     if(chipId >= synth.m_numChips)
         return 0;
-    // Note: intentionally no 0xC0 |= 0x30 fixup here. The public API
-    // documents that the caller is driving the chip directly and is
-    // responsible for whatever bits they want in panning/connection.
+
+    // No 0xC0 |= 0x30 fixup here: the caller is assumed to be OPL3-aware and
+    // is driving panning / connection register bits explicitly.
     synth.writeReg(chipId, reg, value);
     return 1;
 }

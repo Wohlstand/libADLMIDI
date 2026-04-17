@@ -197,6 +197,8 @@ To build that example you will need to have installed SDL2 library.
  * Added support for DMX OP2's Fixed Note feature for melodic instruments.
  * Fixed the unexpected playback distortion while playing IMF/CMF/KLM files using DosBox OPL3 emulator.
  * Fixed unexpected non-GM instruments from embedded bank appears when loading custom GM-only bank.
+ * Added `adl_rt_rawOPL3()` public API to send raw OPL3 register writes to a specific chip, reusing the same internal routing used by IMF/KLM playback. Allows callers to render raw-OPL formats alongside MIDI playback on the same chip.
+ * Added `adl_reserveChipChannels()` / `adl_getReservedChipChannels()` public API for per-chip bitmask reservation of chip channels, so the MIDI voice allocator will skip them and leave them free for raw OPL writes.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.

@@ -893,28 +893,45 @@ public:
     size_t realTime_currentDevice(size_t track);
 
     /**
-     * @brief Send raw OPL chip command (applies IMF-style connection fixup and
-     *        writes to chip 0). Used internally by IMF/KLM sequencer playback.
-     * @param reg OPL Register
+     * @brief Send a raw OPL2 chip command to chip 0.
+     *
+     * Used internally by the IMF/KLM sequencer which stores OPL2-era register
+     * streams. Because libADLMIDI always runs chips in OPL3-extended mode for
+     * stereo output, this function auto-ORs 0x30 into connection-register
+     * (0xC0..0xC8) values so an OPL2-expecting stream produces non-silent
+     * output on an OPL3. Writes always target chip 0 and a single 8-bit
+     * register port; OPL3-aware code should use realTime_rawOPL3_Chip().
+     *
+     * @param reg   OPL2 register (0x00..0xFF)
      * @param value Value to write
      */
-    void realTime_rawOPL(uint8_t reg, uint8_t value);
+    void realTime_rawOPL2(uint8_t reg, uint8_t value);
 
     /**
-     * @brief Send a raw OPL register write to a specific chip, bypassing the
-     *        MIDI driver entirely. Exposed via adl_rt_rawOplCommand().
+     * @brief Send a raw OPL3 register write to a specific chip.
+     *
+     * Bypasses the MIDI driver entirely and writes exactly what the caller
+     * passes, with no 0xC0 fixup. Takes a 16-bit address so the upper bit can
+     * select the secondary OPL3 register bank. The caller is responsible for
+     * the OPL3 panning / stereo bits. Exposed via adl_rt_rawOPL3().
+     *
      * @param chipId Zero-based chip index [0..m_synth->m_numChips-1]
-     * @param reg    OPL register address (0x000..0x1FF for OPL3 port B bank,
-     *               0x00..0xFF for OPL2)
+     * @param reg    OPL3 register address (0x000..0x1FF)
      * @param value  Register value
      * @return 1 on success, 0 on out-of-range arguments
      */
-    int realTime_rawOPL_Chip(size_t chipId, uint16_t reg, uint8_t value);
+    int realTime_rawOPL3_Chip(size_t chipId, uint16_t reg, uint8_t value);
 
     /**
      * @brief Reserve chip channels so the note allocator skips them.
-     *        The caller can then safely drive those channels via raw OPL
-     *        writes (adl_rt_rawOplCommand) without MIDI stealing their voices.
+     *
+     * The caller can then safely drive those channels via raw OPL writes
+     * (realTime_rawOPL3_Chip / adl_rt_rawOPL3) without MIDI stealing their
+     * voices. Reserving a primary 4-op master channel (indices 0..5) is
+     * sufficient to disable the whole pseudo-4-op voice pair: the secondary
+     * sibling is passive and only reached via its primary, so the allocator
+     * will never acquire it once the primary is reserved.
+     *
      * @param chipId       Zero-based chip index [0..m_synth->m_numChips-1]
      * @param channelMask  Bitmask of chip channel indices within the chip
      *                     (bit 0 = channel 0, bit 17 = channel 17 for OPL3).

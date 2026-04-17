@@ -1929,20 +1929,22 @@ ADLMIDI_EXPORT int adl_rt_systemExclusive(struct ADL_MIDIPlayer *device, const A
     return play->realTime_SysEx(msg, size);
 }
 
-ADLMIDI_EXPORT int adl_rt_rawOplCommand(struct ADL_MIDIPlayer *device,
-                                        int chipId,
-                                        ADL_UInt16 reg,
-                                        ADL_UInt8 value)
+ADLMIDI_EXPORT int adl_rt_rawOPL3(struct ADL_MIDIPlayer *device,
+                                  int chipId,
+                                  ADL_UInt16 reg,
+                                  ADL_UInt8 value)
 {
     if(!device)
         return 0;
+
     if(chipId < 0)
         return 0;
+
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    return play->realTime_rawOPL_Chip(static_cast<size_t>(chipId),
-                                      static_cast<uint16_t>(reg),
-                                      static_cast<uint8_t>(value));
+    return play->realTime_rawOPL3_Chip(static_cast<size_t>(chipId),
+                                       static_cast<uint16_t>(reg),
+                                       static_cast<uint8_t>(value));
 }
 
 ADLMIDI_EXPORT int adl_reserveChipChannels(struct ADL_MIDIPlayer *device,
