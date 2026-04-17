@@ -564,8 +564,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
             size_t chipIdx = a / NUM_OF_CHANNELS;
             size_t localCh = a % NUM_OF_CHANNELS;
 
-            if(chipIdx < m_reservedChipChannels.size() &&
-               (m_reservedChipChannels[chipIdx] >> localCh) & 1u)
+            if(chipIdx < m_reservedChipChannels.size() && ((m_reservedChipChannels[chipIdx] >> localCh) & 1u))
                 continue;
 
             if(is_2op || pseudo_4op)
@@ -1246,10 +1245,13 @@ int MIDIplay::realTime_rawOPL3_Chip(size_t chipId, uint16_t reg, uint8_t value)
 int MIDIplay::reserveChipChannels(size_t chipId, uint32_t channelMask)
 {
     Synth &synth = *m_synth;
+
     if(chipId >= synth.m_numChips)
         return 0;
+
     if(m_reservedChipChannels.size() < synth.m_numChips)
         m_reservedChipChannels.resize(synth.m_numChips, 0u);
+
     m_reservedChipChannels[chipId] = channelMask;
     return 1;
 }
@@ -1258,6 +1260,7 @@ uint32_t MIDIplay::getReservedChipChannels(size_t chipId) const
 {
     if(chipId >= m_reservedChipChannels.size())
         return 0u;
+
     return m_reservedChipChannels[chipId];
 }
 
