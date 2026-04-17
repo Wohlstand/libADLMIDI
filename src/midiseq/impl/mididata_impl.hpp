@@ -252,7 +252,7 @@ void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
                 // Set loop points times
                 if(loopStartTicks == pos.absPos)
                     m_loopStartTime = pos.time;
-                else if(loopEndTicks == pos.absPos)
+                else if(loopEndTicks == pos.absPos && m_loopEndTime < pos.time)
                     m_loopEndTime = pos.time;
             }
 
