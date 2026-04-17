@@ -1381,6 +1381,64 @@ extern ADLMIDI_DECLSPEC void adl_rt_bankChange(struct ADL_MIDIPlayer *device, AD
  */
 extern ADLMIDI_DECLSPEC int adl_rt_systemExclusive(struct ADL_MIDIPlayer *device, const ADL_UInt8 *msg, size_t size);
 
+/**
+ * @brief Write a raw OPL2/OPL3 register on a specific chip, bypassing the MIDI driver.
+ *
+ * Exposes libADLMIDI's internal raw-OPL routing (the same path used by IMF/KLM
+ * playback) so callers can render formats that store raw OPL register streams
+ * alongside MIDI playback on the same chip. The caller is fully responsible
+ * for the state of the reserved channels (key-on, envelopes, pan, connection,
+ * etc.); libADLMIDI will not manage it.
+ *
+ * To avoid the MIDI voice allocator stepping on your raw writes, reserve the
+ * chip channels you intend to use via adl_reserveChipChannels().
+ *
+ * @param device  Instance of the library (from adl_init()).
+ * @param chipId  Zero-based chip index (0..adl_getNumChipsObtained()-1).
+ * @param reg     OPL register address. For OPL3 the upper 0x100 bit selects
+ *                the secondary register bank. Valid range 0x000..0x1FF.
+ * @param value   Register value to write (0..255).
+ * @return 1 on success, 0 if chipId is out of range or the device is invalid.
+ */
+extern ADLMIDI_DECLSPEC int adl_rt_rawOplCommand(struct ADL_MIDIPlayer *device,
+                                                 int chipId,
+                                                 ADL_UInt16 reg,
+                                                 ADL_UInt8 value);
+
+/**
+ * @brief Reserve chip channels on a given chip so the MIDI driver will not
+ *        allocate voices on them.
+ *
+ * After reservation, adl_rt_rawOplCommand() can be used to drive those
+ * channels directly without MIDI playback stealing their voices. Rhythm-mode
+ * channels (per-chip indices 18..22) may also be reserved.
+ *
+ * Channel indices are per-chip (not global): bit N of channelMask corresponds
+ * to per-chip channel N in [0..NUM_OF_CHANNELS-1] (currently 23, matching the
+ * internal MIDIplay channel count for a single OPL3 chip).
+ *
+ * The reservation persists across partialReset() / resetMIDI() / file loads;
+ * pass channelMask = 0 to release.
+ *
+ * @param device       Instance of the library.
+ * @param chipId       Zero-based chip index (0..adl_getNumChipsObtained()-1).
+ * @param channelMask  Bitmask of per-chip channels to reserve.
+ * @return 0 on success, -1 on invalid device, -2 on chipId out of range.
+ */
+extern ADLMIDI_DECLSPEC int adl_reserveChipChannels(struct ADL_MIDIPlayer *device,
+                                                    int chipId,
+                                                    unsigned int channelMask);
+
+/**
+ * @brief Read back the chip-channel reservation mask previously set via
+ *        adl_reserveChipChannels().
+ * @param device  Instance of the library.
+ * @param chipId  Zero-based chip index.
+ * @return The reservation mask, or 0 if device is null / chipId is out of range.
+ */
+extern ADLMIDI_DECLSPEC unsigned int adl_getReservedChipChannels(struct ADL_MIDIPlayer *device,
+                                                                 int chipId);
+
 
 
 

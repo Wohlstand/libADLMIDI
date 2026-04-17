@@ -169,6 +169,11 @@ void MIDIplay::applySetup()
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
 
+    // Preserve caller's chip-channel reservations across chip resets;
+    // just grow the vector to match the new chip count if needed.
+    if(m_reservedChipChannels.size() < synth.m_numChips)
+        m_reservedChipChannels.resize(synth.m_numChips, 0u);
+
     // Reset the arpeggio counter
     m_arpeggioCounter = 0;
 }
@@ -182,6 +187,8 @@ void MIDIplay::partialReset()
     chipReset();
     m_chipChannels.clear();
     m_chipChannels.resize((size_t)synth.m_numChannels);
+    if(m_reservedChipChannels.size() < synth.m_numChips)
+        m_reservedChipChannels.resize(synth.m_numChips, 0u);
     resetMIDIDefaults();
 }
 
@@ -550,6 +557,15 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         {
             if(ccount == 1 && static_cast<int32_t>(a) == chipChannel[0]) continue;
             // ^ Don't use the same channel for primary&secondary
+
+            // Skip chip channels reserved by the user for raw OPL writes.
+            {
+                size_t chipIdx = a / NUM_OF_CHANNELS;
+                size_t localCh = a % NUM_OF_CHANNELS;
+                if(chipIdx < m_reservedChipChannels.size() &&
+                   (m_reservedChipChannels[chipIdx] >> localCh) & 1u)
+                    continue;
+            }
 
             if(is_2op || pseudo_4op)
             {
@@ -1209,6 +1225,36 @@ void MIDIplay::realTime_rawOPL(uint8_t reg, uint8_t value)
     //std::printf("OPL poke %02X, %02X\n", reg, value);
     //std::fflush(stdout);
     synth.writeReg(0, reg, value);
+}
+
+int MIDIplay::realTime_rawOPL_Chip(size_t chipId, uint16_t reg, uint8_t value)
+{
+    Synth &synth = *m_synth;
+    if(chipId >= synth.m_numChips)
+        return 0;
+    // Note: intentionally no 0xC0 |= 0x30 fixup here. The public API
+    // documents that the caller is driving the chip directly and is
+    // responsible for whatever bits they want in panning/connection.
+    synth.writeReg(chipId, reg, value);
+    return 1;
+}
+
+int MIDIplay::reserveChipChannels(size_t chipId, uint32_t channelMask)
+{
+    Synth &synth = *m_synth;
+    if(chipId >= synth.m_numChips)
+        return 0;
+    if(m_reservedChipChannels.size() < synth.m_numChips)
+        m_reservedChipChannels.resize(synth.m_numChips, 0u);
+    m_reservedChipChannels[chipId] = channelMask;
+    return 1;
+}
+
+uint32_t MIDIplay::getReservedChipChannels(size_t chipId) const
+{
+    if(chipId >= m_reservedChipChannels.size())
+        return 0u;
+    return m_reservedChipChannels[chipId];
 }
 
 #if defined(ADLMIDI_AUDIO_TICK_HANDLER)

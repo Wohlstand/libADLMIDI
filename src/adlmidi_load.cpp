@@ -272,6 +272,8 @@ bool MIDIplay::LoadMIDI_post()
     //opl.Reset(); // ...twice (just in case someone misprogrammed OPL3 previously)
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
+    if(m_reservedChipChannels.size() < synth.m_numChips)
+        m_reservedChipChannels.resize(synth.m_numChips, 0u);
 
     if(setToOPL2)
         synth.toggleOPL3(false);

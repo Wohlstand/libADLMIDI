@@ -1928,3 +1928,45 @@ ADLMIDI_EXPORT int adl_rt_systemExclusive(struct ADL_MIDIPlayer *device, const A
     assert(play);
     return play->realTime_SysEx(msg, size);
 }
+
+ADLMIDI_EXPORT int adl_rt_rawOplCommand(struct ADL_MIDIPlayer *device,
+                                        int chipId,
+                                        ADL_UInt16 reg,
+                                        ADL_UInt8 value)
+{
+    if(!device)
+        return 0;
+    if(chipId < 0)
+        return 0;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    return play->realTime_rawOPL_Chip(static_cast<size_t>(chipId),
+                                      static_cast<uint16_t>(reg),
+                                      static_cast<uint8_t>(value));
+}
+
+ADLMIDI_EXPORT int adl_reserveChipChannels(struct ADL_MIDIPlayer *device,
+                                           int chipId,
+                                           unsigned int channelMask)
+{
+    if(!device)
+        return -1;
+    if(chipId < 0)
+        return -2;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    if(!play->reserveChipChannels(static_cast<size_t>(chipId),
+                                  static_cast<uint32_t>(channelMask)))
+        return -2;
+    return 0;
+}
+
+ADLMIDI_EXPORT unsigned int adl_getReservedChipChannels(struct ADL_MIDIPlayer *device,
+                                                        int chipId)
+{
+    if(!device || chipId < 0)
+        return 0u;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    return static_cast<unsigned int>(play->getReservedChipChannels(static_cast<size_t>(chipId)));
+}
