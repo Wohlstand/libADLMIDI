@@ -331,6 +331,43 @@ static MutexType g_audioBuffer_lock;
 static ADLMIDI_AudioFormat g_audioFormat;
 static float g_gaining = 2.0f;
 
+static void fillAudioFormat(const AudioOutputSpec &spec)
+{
+    switch(spec.format)
+    {
+    case ADLMIDI_SampleType_S8:
+        g_audioFormat.type = ADLMIDI_SampleType_S8;
+        g_audioFormat.containerSize = sizeof(int8_t);
+        g_audioFormat.sampleOffset = sizeof(int8_t) * 2;
+        break;
+    case ADLMIDI_SampleType_U8:
+        g_audioFormat.type = ADLMIDI_SampleType_U8;
+        g_audioFormat.containerSize = sizeof(uint8_t);
+        g_audioFormat.sampleOffset = sizeof(uint8_t) * 2;
+        break;
+    case ADLMIDI_SampleType_S16:
+        g_audioFormat.type = ADLMIDI_SampleType_S16;
+        g_audioFormat.containerSize = sizeof(int16_t);
+        g_audioFormat.sampleOffset = sizeof(int16_t) * 2;
+        break;
+    case ADLMIDI_SampleType_U16:
+        g_audioFormat.type = ADLMIDI_SampleType_U16;
+        g_audioFormat.containerSize = sizeof(uint16_t);
+        g_audioFormat.sampleOffset = sizeof(uint16_t) * 2;
+        break;
+    case ADLMIDI_SampleType_S32:
+        g_audioFormat.type = ADLMIDI_SampleType_S32;
+        g_audioFormat.containerSize = sizeof(int32_t);
+        g_audioFormat.sampleOffset = sizeof(int32_t) * 2;
+        break;
+    case ADLMIDI_SampleType_F32:
+        g_audioFormat.type = ADLMIDI_SampleType_F32;
+        g_audioFormat.containerSize = sizeof(float);
+        g_audioFormat.sampleOffset = sizeof(float) * 2;
+        break;
+    }
+}
+
 static void applyGain(uint8_t *buffer, size_t bufferSize)
 {
     size_t i;
@@ -948,39 +985,7 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                      audio_format_to_str(obtained.format, obtained.is_msb), obtained.samples, obtained.freq, obtained.channels);
     }
 
-    switch(obtained.format)
-    {
-    case ADLMIDI_SampleType_S8:
-        g_audioFormat.type = ADLMIDI_SampleType_S8;
-        g_audioFormat.containerSize = sizeof(int8_t);
-        g_audioFormat.sampleOffset = sizeof(int8_t) * 2;
-        break;
-    case ADLMIDI_SampleType_U8:
-        g_audioFormat.type = ADLMIDI_SampleType_U8;
-        g_audioFormat.containerSize = sizeof(uint8_t);
-        g_audioFormat.sampleOffset = sizeof(uint8_t) * 2;
-        break;
-    case ADLMIDI_SampleType_S16:
-        g_audioFormat.type = ADLMIDI_SampleType_S16;
-        g_audioFormat.containerSize = sizeof(int16_t);
-        g_audioFormat.sampleOffset = sizeof(int16_t) * 2;
-        break;
-    case ADLMIDI_SampleType_U16:
-        g_audioFormat.type = ADLMIDI_SampleType_U16;
-        g_audioFormat.containerSize = sizeof(uint16_t);
-        g_audioFormat.sampleOffset = sizeof(uint16_t) * 2;
-        break;
-    case ADLMIDI_SampleType_S32:
-        g_audioFormat.type = ADLMIDI_SampleType_S32;
-        g_audioFormat.containerSize = sizeof(int32_t);
-        g_audioFormat.sampleOffset = sizeof(int32_t) * 2;
-        break;
-    case ADLMIDI_SampleType_F32:
-        g_audioFormat.type = ADLMIDI_SampleType_F32;
-        g_audioFormat.containerSize = sizeof(float);
-        g_audioFormat.sampleOffset = sizeof(float) * 2;
-        break;
-    }
+    fillAudioFormat(obtained);
 
 #if defined(ENABLE_TERMINAL_HOTKEYS)
     int bankId = 59;
@@ -1161,39 +1166,56 @@ static int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 }
 #   endif // OUTPUT_WAVE_ONLY
 
-static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, unsigned sampleRate)
+static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, const AudioOutputSpec &obtained, unsigned sampleRate)
 {
     std::string wave_out = musPath + ".wav";
-    s_fprintf(stdout, " - Recording WAV file %s...\n", wave_out.c_str());
-    s_fprintf(stdout, "\n==========================================\n");
-    flushout(stdout);
 
-    if(wave_open(static_cast<long>(sampleRate), wave_out.c_str()) == 0)
+    fillAudioFormat(obtained);
+
+    s_fprintf(stdout, " - Output WAV spec (format=%s,samples=%d,rate=%u,channels=%u);\n",
+                      audio_format_to_str(obtained.format, obtained.is_msb), obtained.samples, obtained.freq, obtained.channels);
+
+    int wav_format = obtained.format == ADLMIDI_SampleType_F32 ? WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
+    int wav_has_sign = obtained.format != ADLMIDI_SampleType_U8 && obtained.format != ADLMIDI_SampleType_U16;
+
+    void *wav_ctx = ctx_wave_open(obtained.channels,
+                                  static_cast<long>(sampleRate),
+                                  g_audioFormat.containerSize,
+                                  wav_format,
+                                  wav_has_sign,
+                                  (int)obtained.is_msb,
+                                  wave_out.c_str()
+                                  );
+
+    if(wav_ctx)
     {
-        wave_enable_stereo();
-        int16_t buff[4096];
+        uint8_t buff[16384];
+
+        s_fprintf(stdout, " - Recording WAV file %s...\n", wave_out.c_str());
+        s_fprintf(stdout, "\n==========================================\n");
+        flushout(stdout);
 
         setCursorVisibility(false);
 
         while(!stop)
         {
-            size_t got = static_cast<size_t>(adl_play(myDevice, 4096, buff));
-
+            size_t got = (size_t)adl_playFormat(myDevice, 4096,
+                                                buff,
+                                                buff + g_audioFormat.containerSize,
+                                                &g_audioFormat) * g_audioFormat.containerSize;
             if(got <= 0)
                 break;
 
-            int16_t *buf = buff;
-            for(size_t i = 0; i < got; ++i)
-                *(buf++) *= g_gaining;
+            applyGain(buff, got);
 
-            wave_write(buff, static_cast<long>(got));
+            ctx_wave_write(wav_ctx, buff, static_cast<long>(got));
 
             s_timeCounter.printProgress(adl_positionTell(myDevice));
         }
 
         setCursorVisibility(true);
 
-        wave_close();
+        ctx_wave_close(wav_ctx);
         s_timeCounter.clearLine();
 
         if(stop)
@@ -1699,7 +1721,8 @@ static struct Args
             else if(!std::strcmp("-v", argv[2]))
                 setHwVibrato = 1;
 
-#if !defined(OUTPUT_WAVE_ONLY) && !defined(ADLMIDI_ENABLE_HW_DOS)
+#if !defined(ADLMIDI_ENABLE_HW_DOS)
+#   if !defined(OUTPUT_WAVE_ONLY)
             else if(!std::strcmp("-w", argv[2]))
             {
                 //Current Wave output implementation allows only SINT16 output
@@ -1708,17 +1731,18 @@ static struct Args
                 g_audioFormat.sampleOffset = sizeof(int16_t) * 2;
                 recordWave = true;//Record library output into WAV file
             }
-            else if(!std::strcmp("-s8", argv[2]) && !recordWave)
+#   endif
+            else if(!std::strcmp("-s8", argv[2]))
                 spec.format = ADLMIDI_SampleType_S8;
-            else if(!std::strcmp("-u8", argv[2]) && !recordWave)
+            else if(!std::strcmp("-u8", argv[2]))
                 spec.format = ADLMIDI_SampleType_U8;
-            else if(!std::strcmp("-s16", argv[2]) && !recordWave)
+            else if(!std::strcmp("-s16", argv[2]))
                 spec.format = ADLMIDI_SampleType_S16;
-            else if(!std::strcmp("-u16", argv[2]) && !recordWave)
+            else if(!std::strcmp("-u16", argv[2]))
                 spec.format = ADLMIDI_SampleType_U16;
-            else if(!std::strcmp("-s32", argv[2]) && !recordWave)
+            else if(!std::strcmp("-s32", argv[2]))
                 spec.format = ADLMIDI_SampleType_S32;
-            else if(!std::strcmp("-f32", argv[2]) && !recordWave)
+            else if(!std::strcmp("-f32", argv[2]))
                 spec.format = ADLMIDI_SampleType_F32;
 #endif
 
@@ -2330,7 +2354,7 @@ int main(int argc, char **argv)
     else
 #   endif //OUTPUT_WAVE_ONLY
     {
-        int ret = runWaveOutLoopLoop(myDevice, s_devSetup.musPath, s_devSetup.sampleRate);
+        int ret = runWaveOutLoopLoop(myDevice, s_devSetup.musPath, s_devSetup.spec, s_devSetup.sampleRate);
         if(ret != 0)
         {
             adl_close(myDevice);
