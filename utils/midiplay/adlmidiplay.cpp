@@ -1171,15 +1171,21 @@ static int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPa
     if(wave_open(static_cast<long>(sampleRate), wave_out.c_str()) == 0)
     {
         wave_enable_stereo();
-        short buff[4096];
+        int16_t buff[4096];
 
         setCursorVisibility(false);
 
         while(!stop)
         {
             size_t got = static_cast<size_t>(adl_play(myDevice, 4096, buff));
+
             if(got <= 0)
                 break;
+
+            int16_t *buf = buff;
+            for(size_t i = 0; i < got; ++i)
+                *(buf++) *= g_gaining;
+
             wave_write(buff, static_cast<long>(got));
 
             s_timeCounter.printProgress(adl_positionTell(myDevice));
