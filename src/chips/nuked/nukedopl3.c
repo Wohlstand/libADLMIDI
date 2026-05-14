@@ -1151,6 +1151,7 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
     uint8_t ii;
     int16_t accm;
     uint8_t shift = 0;
+    uint8_t update_tremolo;
 
     buf4[1] = OPL3_ClipSample(chip->mixbuff[1]);
     buf4[3] = OPL3_ClipSample(chip->mixbuff[3]);
@@ -1245,6 +1246,7 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
     }
 #endif
 
+    update_tremolo = chip->tremolo_dirty;
     if ((chip->timer & 0x3f) == 0x3f)
     {
         chip->tremolopos++;
@@ -1252,6 +1254,10 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
         {
             chip->tremolopos = 0;
         }
+        update_tremolo = 1;
+    }
+    if (update_tremolo)
+    {
         if (chip->tremolopos < 105)
         {
             chip->tremolo = chip->tremolopos >> chip->tremoloshift;
@@ -1260,6 +1266,7 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
         {
             chip->tremolo = (210 - chip->tremolopos) >> chip->tremoloshift;
         }
+        chip->tremolo_dirty = 0;
     }
 
     if ((chip->timer & 0x3ff) == 0x3ff)
@@ -1520,16 +1527,13 @@ void OPL3_WriteReg(opl3_chip *chip, uint16_t reg, uint8_t v)
     case 0xb0:
         if (regm == 0xbd && !high)
         {
-            chip->tremoloshift = (((v >> 7) ^ 1) << 1) + 2;
+            uint8_t tremoloshift = (((v >> 7) ^ 1) << 1) + 2;
+            if (chip->tremoloshift != tremoloshift)
+            {
+                chip->tremolo_dirty = 1;
+            }
+            chip->tremoloshift = tremoloshift;
             chip->vibshift = ((v >> 6) & 0x01) ^ 1;
-            if (chip->tremolopos < 105)
-            {
-                chip->tremolo = chip->tremolopos >> chip->tremoloshift;
-            }
-            else
-            {
-                chip->tremolo = (210 - chip->tremolopos) >> chip->tremoloshift;
-            }
             OPL3_ChannelUpdateRhythm(chip, v);
         }
         else if ((regm & 0x0f) < 9)

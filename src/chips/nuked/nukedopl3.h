@@ -157,6 +157,7 @@ struct _opl3_chip {
     uint8_t tremolo;
     uint8_t tremolopos;
     uint8_t tremoloshift;
+    uint8_t tremolo_dirty;
     uint32_t noise;
     int16_t zeromod;
     int32_t mixbuff[4];
@@ -201,4 +202,3 @@ void OPL3_Generate4ChStream(opl3_chip *chip, int16_t *sndptr1, int16_t *sndptr2,
 #endif
 
 #endif
-
