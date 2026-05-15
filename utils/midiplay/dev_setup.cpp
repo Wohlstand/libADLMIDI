@@ -210,7 +210,7 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             " --gain <value> Set the gaining factor (default 2.0)\n"
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
-            " --emu-nuked7 Uses Nuked OPL3 v 1.7.4 emulator\n"
+            " --emu-nuked7 Uses Nuked OPL3 Fast emulator\n"
             " --emu-nuked-opl2 Uses Nuked OPL2 Lite emulator\n"
 #   endif
 #   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR

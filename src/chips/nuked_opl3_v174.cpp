@@ -19,7 +19,7 @@
  */
 
 #include "nuked_opl3_v174.h"
-#include "nuked/nukedopl3_174.h"
+#include "nuked_fast/nukedopl3_fast.h"
 #include <cstring>
 
 NukedOPL3v174::NukedOPL3v174() :
@@ -40,7 +40,7 @@ void NukedOPL3v174::setRate(uint32_t rate)
     OPLChipBaseT::setRate(rate);
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
     std::memset(chip_r, 0, sizeof(opl3_chip));
-    OPL3v17_Reset(chip_r, rate);
+    OPL3Fast_Reset(chip_r, rate);
 }
 
 void NukedOPL3v174::reset()
@@ -48,30 +48,30 @@ void NukedOPL3v174::reset()
     OPLChipBaseT::reset();
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
     std::memset(chip_r, 0, sizeof(opl3_chip));
-    OPL3v17_Reset(chip_r, m_rate);
+    OPL3Fast_Reset(chip_r, m_rate);
 }
 
 void NukedOPL3v174::writeReg(uint16_t addr, uint8_t data)
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
-    OPL3v17_WriteReg(chip_r, addr, data);
+    OPL3Fast_WriteReg(chip_r, addr, data);
 }
 
 void NukedOPL3v174::writePan(uint16_t addr, uint8_t data)
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
-    OPL3v17_WritePan(chip_r, addr, data);
+    OPL3Fast_WritePan(chip_r, addr, data);
 }
 
 void NukedOPL3v174::nativeGenerate(int16_t *frame)
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
-    OPL3v17_Generate(chip_r, frame);
+    OPL3Fast_Generate(chip_r, frame);
 }
 
 const char *NukedOPL3v174::emulatorName()
 {
-    return "Nuked OPL3 (v 1.7.4)";
+    return "Nuked OPL3 Fast (by tgies)";
 }
 
 bool NukedOPL3v174::hasFullPanning()

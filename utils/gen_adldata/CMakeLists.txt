@@ -60,7 +60,9 @@ if(USE_DOSBOX_EMULATOR)
     set(HAS_EMULATOR TRUE)
     list(APPEND GEN_ADLDATA_SRC
         ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl3.cpp
+        ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl3.h
         ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/dbopl.cpp
+        ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/dbopl.h
     )
 else()
     add_definitions(-DADLMIDI_DISABLE_DOSBOX_EMULATOR)
@@ -70,9 +72,13 @@ if(USE_NUKED_EMULATOR)
     set(HAS_EMULATOR TRUE)
     list(APPEND GEN_ADLDATA_SRC
         ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3.cpp       # v 1.8
+        ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3.h
         ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3.c
+        ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3.h
         ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.cpp  # v 1.7.4
-        ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3_174.c
+        ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.h
+        ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_fast/nukedopl3_fast.c
+        ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_fast/nukedopl3_fast.h
     )
 else()
     add_definitions(-DADLMIDI_DISABLE_NUKED_EMULATOR)
