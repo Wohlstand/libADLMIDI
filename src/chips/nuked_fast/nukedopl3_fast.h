@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #ifndef OPL_ENABLE_STEREOEXT
 #define OPL_ENABLE_STEREOEXT 1 /* libADLMIDI: always-on for soft-pan API */
