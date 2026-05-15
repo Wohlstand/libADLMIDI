@@ -1368,7 +1368,7 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
 #if OPL_ENABLE_STEREOEXT
         mix[0] += (int16_t)((accm * channel->leftpan) >> 16);
 #else
-        mix[0] += (int16_t)(accm & channel->cha);
+        mix[0] += (int16_t)((accm * chip->channel[ii].chl / 65535) & channel->cha);
 #endif
         mix[1] += (int16_t)(accm & channel->chc);
     }
@@ -1401,7 +1401,7 @@ inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
 #if OPL_ENABLE_STEREOEXT
         mix[0] += (int16_t)((accm * channel->rightpan) >> 16);
 #else
-        mix[0] += (int16_t)(accm & channel->chb);
+        mix[0] += (int16_t)((accm * chip->channel[ii].chr / 65535) & channel->chb);
  #endif
         mix[1] += (int16_t)(accm & channel->chd);
     }
