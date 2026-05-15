@@ -30,8 +30,6 @@
  * version: 1.8
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "nukedopl3.h"
 
@@ -1337,7 +1335,7 @@ static void OPL3_ProcessSlot(opl3_slot *slot)
     OPL3_SlotGenerate(slot);
 }
 
-inline void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
+void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4)
 {
     opl3_channel *channel;
     opl3_writebuf *writebuf;
