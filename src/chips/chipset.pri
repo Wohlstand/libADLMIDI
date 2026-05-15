@@ -42,6 +42,7 @@ HEADERS+= \
     $$PWD/dosbox/dbopl.h \
     $$PWD/nuked_opl3_v174.h \
     $$PWD/nuked_fast/nukedopl3_fast.h \
+    $$PWD/nuked_fast/wf_rom.h \
     $$PWD/ymf262_lle.h \
     $$PWD/ymf262_lle/nuked_fmopl3.h \
     $$PWD/ymf262_lle/nopl3.h \
