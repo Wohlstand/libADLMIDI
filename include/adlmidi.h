@@ -714,8 +714,8 @@ enum ADL_Emulator
 {
     /*! Nuked OPL3 v. 1.8 */
     ADLMIDI_EMU_NUKED = 0,
-    /*! Nuked OPL3 v. 1.7.4 */
-    ADLMIDI_EMU_NUKED_174,
+    /*! Nuked OPL3 Fast (Optimised fork by tgies) */
+    ADLMIDI_EMU_NUKED_FAST,
     /*! DosBox */
     ADLMIDI_EMU_DOSBOX,
     /*! Opal */
@@ -737,7 +737,10 @@ enum ADL_Emulator
     /*! Nuked OPL2 Lite */
     ADLMIDI_EMU_NUKED_OPL2_LITE,
     /*! Count instrument on the level */
-    ADLMIDI_EMU_end
+    ADLMIDI_EMU_end,
+
+    /* Fallbacks */
+    ADLMIDI_EMU_NUKED_174 = ADLMIDI_EMU_NUKED_FAST
 };
 
 /**
