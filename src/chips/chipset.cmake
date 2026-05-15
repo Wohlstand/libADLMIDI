@@ -30,6 +30,7 @@ set(CHIPS_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/nuked_opl3_v174.h"
     "${CMAKE_CURRENT_LIST_DIR}/nuked_fast/nukedopl3_fast.c"
     "${CMAKE_CURRENT_LIST_DIR}/nuked_fast/nukedopl3_fast.h"
+    "${CMAKE_CURRENT_LIST_DIR}/nuked_fast/wf_rom.h"
     "${CMAKE_CURRENT_LIST_DIR}/ymf262_lle.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/ymf262_lle.h"
     "${CMAKE_CURRENT_LIST_DIR}/ymf262_lle/nuked_fmopl3.c"
