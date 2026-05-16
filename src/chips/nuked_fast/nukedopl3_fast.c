@@ -172,7 +172,6 @@ static const uint8_t eg_incstep[4][4] = {
     { 1, 1, 1, 0 }
 };
 
-#if OPL_ENABLE_STEREOEXT
 static const uint16_t panlawtable[] =
 {
     65535, 65529, 65514, 65489, 65454, 65409, 65354, 65289,
@@ -194,7 +193,6 @@ static const uint16_t panlawtable[] =
     11291, 10492, 9691, 8888, 8085, 7280, 6473, 5666,
     4858, 4050, 3240, 2431, 1620, 810, 0
 };
-#endif
 
 /*
     address decoding
@@ -1167,26 +1165,33 @@ void OPL3Fast_Generate4Ch(opl3_chip *chip, int16_t *buf4)
     {
         channel = &chip->channel[ii];
         if (!channel->out_cnt) continue;
+        /*
 #if OPL_ENABLE_STEREOEXT
         if (!(channel->leftpan | channel->chc)) continue;
 #else
         if (!(channel->cha | channel->chc)) continue;
-#endif
+#endif */
         out = channel->out;
-        accm = *out[0];
-        if (channel->out_cnt > 1)
+        accm = 0;
+
+        switch(channel->out_cnt)
         {
-            accm += *out[1];
-            if (channel->out_cnt > 2)
-            {
-                accm += *out[2];
-                if (channel->out_cnt > 3) accm += *out[3];
-            }
+        case 4:
+            accm += *out[3]; /* fallthrough */
+        case 3:
+            accm += *out[2]; /* fallthrough */
+        case 2:
+            accm += *out[1]; /* fallthrough */
+        case 1:
+            accm += *out[0];
+        default:
+            break;
         }
+
 #if OPL_ENABLE_STEREOEXT
         mix[0] += (int16_t)(((accm * channel->leftpan) >> 16) & channel->cha);
 #else
-        mix[0] += (int16_t)(accm & channel->cha);
+        mix[0] += (int16_t)((accm * chip->channel[ii].chl / 65535) & channel->cha);
 #endif
         mix[1] += (int16_t)(accm & channel->chc);
     }
@@ -1216,20 +1221,25 @@ void OPL3Fast_Generate4Ch(opl3_chip *chip, int16_t *buf4)
         channel = &chip->channel[ii];
         if (!channel->out_cnt) continue;
         out = channel->out;
-        accm = *out[0];
-        if (channel->out_cnt > 1)
+        accm = 0;
+
+        switch(channel->out_cnt)
         {
-            accm += *out[1];
-            if (channel->out_cnt > 2)
-            {
-                accm += *out[2];
-                if (channel->out_cnt > 3) accm += *out[3];
-            }
+        case 4:
+            accm += *out[3]; /* fallthrough */
+        case 3:
+            accm += *out[2]; /* fallthrough */
+        case 2:
+            accm += *out[1]; /* fallthrough */
+        case 1:
+            accm += *out[0];
+        default:
+            break;
         }
 #if OPL_ENABLE_STEREOEXT
         mix[0] += (int16_t)(((accm * channel->rightpan) >> 16) & channel->chb);
 #else
-        mix[0] += (int16_t)(accm & channel->chb);
+        mix[0] += (int16_t)((accm * chip->channel[ii].chr / 65535) & channel->chb);
 #endif
         mix[1] += (int16_t)(accm & channel->chd);
     }
@@ -1408,6 +1418,8 @@ void OPL3Fast_Reset(opl3_chip *chip, uint32_t samplerate)
         channel->chtype = ch_2op;
         channel->cha = 0xffff;
         channel->chb = 0xffff;
+        channel->chl = 46340;
+        channel->chr = 46340;
 #if OPL_ENABLE_STEREOEXT
         channel->leftpan = 0x10000;
         channel->rightpan = 0x10000;
@@ -1433,6 +1445,14 @@ void OPL3Fast_Reset(opl3_chip *chip, uint32_t samplerate)
 #endif
 }
 
+#if !OPL_ENABLE_STEREOEXT
+static void OPL3_ChannelWritePan(opl3_channel *channel, uint8_t data)
+{
+    channel->chl = panlawtable[data & 0x7F];
+    channel->chr = panlawtable[0x7F - (data & 0x7F)];
+}
+#endif
+
 /* libADLMIDI-local soft-pan API (was kode54's, libADLMIDI commit 0f69d50). */
 void OPL3Fast_WritePan(opl3_chip *chip, uint16_t reg, uint8_t v)
 {
@@ -1444,7 +1464,9 @@ void OPL3Fast_WritePan(opl3_chip *chip, uint16_t reg, uint8_t v)
     channel->leftpan  = panlawtable[data];
     channel->rightpan = panlawtable[0x7f - data];
 #else
-    (void)chip; (void)reg; (void)v;
+    uint8_t high = (reg >> 8) & 0x01;
+    uint8_t regm = reg & 0xff;
+    OPL3_ChannelWritePan(&chip->channel[9 * high + (regm & 0x0f)], v);
 #endif
 }
 

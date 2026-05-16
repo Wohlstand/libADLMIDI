@@ -57,7 +57,7 @@ extern "C" {
 #include <stdint.h>
 
 #ifndef OPL_ENABLE_STEREOEXT
-#define OPL_ENABLE_STEREOEXT 1 /* libADLMIDI: always-on for soft-pan API */
+#define OPL_ENABLE_STEREOEXT 0
 #endif
 
 #ifndef OPL_QUIRK_CHANNELSAMPLEDELAY
@@ -131,6 +131,7 @@ struct _opl3_channel {
     uint8_t ksv;
     uint16_t cha, chb;
     uint16_t chc, chd;
+    uint16_t chl, chr;
     uint8_t ch_num;
 };
 
