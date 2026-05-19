@@ -1,14 +1,13 @@
 
-if(NOT ADLMIDI_DOS AND NOT MIDIPLAY_WAVE_ONLY)
-    if(NOT WIN32)
-        libADLMIDI_find_SDL3()
-        if(TARGET ADLMIDI_SDL3)
-            set(USE_SDL3_AUDIO 1)
-        else()
-            libADLMIDI_find_SDL2()
-            set(USE_SDL2_AUDIO 1)
-        endif()
+if(UNIX AND NOT APPLE)
+    set(USE_ALSA_AUDIO 1)
+elseif(NOT ADLMIDI_DOS AND NOT WIN32 AND NOT MIDIPLAY_WAVE_ONLY)
+    libADLMIDI_find_SDL3()
+    if(TARGET ADLMIDI_SDL3)
+        set(USE_SDL3_AUDIO 1)
     else()
+        libADLMIDI_find_SDL2()
+        set(USE_SDL2_AUDIO 1)
     endif()
 endif()
 
@@ -25,6 +24,12 @@ set(ADLMIDI_PLAY_SRC
 if(USE_SDL2_AUDIO OR USE_SDL3_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
         audio_sdl.c
+    )
+endif()
+
+if(USE_ALSA_AUDIO AND NOT USE_SDL2_AUDIO AND NOT USE_SDL3_AUDIO)
+    list(APPEND ADLMIDI_PLAY_SRC
+        audio_alsa.c
     )
 endif()
 
@@ -53,6 +58,8 @@ if(USE_SDL3_AUDIO)
 elseif(USE_SDL2_AUDIO)
     target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL2)
     target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL2)
+elseif(USE_ALSA_AUDIO)
+    target_link_libraries(adlmidiplay PRIVATE asound)
 elseif(WIN32)
     target_link_libraries(adlmidiplay PRIVATE winmm)
 endif()
