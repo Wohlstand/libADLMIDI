@@ -89,6 +89,7 @@ static void CALLBACK s_waveOutProc(HWAVEOUT waveout, UINT msg, DWORD_PTR userDat
 int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback)
 {
     WORD bits = 16;
+    WORD format = WAVE_FORMAT_PCM;
     WAVEFORMATEX wformat;
     MMRESULT result;
 
@@ -98,20 +99,26 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
 
     g_audioCallback = callback;
 
+    out_obtained->channels = in_spec->channels;
+    out_obtained->format = in_spec->format;
+    out_obtained->freq = in_spec->freq;
+    out_obtained->is_msb = in_spec->is_msb;
+    out_obtained->samples = in_spec->samples;
+
     switch(in_spec->format)
     {
     case ADLMIDI_SampleType_S8:
-        bits = 8; break;
+        bits = 8; out_obtained->format = OPNMIDI_SampleType_U8; break;
     case ADLMIDI_SampleType_U8:
         bits = 8; break;
     case ADLMIDI_SampleType_S16:
         bits = 16; break;
     case ADLMIDI_SampleType_U16:
-        bits = 16; break;
+        bits = 16; out_obtained->format = OPNMIDI_SampleType_S16; break;
     case ADLMIDI_SampleType_S32:
         bits = 32; break;
     case ADLMIDI_SampleType_F32:
-        bits = 32; break;
+        bits = 32; format = WAVE_FORMAT_IEEE_FLOAT; break;
     }
 
     g_bufferSize = in_spec->samples * (bits / 8) * in_spec->channels;
@@ -123,17 +130,11 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
         return -1;
     }
 
-    out_obtained->channels = in_spec->channels;
-    out_obtained->format = in_spec->format;
-    out_obtained->freq = in_spec->freq;
-    out_obtained->is_msb = in_spec->is_msb;
-    out_obtained->samples = in_spec->samples;
-
     memset(&wformat, 0, sizeof(wformat));
     wformat.cbSize = sizeof(WAVEFORMATEX);
     wformat.nChannels       = (WORD)in_spec->channels;
     wformat.nSamplesPerSec  = (WORD)in_spec->freq;
-    wformat.wFormatTag      = WAVE_FORMAT_PCM;
+    wformat.wFormatTag      = format;
     wformat.wBitsPerSample  = bits;
     wformat.nBlockAlign     = wformat.nChannels * (wformat.wBitsPerSample >> 3);
     wformat.nAvgBytesPerSec = wformat.nSamplesPerSec * wformat.nBlockAlign;
@@ -144,11 +145,18 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
         g_lastErrorMessage = "Could not open the audio device";
         return -1;
     }
+
     waveOutPause(g_waveOut);
     g_audioLock = audio_mutex_create();
 
     return 0;
 }
+
+int audio_is_big_endian(void)
+{
+    return 0;
+}
+
 
 void audio_close(void)
 {

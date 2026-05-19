@@ -40,6 +40,8 @@ struct AudioOutputSpec
 
 extern int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback);
 
+extern int audio_is_big_endian(void);
+
 extern void audio_close(void);
 
 extern const char* audio_get_error(void);

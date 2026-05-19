@@ -1563,7 +1563,7 @@ static struct Args
 #if !defined(ADLMIDI_ENABLE_HW_DOS) && !defined(OUTPUT_WAVE_ONLY)
         spec.freq     = sampleRate;
         spec.format   = ADLMIDI_SampleType_S16;
-        spec.is_msb   = 0;
+        spec.is_msb   = audio_is_big_endian();
         spec.channels = 2;
         spec.samples  = 1024; //uint16_t((double)spec.freq * AudioBufferLength);
 #endif

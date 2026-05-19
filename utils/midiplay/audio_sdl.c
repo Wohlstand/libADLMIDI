@@ -169,6 +169,15 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     return ret;
 }
 
+int audio_is_big_endian(void)
+{
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+    return 0;
+#else
+    return 1;
+#endif
+}
+
 void audio_close(void)
 {
 #if defined(ADLMIDI_USE_SDL3)

@@ -241,6 +241,15 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     return 0;
 }
 
+int audio_is_big_endian(void)
+{
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    return 0;
+#else
+    return 1;
+#endif
+}
+
 void audio_close(void)
 {
     audio_stop();
