@@ -108,13 +108,13 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     switch(in_spec->format)
     {
     case ADLMIDI_SampleType_S8:
-        bits = 8; out_obtained->format = OPNMIDI_SampleType_U8; break;
+        bits = 8; out_obtained->format = ADLMIDI_SampleType_U8; break;
     case ADLMIDI_SampleType_U8:
         bits = 8; break;
     case ADLMIDI_SampleType_S16:
         bits = 16; break;
     case ADLMIDI_SampleType_U16:
-        bits = 16; out_obtained->format = OPNMIDI_SampleType_S16; break;
+        bits = 16; out_obtained->format = ADLMIDI_SampleType_S16; break;
     case ADLMIDI_SampleType_S32:
         bits = 32; break;
     case ADLMIDI_SampleType_F32:
