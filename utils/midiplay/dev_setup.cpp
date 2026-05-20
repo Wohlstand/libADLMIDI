@@ -308,8 +308,8 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
         {
             //Current Wave output implementation allows only SINT16 output
             g_audioFormat.type = ADLMIDI_SampleType_S16;
-            g_audioFormat.containerSize = sizeof(int16_t);
-            g_audioFormat.sampleOffset = sizeof(int16_t) * 2;
+            g_audioFormat.containerSize = sizeof(ADL_SInt16);
+            g_audioFormat.sampleOffset = sizeof(ADL_SInt16) * 2;
             recordWave = true;//Record library output into WAV file
         }
 #   endif
