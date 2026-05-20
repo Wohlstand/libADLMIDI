@@ -23,11 +23,35 @@ include(../common/utf8main.cmake)
 
 set(ADLMIDI_PLAY_SRC
     adlmidiplay.cpp
+    dev_setup.cpp
+    dev_setup.h
     wave_writer.c
     wave_writer.h
     audio.h
+    misc.c
+    misc.h
+    time_counter.cpp
+    time_counter.h
+    playback_common.cpp
+    playback.h
     ${UTF8MAIN_SRCS}
 )
+
+if(ADLMIDI_DOS)
+    list(APPEND ADLMIDI_PLAY_SRC
+        playback_hw_dos.cpp
+    )
+else()
+    list(APPEND ADLMIDI_PLAY_SRC playback_wave.cpp)
+
+    if(NOT MIDIPLAY_WAVE_ONLY)
+        list(APPEND ADLMIDI_PLAY_SRC playback_audio.cpp)
+
+        if(USE_HW_SERIAL)
+            list(APPEND ADLMIDI_PLAY_SRC playback_hw_serial.cpp)
+        endif()
+    endif()
+endif()
 
 if(USE_SDL2_AUDIO OR USE_SDL3_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
@@ -50,6 +74,7 @@ endif()
 if(ADLMIDI_DOS)
     list(APPEND ADLMIDI_PLAY_SRC
         dos_tman.h
+        dos_tman_c.h
         dos_tman.cpp
     )
 endif()

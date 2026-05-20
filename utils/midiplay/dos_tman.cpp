@@ -33,6 +33,7 @@
 #include <stdarg.h>
 
 #include "dos_tman.h"
+#include "dos_tman_c.h"
 
 #define TIMER_IRQ               8
 #define BIOS_TIMER()            _farpeekl(_dos_ds, 0x46C)
@@ -386,4 +387,32 @@ DosTaskman::DosTask *DosTaskman::addTask(DosTaskman::DosTask &task)
     }
 
     return &*m_tasks.insert(m_tasks.end(), task);
+}
+
+
+/* C bindings */
+
+void dos_taskman_suspend(void)
+{
+    DosTaskman::suspend();
+}
+
+void dos_taskman_resume(void)
+{
+    DosTaskman::resume();
+}
+
+void dos_taskman_reserve_flush(FILE *stream)
+{
+    DosTaskman::reserve_flush(stream);
+}
+
+int dos_taskman_is_inside_interrupt(void)
+{
+    return DosTaskman::isInsideInterrupt() ? 1 : 0;
+}
+
+int dos_taskman_reserve_fprintf(FILE *stream, const char *format, va_list args)
+{
+    return DosTaskman::reserve_fprintf(stream, format, args);
 }

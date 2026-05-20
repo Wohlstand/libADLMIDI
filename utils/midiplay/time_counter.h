@@ -22,51 +22,60 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-#ifndef MIDIPLAY_AUDIO_H
-#define MIDIPLAY_AUDIO_H
 
-#ifdef __cplusplus
-extern "C"
+#pragma once
+#ifndef ADLMIDI_TIME_COUNTER_H
+#define ADLMIDI_TIME_COUNTER_H
+
+#include <stdint.h>
+#include "misc.h" // IWYU pragma: keep
+
+struct TimeCounter
 {
+    char posHMS[25];
+    char totalHMS[25];
+    char loopStartHMS[25];
+    char loopEndHMS[25];
+    char linebuff[81];
+#ifdef HAS_S_GETTIME
+    char realHMS[25];
 #endif
 
-typedef void (*AudioOutputCallback)(void *, unsigned char *stream, int len);
+    bool hasLoop;
+    uint64_t milliseconds_prev;
+    int printsCounter;
+    int printsCounterPeriod;
+    int complete_prev;
+    double totalTime;
 
-struct AudioOutputSpec
-{
-    unsigned int freq;
-    unsigned short format;
-    unsigned short is_msb;
-    unsigned short samples;
-    unsigned char  channels;
+#ifdef HAS_S_GETTIME
+    double realTimeStart;
+#endif
+
+    TimeCounter();
+
+    void setTotal(double total);
+
+    void setLoop(double loopStart, double loopEnd);
+
+#ifdef ADLMIDI_ENABLE_HW_DOS
+    void waitDosTimerTick();
+    void delay(int ticks);
+#endif
+
+    void initLineBuff();
+
+    void clearLineR();
+
+    void printTime(double pos);
+
+    void printProgress(double pos);
+
+    void clearLine();
+
 };
 
-extern int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback);
+extern TimeCounter s_timeCounter;
 
-extern int audio_is_big_endian(void);
 
-extern void audio_close(void);
-
-extern const char* audio_get_error(void);
-
-extern void audio_start(void);
-
-extern void audio_stop(void);
-
-extern void audio_lock(void);
-
-extern void audio_unlock(void);
-
-extern void audio_delay(unsigned int ms);
-
-extern void* audio_mutex_create(void);
-extern void  audio_mutex_destroy(void *m);
-extern void  audio_mutex_lock(void *m);
-extern void  audio_mutex_unlock(void *m);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* MIDIPLAY_AUDIO_H */
+#endif /* ADLMIDI_TIME_COUNTER_H */
