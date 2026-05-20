@@ -24,7 +24,6 @@
 
 #include <string>
 #include <cstdio>
-#include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>

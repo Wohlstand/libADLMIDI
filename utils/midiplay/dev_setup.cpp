@@ -25,15 +25,17 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <cctype>
 #include <cstring>
 #include "adlmidi.h"
 #include "misc.h"
 #include "dev_setup.h"
 
 
-Args s_devSetup;
-ADLMIDI_AudioFormat g_audioFormat;
-float g_gaining = 2.0f;
+Args                s_devSetup;
+
+ADLMIDI_AudioFormat g_audioFormat = {ADLMIDI_SampleType_S16, 0 ,0};
+float               g_gaining = 2.0f;
 
 
 static bool is_number(const std::string &s)
