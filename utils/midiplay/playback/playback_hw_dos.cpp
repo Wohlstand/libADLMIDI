@@ -24,9 +24,9 @@
 
 #include <cstdio>
 #include "playback.h"
-#include "dev_setup.h"
-#include "misc.h"
-#include "time_counter.h"
+#include "../dev_setup.h"
+#include "../misc.h"
+#include "../time_counter.h"
 #include "dos_tman.h"
 
 int s_curSong = 0;

@@ -1,30 +1,29 @@
 /*
- * ADLMIDI Player is a free MIDI player based on a libADLMIDI,
- * a Software MIDI synthesizer library with OPL3 emulation
+ * Simple cross-platform Audio Output wrapper
  *
- * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2015-2026 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2015-2026 Vitaly Novichkov <admin@wohlnet.ru>
  *
- * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
- * http://iki.fi/bisqwit/source/adlmidi.html
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #include "audio.h"
 
-#include <adlmidi.h>
 #include <malloc.h>
 #include <windows.h>
 #include <mmreg.h>
@@ -107,17 +106,17 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
 
     switch(in_spec->format)
     {
-    case ADLMIDI_SampleType_S8:
-        bits = 8; out_obtained->format = ADLMIDI_SampleType_U8; break;
-    case ADLMIDI_SampleType_U8:
+    case MidiPlay_SampleType_S8:
+        bits = 8; out_obtained->format = MidiPlay_SampleType_U8; break;
+    case MidiPlay_SampleType_U8:
         bits = 8; break;
-    case ADLMIDI_SampleType_S16:
+    case MidiPlay_SampleType_S16:
         bits = 16; break;
-    case ADLMIDI_SampleType_U16:
-        bits = 16; out_obtained->format = ADLMIDI_SampleType_S16; break;
-    case ADLMIDI_SampleType_S32:
+    case MidiPlay_SampleType_U16:
+        bits = 16; out_obtained->format = MidiPlay_SampleType_S16; break;
+    case MidiPlay_SampleType_S32:
         bits = 32; break;
-    case ADLMIDI_SampleType_F32:
+    case MidiPlay_SampleType_F32:
         bits = 32; format = WAVE_FORMAT_IEEE_FLOAT; break;
     }
 

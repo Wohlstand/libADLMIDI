@@ -23,50 +23,46 @@
  */
 
 #pragma once
-#ifndef MIDIPLAY_AUDIO_H
-#define MIDIPLAY_AUDIO_H
+#ifndef MIDIPLAY_PLAYBACK_H
+#define MIDIPLAY_PLAYBACK_H
 
-#ifdef __cplusplus
-extern "C"
-{
+#include "adlmidi.h"
+#if !defined(ADLMIDI_ENABLE_HW_DOS)
+#   include <stdint.h>
+#   include "../audio/audio.h"
+#   include <string>
+#else
+#   include "dos_tman.h"
 #endif
 
-typedef void (*AudioOutputCallback)(void *, unsigned char *stream, int len);
 
-struct AudioOutputSpec
-{
-    unsigned int freq;
-    unsigned short format;
-    unsigned short is_msb;
-    unsigned short samples;
-    unsigned char  channels;
-};
 
-extern int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback);
+extern int stop;
 
-extern int audio_is_big_endian(void);
+#if !defined(ADLMIDI_ENABLE_HW_DOS)
+const char* audio_format_to_str(int format, int is_msb);
+void fillAudioFormat(const AudioOutputSpec &spec);
 
-extern void audio_close(void);
-
-extern const char* audio_get_error(void);
-
-extern void audio_start(void);
-
-extern void audio_stop(void);
-
-extern void audio_lock(void);
-
-extern void audio_unlock(void);
-
-extern void audio_delay(unsigned int ms);
-
-extern void* audio_mutex_create(void);
-extern void  audio_mutex_destroy(void *m);
-extern void  audio_mutex_lock(void *m);
-extern void  audio_mutex_unlock(void *m);
-
-#ifdef __cplusplus
-}
+void applyGain(uint8_t *buffer, size_t bufferSize);
 #endif
 
-#endif /* MIDIPLAY_AUDIO_H */
+
+
+#if !defined(OUTPUT_WAVE_ONLY) && !defined(ADLMIDI_ENABLE_HW_DOS)
+int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec);
+#endif
+
+#if !defined(ADLMIDI_ENABLE_HW_DOS)
+int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, const AudioOutputSpec &obtained, unsigned sampleRate);
+#endif
+
+#if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
+void runHWSerialLoop(ADL_MIDIPlayer *myDevice);
+#endif
+
+#if defined(ADLMIDI_ENABLE_HW_DOS)
+extern int s_curSong;
+void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice);
+#endif
+
+#endif /* MIDIPLAY_PLAYBACK_H */

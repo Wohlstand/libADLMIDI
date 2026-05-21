@@ -29,7 +29,7 @@
 
 #include <string>
 #include <vector>
-#include "audio.h"
+#include "audio/audio.h"
 #include "adlmidi.h"
 
 struct Args

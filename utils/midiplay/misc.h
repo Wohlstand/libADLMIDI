@@ -30,9 +30,9 @@
 
 #if defined(__DJGPP__)
 #   ifdef __cplusplus
-#       include "dos_tman.h" // IWYU pragma: keep
+#       include "playback/dos_tman.h" // IWYU pragma: keep
 #   else
-#       include "dos_tman_c.h" // IWYU pragma: keep
+#       include "playback/dos_tman_c.h" // IWYU pragma: keep
 #   endif
 #endif
 

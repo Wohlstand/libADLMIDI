@@ -26,9 +26,9 @@
 #include <deque>
 #include <cstring>
 #include "playback.h"
-#include "dev_setup.h"
-#include "time_counter.h"
-#include "misc.h"
+#include "../dev_setup.h"
+#include "../time_counter.h"
+#include "../misc.h"
 
 
 class MutexType
@@ -55,7 +55,7 @@ static AudioBuff g_audioBuffer;
 static MutexType g_audioBuffer_lock;
 
 
-static void SDL_AudioCallbackX(void *, uint8_t *stream, int len)
+static void s_audioPlaybackCallback(void *, uint8_t *stream, int len)
 {
     unsigned ate = static_cast<unsigned>(len); // number of bytes
 
@@ -109,8 +109,8 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 
     AudioOutputSpec obtained;
 
-    // Set up SDL
-    if(audio_init(&spec, &obtained, SDL_AudioCallbackX) < 0)
+    // Set up Audio Output
+    if(audio_init(&spec, &obtained, s_audioPlaybackCallback) < 0)
     {
         s_fprintf(stdout, "\nERROR: Couldn't open audio: %s\n\n", audio_get_error());
         return 1;

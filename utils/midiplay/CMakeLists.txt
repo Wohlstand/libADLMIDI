@@ -25,57 +25,54 @@ set(ADLMIDI_PLAY_SRC
     adlmidiplay.cpp
     dev_setup.cpp
     dev_setup.h
-    wave_writer.c
-    wave_writer.h
-    audio.h
     misc.c
     misc.h
     time_counter.cpp
     time_counter.h
-    playback_common.cpp
-    playback.h
+    audio/audio.h
+    playback/playback_common.cpp
+    playback/playback.h
     ${UTF8MAIN_SRCS}
 )
 
 if(ADLMIDI_DOS)
     list(APPEND ADLMIDI_PLAY_SRC
-        playback_hw_dos.cpp
+        playback/playback_hw_dos.cpp
+        playback/dos_tman.h
+        playback/dos_tman_c.h
+        playback/dos_tman.cpp
     )
 else()
-    list(APPEND ADLMIDI_PLAY_SRC playback_wave.cpp)
+    list(APPEND ADLMIDI_PLAY_SRC
+        playback/playback_wave.cpp
+        playback/wave_writer.c
+        playback/wave_writer.h
+    )
 
     if(NOT MIDIPLAY_WAVE_ONLY)
-        list(APPEND ADLMIDI_PLAY_SRC playback_audio.cpp)
+        list(APPEND ADLMIDI_PLAY_SRC playback/playback_audio.cpp)
 
         if(USE_HW_SERIAL)
-            list(APPEND ADLMIDI_PLAY_SRC playback_hw_serial.cpp)
+            list(APPEND ADLMIDI_PLAY_SRC playback/playback_hw_serial.cpp)
         endif()
     endif()
 endif()
 
 if(USE_SDL2_AUDIO OR USE_SDL3_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
-        audio_sdl.c
+        audio/audio_sdl.c
     )
 endif()
 
 if(USE_ALSA_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
-        audio_alsa.c
+        audio/audio_alsa.c
     )
 endif()
 
 if(WIN32)
     list(APPEND ADLMIDI_PLAY_SRC
-        audio_winmm.c
-    )
-endif()
-
-if(ADLMIDI_DOS)
-    list(APPEND ADLMIDI_PLAY_SRC
-        dos_tman.h
-        dos_tman_c.h
-        dos_tman.cpp
+        audio/audio_winmm.c
     )
 endif()
 
@@ -87,10 +84,10 @@ add_executable(adlmidiplay ${ADLMIDI_PLAY_SRC})
 
 if(USE_SDL3_AUDIO)
     target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL3)
-    target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL3)
+    target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL3 MIDIPLAY_USE_SDL3)
 elseif(USE_SDL2_AUDIO)
     target_link_libraries(adlmidiplay PRIVATE ADLMIDI_SDL2)
-    target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL2)
+    target_compile_definitions(adlmidiplay PRIVATE ADLMIDI_USE_SDL2 MIDIPLAY_USE_SDL2)
 elseif(USE_ALSA_AUDIO)
     target_link_libraries(adlmidiplay PRIVATE asound)
 elseif(WIN32)

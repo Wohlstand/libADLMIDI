@@ -23,8 +23,8 @@
  */
 
 #include "playback.h"
-#include "misc.h"
-#include "time_counter.h"
+#include "../misc.h"
+#include "../time_counter.h"
 
 
 void runHWSerialLoop(ADL_MIDIPlayer *myDevice)

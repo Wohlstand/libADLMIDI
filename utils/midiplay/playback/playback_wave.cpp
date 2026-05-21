@@ -24,10 +24,10 @@
 
 #include <cstdio>
 
-#include "dev_setup.h"
 #include "playback.h"
-#include "misc.h"
-#include "time_counter.h"
+#include "../dev_setup.h"
+#include "../misc.h"
+#include "../time_counter.h"
 #include "wave_writer.h"
 
 

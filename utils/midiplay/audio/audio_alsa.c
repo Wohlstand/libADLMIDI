@@ -1,25 +1,25 @@
 /*
- * ADLMIDI Player is a free MIDI player based on a libADLMIDI,
- * a Software MIDI synthesizer library with OPL3 emulation
+ * Simple cross-platform Audio Output wrapper
  *
- * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2015-2026 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2015-2026 Vitaly Novichkov <admin@wohlnet.ru>
  *
- * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
- * http://iki.fi/bisqwit/source/adlmidi.html
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #include <unistd.h>
@@ -30,7 +30,6 @@
 #include <stdatomic.h>
 #endif
 
-#include <adlmidi.h>
 #include "audio.h"
 
 #define PCM_DEVICE "default"
@@ -59,24 +58,24 @@ static char s_audioError[1024] = "";
 
 static int audio_next_format(int prev_format)
 {
-    if(prev_format == ADLMIDI_SampleType_F64)
-        return ADLMIDI_SampleType_F32;
-    else if(prev_format == ADLMIDI_SampleType_F32)
-        return ADLMIDI_SampleType_S32;
-    else if(prev_format == ADLMIDI_SampleType_U32)
-        return ADLMIDI_SampleType_S32;
-    else if(prev_format == ADLMIDI_SampleType_S32)
-        return ADLMIDI_SampleType_S24;
-    else if(prev_format == ADLMIDI_SampleType_U24)
-        return ADLMIDI_SampleType_S24;
-    else if(prev_format == ADLMIDI_SampleType_S24)
-        return ADLMIDI_SampleType_S16;
-    else if(prev_format == ADLMIDI_SampleType_U16)
-        return ADLMIDI_SampleType_S16;
-    else if(prev_format == ADLMIDI_SampleType_S16)
-        return ADLMIDI_SampleType_U8;
-    else if(prev_format == ADLMIDI_SampleType_S8)
-        return ADLMIDI_SampleType_U8;
+    if(prev_format == MidiPlay_SampleType_F64)
+        return MidiPlay_SampleType_F32;
+    else if(prev_format == MidiPlay_SampleType_F32)
+        return MidiPlay_SampleType_S32;
+    else if(prev_format == MidiPlay_SampleType_U32)
+        return MidiPlay_SampleType_S32;
+    else if(prev_format == MidiPlay_SampleType_S32)
+        return MidiPlay_SampleType_S24;
+    else if(prev_format == MidiPlay_SampleType_U24)
+        return MidiPlay_SampleType_S24;
+    else if(prev_format == MidiPlay_SampleType_S24)
+        return MidiPlay_SampleType_S16;
+    else if(prev_format == MidiPlay_SampleType_U16)
+        return MidiPlay_SampleType_S16;
+    else if(prev_format == MidiPlay_SampleType_S16)
+        return MidiPlay_SampleType_U8;
+    else if(prev_format == MidiPlay_SampleType_S8)
+        return MidiPlay_SampleType_U8;
 
     return -1;
 }
@@ -129,25 +128,25 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     {
         switch(test_format)
         {
-        case ADLMIDI_SampleType_S8:
+        case MidiPlay_SampleType_S8:
             out_format = SND_PCM_FORMAT_S8; sample_size = 1; break;
-        case ADLMIDI_SampleType_U8:
+        case MidiPlay_SampleType_U8:
             out_format = SND_PCM_FORMAT_U8; sample_size = 1; break;
-        case ADLMIDI_SampleType_S16:
+        case MidiPlay_SampleType_S16:
             out_format = SND_PCM_FORMAT_S16; sample_size = 2; break;
-        case ADLMIDI_SampleType_U16:
+        case MidiPlay_SampleType_U16:
             out_format = SND_PCM_FORMAT_U16; sample_size = 2; break;
-        case ADLMIDI_SampleType_S24:
+        case MidiPlay_SampleType_S24:
             out_format = SND_PCM_FORMAT_S24; sample_size = 3; break;
-        case ADLMIDI_SampleType_U24:
+        case MidiPlay_SampleType_U24:
             out_format = SND_PCM_FORMAT_U24; sample_size = 3; break;
-        case ADLMIDI_SampleType_S32:
+        case MidiPlay_SampleType_S32:
             out_format = SND_PCM_FORMAT_S32; sample_size = 4; break;
-        case ADLMIDI_SampleType_U32:
+        case MidiPlay_SampleType_U32:
             out_format = SND_PCM_FORMAT_U32; sample_size = 4; break;
-        case ADLMIDI_SampleType_F32:
+        case MidiPlay_SampleType_F32:
             out_format = SND_PCM_FORMAT_FLOAT; sample_size = 4; break;
-        case ADLMIDI_SampleType_F64:
+        case MidiPlay_SampleType_F64:
             out_format = SND_PCM_FORMAT_FLOAT64; sample_size = 4; break;
         }
 

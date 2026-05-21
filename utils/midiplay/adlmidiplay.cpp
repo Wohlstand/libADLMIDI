@@ -40,7 +40,7 @@
 #include "misc.h"
 #include "time_counter.h"
 #include "dev_setup.h"
-#include "playback.h"
+#include "playback/playback.h"
 
 
 const char* volume_model_to_str(int vm)

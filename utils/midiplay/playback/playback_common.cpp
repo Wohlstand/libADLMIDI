@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 #include "playback.h"
-#include "dev_setup.h"
+#include "../dev_setup.h"
 
 
 int stop = 0;
