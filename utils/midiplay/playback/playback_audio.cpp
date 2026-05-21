@@ -54,6 +54,27 @@ typedef std::deque<uint8_t> AudioBuff;
 static AudioBuff g_audioBuffer;
 static MutexType g_audioBuffer_lock;
 
+//#define DEBUG_SONG_CHANGE
+//#define DEBUG_SONG_CHANGE_BY_HOOK
+
+#ifdef DEBUG_SONG_CHANGE_BY_HOOK
+static bool gotXmiTrigger = false;
+
+static void xmiTriggerCallback(void *, unsigned trigger, size_t track)
+{
+    s_fprintf(stdout, " - Trigger hook: trigger %u, track: %u\n", trigger, (unsigned)track);
+    flushout(stdout);
+    gotXmiTrigger = true;
+}
+
+static void loopEndCallback(void *)
+{
+    s_fprintf(stdout, " - Loop End hook: trigger\n");
+    flushout(stdout);
+    gotXmiTrigger = true;
+}
+#endif
+
 
 static void s_audioPlaybackCallback(void *, uint8_t *stream, int len)
 {
@@ -116,7 +137,7 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         return 1;
     }
 
-    if(spec.samples != obtained.samples)
+    if(spec.samples != obtained.samples || spec.freq != obtained.freq || spec.format != obtained.format)
     {
         s_fprintf(stdout, " - Audio wanted (format=%s,samples=%u,rate=%u,channels=%u);\n"
                           " - Audio obtained (format=%s,samples=%u,rate=%u,channels=%u)\n",
@@ -130,6 +151,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
     int bankId = 59;
 #endif
 
+#if defined(DEBUG_SONG_SWITCHING)
+    int songsCount = adl_getSongsCount(myDevice);
+#endif
 
 #   ifdef DEBUG_SONG_CHANGE
     int delayBeforeSongChange = 50;
@@ -219,20 +243,20 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 #           if defined(DEBUG_SONG_SWITCHING)
                 case 'C':
                     // code for arrow right
-                    songNumLoad++;
-                    if(songNumLoad >= songsCount)
-                        songNumLoad = songsCount;
-                    adl_selectSongNum(myDevice, songNumLoad);
-                    s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
+                    s_devSetup.songNumLoad++;
+                    if(s_devSetup.songNumLoad >= songsCount)
+                        s_devSetup.songNumLoad = songsCount;
+                    adl_selectSongNum(myDevice, s_devSetup.songNumLoad);
+                    s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", s_devSetup.songNumLoad, songsCount);
                     flushout(stdout);
                     break;
                 case 'D':
                     // code for arrow left
-                    songNumLoad--;
-                    if(songNumLoad < 0)
-                        songNumLoad = 0;
-                    adl_selectSongNum(myDevice, songNumLoad);
-                    s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", songNumLoad, songsCount);
+                    s_devSetup.songNumLoad--;
+                    if(s_devSetup.songNumLoad < 0)
+                        s_devSetup.songNumLoad = 0;
+                    adl_selectSongNum(myDevice, s_devSetup.songNumLoad);
+                    s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", s_devSetup.songNumLoad, songsCount);
                     flushout(stdout);
                     break;
 #endif

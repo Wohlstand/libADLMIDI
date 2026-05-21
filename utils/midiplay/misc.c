@@ -109,6 +109,8 @@ void s_sleepU(double s)
 
 #if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
 #   include <unistd.h>
+#   include <string.h>
+#   include <stdlib.h>
 #   include <sys/select.h>
 #   ifndef TERMINAL_USE_NCURSES
 #       include <termios.h>

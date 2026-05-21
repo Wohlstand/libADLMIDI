@@ -117,27 +117,6 @@ static void sighandler(int dum)
 }
 #endif // ADLMIDI_ENABLE_HW_DOS
 
-//#define DEBUG_SONG_CHANGE
-//#define DEBUG_SONG_CHANGE_BY_HOOK
-
-#ifdef DEBUG_SONG_CHANGE_BY_HOOK
-static bool gotXmiTrigger = false;
-
-static void xmiTriggerCallback(void *, unsigned trigger, size_t track)
-{
-    s_fprintf(stdout, " - Trigger hook: trigger %u, track: %u\n", trigger, (unsigned)track);
-    flushout(stdout);
-    gotXmiTrigger = true;
-}
-
-static void loopEndCallback(void *)
-{
-    s_fprintf(stdout, " - Loop End hook: trigger\n");
-    flushout(stdout);
-    gotXmiTrigger = true;
-}
-#endif
-
 static void debugPrint(void * /*userdata*/, const char *fmt, ...)
 {
     char buffer[4096];
