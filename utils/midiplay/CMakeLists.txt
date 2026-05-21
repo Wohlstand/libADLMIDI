@@ -9,7 +9,11 @@ if(UNIX AND NOT APPLE AND NOT MIDIPLAY_PREFER_SDL)
     set(USE_ALSA_AUDIO 1)
 endif()
 
-if(MIDIPLAY_PREFER_SDL OR (NOT ADLMIDI_DOS AND NOT WIN32 AND NOT MIDIPLAY_WAVE_ONLY AND NOT USE_ALSA_AUDIO))
+if(WIN32 AND NOT MIDIPLAY_PREFER_SDL AND NOT MIDIPLAY_WAVE_ONLY)
+    set(USE_WINMM_AUDIO 1)
+endif()
+
+if(MIDIPLAY_PREFER_SDL OR (NOT ADLMIDI_DOS AND NOT USE_WINMM_AUDIO AND NOT MIDIPLAY_WAVE_ONLY AND NOT USE_ALSA_AUDIO))
     libADLMIDI_find_SDL3()
     if(TARGET ADLMIDI_SDL3)
         set(USE_SDL3_AUDIO 1)
@@ -58,6 +62,7 @@ else()
     endif()
 endif()
 
+
 if(USE_SDL2_AUDIO OR USE_SDL3_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
         audio/audio_sdl.c
@@ -70,11 +75,12 @@ if(USE_ALSA_AUDIO)
     )
 endif()
 
-if(WIN32)
+if(USE_WINMM_AUDIO)
     list(APPEND ADLMIDI_PLAY_SRC
         audio/audio_winmm.c
     )
 endif()
+
 
 option(DEBUG_SONG_SWITCHING  "Enable song switching by left and right keys (Linux only)" OFF)
 option(ENABLE_TERMINAL_HOTKEYS  "Enable use of ncurses library to handle keyboard actions" OFF)
