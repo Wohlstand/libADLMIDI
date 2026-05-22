@@ -48,7 +48,7 @@
 // Nuked OPL3 emulator, Most accurate, but requires the powerful CPU
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
 #       include "chips/nuked_opl3.h"
-#       include "chips/nuked_opl3_v174.h"
+#       include "chips/nuked_opl3_fast.h"
 #       include "chips/nuked_opl2.h"
 #   endif
 

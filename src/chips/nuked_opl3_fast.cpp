@@ -18,24 +18,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "nuked_opl3_v174.h"
+#include "nuked_opl3_fast.h"
 #include "nuked_fast/nukedopl3_fast.h"
 #include <cstring>
 
-NukedOPL3v174::NukedOPL3v174() :
+NukedOPL3Fast::NukedOPL3Fast() :
     OPLChipBaseT()
 {
     m_chip = new opl3_chip;
-    NukedOPL3v174::setRate(m_rate);
+    NukedOPL3Fast::setRate(m_rate);
 }
 
-NukedOPL3v174::~NukedOPL3v174()
+NukedOPL3Fast::~NukedOPL3Fast()
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
     delete chip_r;
 }
 
-void NukedOPL3v174::setRate(uint32_t rate)
+void NukedOPL3Fast::setRate(uint32_t rate)
 {
     OPLChipBaseT::setRate(rate);
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
@@ -43,7 +43,7 @@ void NukedOPL3v174::setRate(uint32_t rate)
     OPL3Fast_Reset(chip_r, rate);
 }
 
-void NukedOPL3v174::reset()
+void NukedOPL3Fast::reset()
 {
     OPLChipBaseT::reset();
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
@@ -51,35 +51,35 @@ void NukedOPL3v174::reset()
     OPL3Fast_Reset(chip_r, m_rate);
 }
 
-void NukedOPL3v174::writeReg(uint16_t addr, uint8_t data)
+void NukedOPL3Fast::writeReg(uint16_t addr, uint8_t data)
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
     OPL3Fast_WriteRegBuffered(chip_r, addr, data);
 }
 
-void NukedOPL3v174::writePan(uint16_t addr, uint8_t data)
+void NukedOPL3Fast::writePan(uint16_t addr, uint8_t data)
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
     OPL3Fast_WritePan(chip_r, addr, data);
 }
 
-void NukedOPL3v174::nativeGenerate(int16_t *frame)
+void NukedOPL3Fast::nativeGenerate(int16_t *frame)
 {
     opl3_chip *chip_r = reinterpret_cast<opl3_chip*>(m_chip);
     OPL3Fast_Generate(chip_r, frame);
 }
 
-const char *NukedOPL3v174::emulatorName()
+const char *NukedOPL3Fast::emulatorName()
 {
     return "Nuked OPL3 Fast (by tgies)";
 }
 
-bool NukedOPL3v174::hasFullPanning()
+bool NukedOPL3Fast::hasFullPanning()
 {
     return true;
 }
 
-OPLChipBase::ChipType NukedOPL3v174::chipType()
+OPLChipBase::ChipType NukedOPL3Fast::chipType()
 {
     return CHIPTYPE_OPL3;
 }

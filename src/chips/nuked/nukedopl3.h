@@ -37,7 +37,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include <stdint.h> /* IWYU pragma: keep */
 
 #ifndef OPL_ENABLE_STEREOEXT
 #define OPL_ENABLE_STEREOEXT 0

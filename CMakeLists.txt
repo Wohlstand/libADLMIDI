@@ -354,8 +354,8 @@ function(handle_options targetLib)
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3.c
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl3.h
-                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.cpp  # v 1.7.4
-                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_v174.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_fast.cpp  # v 1.8 Optimised by @tgies
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl3_fast.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_fast/nukedopl3_fast.c
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_fast/nukedopl3_fast.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_fast/wf_rom.h

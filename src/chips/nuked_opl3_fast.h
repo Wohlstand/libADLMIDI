@@ -23,12 +23,15 @@
 
 #include "opl_chip_base.h"
 
-class NukedOPL3v174 final : public OPLChipBaseT<NukedOPL3v174>
+// Compatibility fallback
+#define NukedOPL3v174 NukedOPL3Fast
+
+class NukedOPL3Fast final : public OPLChipBaseT<NukedOPL3Fast>
 {
     void *m_chip;
 public:
-    NukedOPL3v174();
-    ~NukedOPL3v174() override;
+    NukedOPL3Fast();
+    ~NukedOPL3Fast() override;
 
     bool canRunAtPcmRate() const override { return false; }
     void setRate(uint32_t rate) override;

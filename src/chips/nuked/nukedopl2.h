@@ -36,7 +36,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include <stdint.h> /* IWYU pragma: keep */
 
 #define OPL2_WRITEBUF_SIZE   1024
 #define OPL2_WRITEBUF_DELAY  2

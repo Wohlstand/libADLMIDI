@@ -35,8 +35,8 @@
 
 // Nuked OPL3 emulator, Most accurate, but requires the powerful CPU
 #ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
-#   include "../../src/chips/nuked_opl3.h"
-#   include "../../src/chips/nuked_opl3_v174.h"
+#   include "../../src/chips/nuked_opl3.h" // IWYU pragma: keep
+#   include "../../src/chips/nuked_opl3_fast.h" // IWYU pragma: keep
 #endif
 
 // DosBox 0.74 OPL3 emulator, Well-accurate and fast
