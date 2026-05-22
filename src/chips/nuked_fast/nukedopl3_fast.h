@@ -64,7 +64,7 @@ extern "C" {
 #define OPL_QUIRK_CHANNELSAMPLEDELAY 1 /* libADLMIDI: preserve OPL3 channel sample-delay quirk regardless of STEREOEXT */
 #endif
 
-#define OPL_WRITEBUF_SIZE   1024
+#define OPL_WRITEBUF_SIZE   2048
 #define OPL_WRITEBUF_DELAY  2
 
 typedef struct _opl3_slot opl3_slot;
