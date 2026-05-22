@@ -1,0 +1,163 @@
+name: DOS CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "${{ matrix.config.name }} | ${{ matrix.config.build_type }}"
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "DOS DJGPP",
+            os: ubuntu-latest,
+            generator: "Ninja",
+            build_type: "MinSizeRel",
+            upload_directory: "www/dos/",
+
+            djgpp_download: "https://wohlsoft.ru/docs/Software/DJGPP/djgpp-linux-x-dos-12.1.0.tar.gz",
+            csdpmi7b_download: "https://wohlsoft.ru/docs/Software/DJGPP/v2misc/csdpmi7b.zip",
+
+            deps_cmdline: "sudo apt-get update --fix-missing -qq &&
+            sudo apt-get install -y ninja-build cmake p7zip-full unzip lftp
+            "
+          }
+
+    steps:
+    - name: Check for the upload support
+      id: upload-check
+      shell: bash
+      run: |
+        if [[ "${{ secrets.builds_login }}" != '' && \
+              "${{ secrets.builds_password }}" != '' && \
+              "${{ secrets.builds_host }}" != '' ]]; then
+          echo "available=true" >> $GITHUB_OUTPUT;
+        else
+          echo "available=false" >> $GITHUB_OUTPUT;
+        fi
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.deps_cmdline }}" ]]; then
+          eval ${{ matrix.config.deps_cmdline }}
+        fi
+        cmake --version
+
+    - name: Download DJGPP
+      if: matrix.config.djgpp_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.djgpp_download }}"
+        file-name: djgpp.tar.gz
+
+    - name: Extract DJGPP
+      if: matrix.config.djgpp_download
+      shell: bash
+      run: |
+        sudo mkdir -p /usr/local
+        sudo tar -xvf djgpp.tar.gz -C /usr/local/
+
+    # Download this AFTER the repo clonned, otherwise it gets wiped during clone
+    - name: Download CSDPMI7B
+      if: matrix.config.csdpmi7b_download
+      uses: carlosperate/download-file-action@v2
+      with:
+        file-url: "${{ matrix.config.csdpmi7b_download }}"
+        file-name: dpmi.zip
+
+    - name: Extract CSDPMI7B
+      if: matrix.config.csdpmi7b_download
+      shell: bash
+      run: |
+        oldpath=`pwd`
+        mkdir -p $HOME/dpmi
+        cd $HOME/dpmi
+        unzip $oldpath/dpmi.zip
+        ls -lR .
+        cd $oldpath
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 3
+        submodules: recursive
+
+    - uses: Wohlstand/branch-name@v1.0.1-wohl
+
+    - name: Check if a pull request
+      id: event-check
+      shell: bash
+      run: |
+        if [[ "${BRANCH_NAME}" == *"merge"* ]]; then
+          echo "--- This build is a pull-request ---"
+          echo "is_pull_request=true" >> $GITHUB_OUTPUT;
+        else
+          echo "--- This build is a normal branch build ---"
+          echo "is_pull_request=false" >> $GITHUB_OUTPUT;
+        fi
+
+    - name: Configure
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
+          export PATH=${{ matrix.config.extra_path }}:${PATH}
+          echo "PATH environment: ${PATH}"
+        fi
+        echo "====================================="
+        gcc --version
+        echo "====================================="
+        git --version
+        echo "====================================="
+        cmake --version
+        echo "====================================="
+        cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/djgpp -DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/ci_dos_djgpp_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DCMAKE_INSTALL_PREFIX="`pwd`/libADLMIDI" ${{ matrix.config.extra_options }} -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON .
+
+    - name: Build
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
+          export PATH=${{ matrix.config.extra_path }}:${PATH}
+          export QT_DIR="${{ matrix.config.qt_dir }}"
+          export QtDir="${{ matrix.config.qt_dir }}"
+        fi
+        export MAKEFLAGS=--keep-going
+        cmake --build build --target all --config ${{ matrix.config.build_type }} --parallel 3
+
+    - name: Pack
+      shell: bash
+      run: |
+        mkdir _packed
+        zip -j -9 _packed/adlmidi-dos32.zip build/adlmidi.exe build/adlmidi2.exe $HOME/dpmi/bin/CWSDPMI.EXE
+
+    - name: Deploy to builds.wohlsoft.ru
+      if: success() && github.event_name != 'pull_request' && steps.event-check.outputs.is_pull_request == 'false' && steps.upload-check.outputs.available == 'true'
+      shell: bash
+      run: |
+        if [[ ! -z "${{ matrix.config.extra_path }}" ]]; then
+            export PATH=${{ matrix.config.extra_path }}:${PATH}
+        fi
+        UPLOAD_LIST="set ssl:verify-certificate no;"
+        for q in ./_packed/*.zip; do
+            UPLOAD_LIST="${UPLOAD_LIST} put -O ${{ matrix.config.upload_directory }} $q;"
+        done
+        lftp -e "${UPLOAD_LIST} exit" -u ${{ secrets.builds_login }},${{ secrets.builds_password }} ${{ secrets.builds_host }}
+
+    - name: List Build Directory
+      if: always()
+      shell: bash
+      run: |
+        git status
+        ls -lR build
