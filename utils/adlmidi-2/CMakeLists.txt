@@ -31,8 +31,9 @@ list(APPEND adlmidi2_src
 
 if(ADLMIDI_DOS)
     list(APPEND adlmidi2_src
-        ../midiplay/dos_tman.h
-        ../midiplay/dos_tman.cpp
+        ../midiplay/playback/dos_tman.h
+        ../midiplay/playback/dos_tman_c.h
+        ../midiplay/playback/dos_tman.cpp
     )
 endif()
 
