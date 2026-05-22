@@ -199,6 +199,8 @@ To build that example you will need to have installed SDL2 library.
  * Fixed unexpected non-GM instruments from embedded bank appears when loading custom GM-only bank.
  * Added `adl_rt_rawOPL3()` public API to send raw OPL3 register writes to a specific chip, reusing the same internal routing used by IMF/KLM playback. Allows callers to render raw-OPL formats alongside MIDI playback on the same chip.
  * Added `adl_reserveChipChannels()` / `adl_getReservedChipChannels()` public API for per-chip bitmask reservation of chip channels, so the MIDI voice allocator will skip them and leave them free for raw OPL writes.
+ * The Nuked OPL3 v1.8 got been slightly updated to sync with the mainstream to have all recent envelope generator fixes.
+ * The old Nuked OPL3 v1.7 emulator is replaced with an optimised alternative fork by tgies.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
