@@ -29,7 +29,9 @@
 #include <cstddef>
 #include <stdint.h>
 
+// IWYU pragma: begin_exports
 #include "../file_reader.hpp"
+// IWYU pragma: end_exports
 
 #if !defined(__SIZEOF_POINTER__) // Workaround for MSVC
 #   if defined(_WIN32)
@@ -50,7 +52,7 @@
  * @param nbytes Count of bytes to parse integer
  * @return Extracted unsigned integer
  */
-static uint64_t readBEint(const void *buffer, size_t nbytes)
+inline uint64_t readBEint(const void *buffer, size_t nbytes)
 {
     uint64_t result = 0;
     const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
@@ -70,7 +72,7 @@ static uint64_t readBEint(const void *buffer, size_t nbytes)
  * @param nbytes Count of bytes to parse integer
  * @return Extracted unsigned integer
  */
-static uint64_t readLEint(const void *buffer, size_t nbytes)
+inline uint64_t readLEint(const void *buffer, size_t nbytes)
 {
     uint64_t result = 0;
     const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
@@ -81,7 +83,7 @@ static uint64_t readLEint(const void *buffer, size_t nbytes)
     return result;
 }
 
-static uint16_t readLEint16(const void *buffer, size_t nbytes)
+inline uint16_t readLEint16(const void *buffer, size_t nbytes)
 {
     uint16_t result = 0;
     const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
@@ -92,7 +94,7 @@ static uint16_t readLEint16(const void *buffer, size_t nbytes)
     return result;
 }
 
-static uint32_t readLEint32(const void *buffer, size_t nbytes)
+inline uint32_t readLEint32(const void *buffer, size_t nbytes)
 {
     uint32_t result = 0;
     const uint8_t *data = reinterpret_cast<const uint8_t *>(buffer);
@@ -103,7 +105,7 @@ static uint32_t readLEint32(const void *buffer, size_t nbytes)
     return result;
 }
 
-static bool readUInt32LE_SZ(size_t &out, FileAndMemReader &fr)
+inline bool readUInt32LE_SZ(size_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[4];
 
@@ -115,7 +117,7 @@ static bool readUInt32LE_SZ(size_t &out, FileAndMemReader &fr)
     return true;
 }
 
-static bool readUInt32LE(uint32_t &out, FileAndMemReader &fr)
+inline bool readUInt32LE(uint32_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[4];
 
@@ -127,7 +129,7 @@ static bool readUInt32LE(uint32_t &out, FileAndMemReader &fr)
     return true;
 }
 
-static bool readUInt16LE(size_t &out, FileAndMemReader &fr)
+inline bool readUInt16LE(size_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[2];
 
@@ -139,7 +141,7 @@ static bool readUInt16LE(size_t &out, FileAndMemReader &fr)
     return true;
 }
 
-static bool readUInt16LE(uint16_t &out, FileAndMemReader &fr)
+inline bool readUInt16LE(uint16_t &out, FileAndMemReader &fr)
 {
     uint8_t buf[2];
 
@@ -160,7 +162,7 @@ static bool readUInt16LE(uint16_t &out, FileAndMemReader &fr)
  * @param [_out] ok Reference to boolean which takes result of variable-length value parsing
  * @return Unsigned integer that conains parsed variable-length value
  */
-static uint64_t readVarLenEx(const uint8_t **ptr, const uint8_t *end, bool &ok)
+inline uint64_t readVarLenEx(const uint8_t **ptr, const uint8_t *end, bool &ok)
 {
     uint64_t result = 0;
     ok = false;
@@ -180,7 +182,7 @@ static uint64_t readVarLenEx(const uint8_t **ptr, const uint8_t *end, bool &ok)
 }
 #endif
 
-static uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
+inline uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
 {
     uint64_t result = 0;
     uint8_t byte;
@@ -203,7 +205,7 @@ static uint64_t readVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
     return result;
 }
 
-static uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
+inline uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok)
 {
     uint64_t result = 0;
     uint8_t byte;
@@ -228,7 +230,7 @@ static uint64_t readHMPVarLenEx(FileAndMemReader &fr, const size_t end, bool &ok
     return result;
 }
 
-static bool strEqual(const char *in_str, size_t length, const char *needle)
+inline bool strEqual(const char *in_str, size_t length, const char *needle)
 {
     const char *it_i = in_str, *it_n = needle;
     size_t i = 0;
