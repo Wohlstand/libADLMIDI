@@ -32,8 +32,14 @@
 
 #define DOS_TASK_CLOCK_BASE 1192030L
 
+extern bool adl_dpmi_lock_memory(void *address, size_t size);
+extern bool adl_dpmi_lock_region(void *begin, void *end);
+extern bool adl_dpmi_unlock_memory(void *address, size_t size);
+extern bool adl_dpmi_unlock_region(void *begin, void *end);
+
 class DosTaskman
 {
+    void dpmi_lock_begin() {}
     bool m_running;
     static DosTaskman *self;
     volatile long m_timerRate;
@@ -137,6 +143,7 @@ private:
     DosTask *addTask(DosTask &task);
 
     std::list<DosTask> m_tasks;
+    void dpmi_lock_end() {}
 };
 
 #endif // DOS_TMAN_H

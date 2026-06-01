@@ -78,10 +78,18 @@ static void prevSong(ADL_MIDIPlayer *myDevice)
     adl_selectSongNum(myDevice, s_curSong);
 }
 
+static void dos_dpmi_tail() {}
+
 void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice)
 {
-    DosTaskman::DosTask *midiTask = taskMan->addTask(s_midiLoop, s_devSetup.clock_freq, 1, myDevice);
+    DosTaskman::DosTask *midiTask;
+    void (*c_lock_begin)(DosTaskman::DosTask *task) = &s_midiLoop;
+    void (*c_lock_end)() = &dos_dpmi_tail;
+    adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+
+    midiTask = taskMan->addTask(s_midiLoop, s_devSetup.clock_freq, 1, myDevice);
     s_taskman = taskMan;
+
     taskMan->dispatch();
 
     if(s_devSetup.songNumLoad >= 0)
@@ -185,4 +193,5 @@ void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice)
     adl_panic(myDevice); //Shut up all sustaining notes
 
     taskMan->terminate(midiTask);
+    adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
 }

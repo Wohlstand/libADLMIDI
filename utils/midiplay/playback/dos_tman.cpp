@@ -47,6 +47,10 @@ static char s_snpirntf[300];
 static char s_reserve_print_buffer_out[2048] = "";
 static char s_reserve_print_buffer_err[2048] = "";
 
+void dos_taskman_dpmi_lock_head(void) {}
+void dos_taskman_dpmi_lock_tail(void);
+
+
 static __attribute__((always_inline)) inline uint32_t disableInterrupts(void)
 {
     uint32_t a;
@@ -146,13 +150,43 @@ DosTaskman::DosTaskman()
 
     self = this;
 
+    void (DosTaskman::* lock_begin)() = &DosTaskman::dpmi_lock_begin;
+    void (DosTaskman::* lock_end)() = &DosTaskman::dpmi_lock_end;
+    adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+
     // setSystemClockRate();
+    void (*c_lock_begin)() = &dos_taskman_dpmi_lock_head;
+    void (*c_lock_end)() = &dos_taskman_dpmi_lock_tail;
+    adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_lock_memory(this, sizeof(DosTaskman));
+    adl_dpmi_lock_memory(&s_oldIRQ8, sizeof(s_oldIRQ8));
+    adl_dpmi_lock_memory(&s_newIRQ8, sizeof(s_newIRQ8));
+    adl_dpmi_lock_memory(&self, sizeof(DosTaskman*));
+    adl_dpmi_lock_memory(s_snpirntf, sizeof(s_snpirntf));
+    adl_dpmi_lock_memory(s_reserve_print_buffer_out, sizeof(s_reserve_print_buffer_out));
+    adl_dpmi_lock_memory(s_reserve_print_buffer_err, sizeof(s_reserve_print_buffer_err));
 }
 
 DosTaskman::~DosTaskman()
 {
     close();
     self = NULL;
+
+    void (DosTaskman::* lock_begin)() = &DosTaskman::dpmi_lock_begin;
+    void (DosTaskman::* lock_end)() = &DosTaskman::dpmi_lock_end;
+    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+
+    adl_dpmi_unlock_memory(this, sizeof(DosTaskman));
+    void (*c_lock_begin)() = &dos_taskman_dpmi_lock_head;
+    void (*c_lock_end)() = &dos_taskman_dpmi_lock_tail;
+    adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_unlock_memory(this, sizeof(DosTaskman));
+    adl_dpmi_unlock_memory(&s_oldIRQ8, sizeof(s_oldIRQ8));
+    adl_dpmi_unlock_memory(&s_newIRQ8, sizeof(s_newIRQ8));
+    adl_dpmi_unlock_memory(&self, sizeof(DosTaskman*));
+    adl_dpmi_unlock_memory(s_snpirntf, sizeof(s_snpirntf));
+    adl_dpmi_unlock_memory(s_reserve_print_buffer_out, sizeof(s_reserve_print_buffer_out));
+    adl_dpmi_unlock_memory(s_reserve_print_buffer_err, sizeof(s_reserve_print_buffer_err));
 }
 
 bool DosTaskman::isInsideInterrupt()
@@ -416,3 +450,5 @@ int dos_taskman_reserve_fprintf(FILE *stream, const char *format, va_list args)
 {
     return DosTaskman::reserve_fprintf(stream, format, args);
 }
+
+void dos_taskman_dpmi_lock_tail(void) {}
