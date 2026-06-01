@@ -115,10 +115,22 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
     resetMIDI();
     applySetup();
     realTime_ResetState();
+
+#ifdef ENABLE_HW_OPL_DOS
+    if(!adl_dpmi_lock_memory(this, sizeof(MIDIplay)))
+    {
+        if(hooks.onDebugMessage)
+            hooks.onDebugMessage(hooks.onDebugMessage_userData, "Error: Failed to lock the DPMI memory region during initialisation");
+    }
+#endif
 }
 
 MIDIplay::~MIDIplay()
-{}
+{
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_unlock_memory(this, sizeof(MIDIplay));
+#endif
+}
 
 void MIDIplay::applySetup()
 {

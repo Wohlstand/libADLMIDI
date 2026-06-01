@@ -1217,7 +1217,7 @@ ADLMIDI_EXPORT const char *adl_metaTrackTitle(struct ADL_MIDIPlayer *device, siz
 
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    const std::vector<BW_MidiSequencer::DataBlock> &titles = play->m_sequencer->getTrackTitles();
+    const std::vector<BW_MidiSequencer::DataBlock, dpmi_allocator<BW_MidiSequencer::DataBlock> > &titles = play->m_sequencer->getTrackTitles();
 
     if(index >= titles.size())
         return "INVALID";
@@ -1262,7 +1262,7 @@ ADLMIDI_EXPORT Adl_MarkerEntry adl_metaMarker(struct ADL_MIDIPlayer *device, siz
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
 
-    const std::vector<MidiSequencer::MIDI_MarkerEntry> &markers = play->m_sequencer->getMarkers();
+    const MidiSequencer::MusMarkersList &markers = play->m_sequencer->getMarkers();
     if(index >= markers.size())
     {
         marker.label = "INVALID";

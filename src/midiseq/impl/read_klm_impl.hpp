@@ -563,7 +563,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     m_trackData[0].push_back(evtPos);
     initTracksBegin(0);
 
-    buildTimeLine(std::vector<TempoEvent>());
+    buildTimeLine(TemposList());
 
     return true;
 }

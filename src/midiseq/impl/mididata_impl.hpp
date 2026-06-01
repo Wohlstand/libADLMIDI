@@ -111,7 +111,7 @@ void BW_MidiSequencer::initTracksBegin(size_t track)
 }
 
 
-void BW_MidiSequencer::buildTimeLine(const std::vector<TempoEvent> &tempos,
+void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
                                      uint64_t loopStartTicks,
                                      uint64_t loopEndTicks)
 {

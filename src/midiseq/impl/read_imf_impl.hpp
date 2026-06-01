@@ -48,7 +48,7 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     std::memset(&event, 0, sizeof(event));
     event.isValid = 1;
 
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
 
     m_format = Format_IMF;
 

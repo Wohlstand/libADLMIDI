@@ -37,7 +37,7 @@ bool BW_MidiSequencer::parseGMF(FileAndMemReader &fr)
     size_t fsize = 0, deltaTicks = 192, totalGotten, trackLength, trackPos;
     LoopPointParseState loopState;
 
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
 
     std::memset(&loopState, 0, sizeof(loopState));
 

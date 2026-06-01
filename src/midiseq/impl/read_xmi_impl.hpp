@@ -40,7 +40,7 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
     char headerBuf[headerSize] = "";
     size_t fsize = 0;
 //    BufferGuard<uint8_t> cvt_buf;
-    std::vector<std::vector<uint8_t > > song_buf;
+    RawSongsList song_buf;
     bool ret;
 
     (void)Convert_xmi2midi; /* Shut up the warning */

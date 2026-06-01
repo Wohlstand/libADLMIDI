@@ -33,6 +33,8 @@
 
 #include <vector>
 
+#include "../midi_sequencer.hpp"
+
 #ifdef __DJGPP__
 typedef signed char     int8_t;
 typedef unsigned char   uint8_t;
@@ -105,8 +107,8 @@ struct xmi2mid_xmi_ctx {
     int16_t *timing;
     midi_event *list;
     midi_event *current;
-    std::vector<std::vector<uint8_t > > *dyn_out;
-    std::vector<uint8_t > *dyn_out_cur;
+    std::vector<std::vector<uint8_t, dpmi_allocator<uint8_t> >, dpmi_allocator<std::vector<uint8_t, dpmi_allocator<uint8_t> > > > *dyn_out;
+    std::vector<uint8_t, dpmi_allocator<uint8_t > > *dyn_out_cur;
 };
 
 typedef struct {
@@ -598,9 +600,9 @@ _end:   /* cleanup */
     return (ret);
 }
 
-static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
-                                  std::vector<std::vector<uint8_t > > &out,
-                                  uint32_t convert_type)
+int BW_MidiSequencer::Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
+                                             RawSongsList &out,
+                                             uint32_t convert_type)
 {
     struct xmi2mid_xmi_ctx ctx;
     unsigned int i;
@@ -630,7 +632,7 @@ static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
 
     for (i = 0; i < ctx.info.tracks; i++)
     {
-        out.push_back(std::vector<uint8_t>());
+        out.push_back(RawSongEntry());
         ctx.dyn_out_cur = &out.back();
         ctx.dyn_out_cur->resize(DST_CHUNK);
         ctx.dst = ctx.dyn_out_cur->data();

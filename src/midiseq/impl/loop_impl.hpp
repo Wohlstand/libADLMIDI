@@ -258,7 +258,7 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
                             branch.offset = rowBegin;
                         }
 
-                        for(std::vector<BranchEntry>::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
+                        for(BranchesList::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
                         {
                             BranchEntry &e = *it;
                             if(e.id == branch.id && e.track == branch.track)

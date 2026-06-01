@@ -58,7 +58,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     uint64_t abs_position = 0;
     int32_t delay = 0;
     std::vector<uint16_t> mus_instrs;
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
 
     const uint8_t controller_map[15] =
     {

@@ -41,7 +41,7 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
     LoopPointParseState loopState;
     char start;
 
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
 
     std::memset(&loopState, 0, sizeof(loopState));
 

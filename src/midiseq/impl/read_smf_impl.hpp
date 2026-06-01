@@ -53,7 +53,7 @@ bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks
     size_t trackLength;
     size_t offset_next;
     //! Tempo change events list
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
     LoopPointParseState loopState;
 
     std::memset(&loopState, 0, sizeof(loopState));
@@ -91,7 +91,7 @@ bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks
 bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
                                      const size_t track_idx,
                                      const size_t track_size,
-                                     std::vector<TempoEvent> &temposList,
+                                     TemposList &temposList,
                                      LoopPointParseState &loopState)
 {
     MidiTrackRow evtPos;

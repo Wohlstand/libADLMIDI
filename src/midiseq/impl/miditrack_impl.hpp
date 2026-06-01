@@ -181,7 +181,7 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
     }
 }
 
-void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBank, bool *noteStates)
+void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent, dpmi_allocator<MidiEvent> > &eventsBank, bool *noteStates)
 {
     size_t arr_size = 0, max_size, i, j, k, note_i, note_j;
     MidiEvent tmp, *dst, *src, *mi, *mj, *arr = NULL, *arr_end = NULL;

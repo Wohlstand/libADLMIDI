@@ -887,7 +887,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     Tempo_t t;
 #endif
 
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
     std::vector<HMITrackDir> dir;
 
     std::memset(&loopState, 0, sizeof(loopState));
