@@ -122,6 +122,15 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
         if(hooks.onDebugMessage)
             hooks.onDebugMessage(hooks.onDebugMessage_userData, "Error: Failed to lock the DPMI memory region during initialisation");
     }
+
+    void (MIDIplay::* lock_begin)() = &MIDIplay::dpmi_lock_begin;
+    void (MIDIplay::* lock_end)() = &MIDIplay::dpmi_lock_end;
+
+    if(!adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end))
+    {
+        if(hooks.onDebugMessage)
+            hooks.onDebugMessage(hooks.onDebugMessage_userData, "Error: Failed to lock the DPMI memory region during initialisation");
+    }
 #endif
 }
 
@@ -129,6 +138,11 @@ MIDIplay::~MIDIplay()
 {
 #ifdef ENABLE_HW_OPL_DOS
     adl_dpmi_unlock_memory(this, sizeof(MIDIplay));
+
+    void (MIDIplay::* lock_begin)() = &MIDIplay::dpmi_lock_begin;
+    void (MIDIplay::* lock_end)() = &MIDIplay::dpmi_lock_end;
+
+    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
 #endif
 }
 

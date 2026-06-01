@@ -65,6 +65,10 @@ struct MIDIEventHooks
 
 class MIDIplay
 {
+#if defined(__DJGPP__)
+    void dpmi_lock_begin() {}
+#endif
+
     friend void adl_reset(struct ADL_MIDIPlayer*);
 public:
     explicit MIDIplay(unsigned long sampleRate = 22050);
@@ -1169,6 +1173,11 @@ public:
      * @param size number of characters available to write
      */
     void describeChannels(char *text, char *attr, size_t size);
+
+#if defined(__DJGPP__)
+private:
+    void dpmi_lock_end() {}
+#endif
 };
 
 #endif //  ADLMIDI_MIDIPLAY_HPP

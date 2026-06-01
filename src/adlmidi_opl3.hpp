@@ -44,6 +44,10 @@
  */
 class OPL3
 {
+#if defined(__DJGPP__)
+    void dpmi_lock_begin() {}
+#endif
+
     friend class MIDIplay;
     friend class AdlInstrumentTester;
     friend int adlCalculateFourOpChannels(MIDIplay *play, bool silent);
@@ -437,6 +441,11 @@ public:
      * @param audioTickHandler
      */
     void resetSerial(const std::string &serialName, unsigned int baud, unsigned int protocol);
+#endif
+
+#if defined(__DJGPP__)
+private:
+    void dpmi_lock_end() {}
 #endif
 };
 

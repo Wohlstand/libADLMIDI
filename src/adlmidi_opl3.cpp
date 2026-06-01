@@ -320,6 +320,14 @@ OPL3::OPL3() :
 #else
     setEmbeddedBank(0);
 #endif
+
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_lock_memory(this, sizeof(OPL3));
+
+    void (OPL3::* lock_begin)() = &OPL3::dpmi_lock_begin;
+    void (OPL3::* lock_end)() = &OPL3::dpmi_lock_end;
+    adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+#endif
 }
 
 OPL3::~OPL3()
@@ -332,6 +340,14 @@ OPL3::~OPL3()
     writeRegI(0, 0x104, 0);
     writeRegI(0, 0x105, 0);
     silenceAll();
+#endif
+
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_unlock_memory(this, sizeof(OPL3));
+
+    void (OPL3::* lock_begin)() = &OPL3::dpmi_lock_begin;
+    void (OPL3::* lock_end)() = &OPL3::dpmi_lock_end;
+    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
 #endif
 }
 
