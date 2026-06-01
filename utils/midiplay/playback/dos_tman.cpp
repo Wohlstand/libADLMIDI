@@ -411,7 +411,7 @@ void DosTaskman::clearTasks()
 
 DosTaskman::DosTask *DosTaskman::addTask(DosTaskman::DosTask &task)
 {
-    std::list<DosTask>::iterator it = m_tasks.begin();
+    DosTasksList::iterator it = m_tasks.begin();
 
     for(; it != m_tasks.end(); ++it)
     {

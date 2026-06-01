@@ -80,6 +80,10 @@ static const ADLMIDI_AudioFormat adl_DefaultAudioFormat =
     2 * sizeof(int16_t),
 };
 
+#ifdef ENABLE_HW_OPL_DOS
+void adl_pub_dpmi_lock_begin() {}
+#endif
+
 /*---------------------------EXPORTS---------------------------*/
 
 ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
@@ -105,6 +109,7 @@ ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
     adlCalculateFourOpChannels(player);
 
 #ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_lock_memory(midi_device, sizeof(ADL_MIDIPlayer));
     adl_lock_code();
 #endif
 
@@ -115,6 +120,10 @@ ADLMIDI_EXPORT void adl_close(struct ADL_MIDIPlayer *device)
 {
     if(!device)
         return;
+
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_unlock_memory(device, sizeof(ADL_MIDIPlayer));
+#endif
 
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
@@ -2126,3 +2135,7 @@ ADLMIDI_EXPORT unsigned int adl_getReservedChipChannels(struct ADL_MIDIPlayer *d
 
     return static_cast<unsigned int>(play->getReservedChipChannels(static_cast<size_t>(chipId)));
 }
+
+#ifdef ENABLE_HW_OPL_DOS
+void adl_pub_dpmi_lock_end() {}
+#endif

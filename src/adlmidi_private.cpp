@@ -190,11 +190,18 @@ void dpmi_unlock_class_code()
     adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
 }
 
+extern void adl_pub_dpmi_lock_begin();
+extern void adl_pub_dpmi_lock_end();
+
 void adl_lock_code(void)
 {
     dpmi_lock_class_code<MIDIplay>();
     dpmi_lock_class_code<OPL3>();
     dpmi_lock_class_code<DOS_HW_OPL>();
+
+    void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
+    void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
+    adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
 }
 
 // Unlock code of all known classes
@@ -204,5 +211,9 @@ void adl_unlock_code(void)
     dpmi_unlock_class_code<MIDIplay>();
     dpmi_unlock_class_code<OPL3>();
     dpmi_unlock_class_code<DOS_HW_OPL>();
+
+    void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
+    void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
+    adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
 }
 #endif

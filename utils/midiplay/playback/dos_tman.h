@@ -30,6 +30,8 @@
 #include <stdio.h>
 #include <list>
 
+#include "../../src/midiseq/impl/dpmi_alloc.hpp"
+
 #define DOS_TASK_CLOCK_BASE 1192030L
 
 extern bool adl_dpmi_lock_memory(void *address, size_t size);
@@ -142,7 +144,8 @@ private:
     void clearTasks();
     DosTask *addTask(DosTask &task);
 
-    std::list<DosTask> m_tasks;
+    typedef std::list<DosTask, dpmi_allocator<DosTask> > DosTasksList;
+    DosTasksList m_tasks;
     void dpmi_lock_end() {}
 };
 
