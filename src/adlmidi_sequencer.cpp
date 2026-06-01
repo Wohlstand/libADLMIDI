@@ -23,12 +23,6 @@
 
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
 
-#if defined(__DJGPP__)
-#   include <sys/segments.h>
-#   include <sys/nearptr.h>
-#   include <dpmi.h>
-#endif
-
 // Rename class to avoid ABI collisions
 #define BW_MidiSequencer AdlMidiSequencer
 #define BWMIDI_ENABLE_OPL_MUSIC_SUPPORT

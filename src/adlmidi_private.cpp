@@ -198,6 +198,9 @@ void adl_lock_code(void)
     dpmi_lock_class_code<MIDIplay>();
     dpmi_lock_class_code<OPL3>();
     dpmi_lock_class_code<DOS_HW_OPL>();
+    dpmi_lock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
+    dpmi_lock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
+    dpmi_lock_class_code<AdlMIDI_UPtr<Synth> >();
 
     void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
     void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
@@ -211,6 +214,9 @@ void adl_unlock_code(void)
     dpmi_unlock_class_code<MIDIplay>();
     dpmi_unlock_class_code<OPL3>();
     dpmi_unlock_class_code<DOS_HW_OPL>();
+    dpmi_unlock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
+    dpmi_unlock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
+    dpmi_unlock_class_code<AdlMIDI_UPtr<Synth> >();
 
     void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
     void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;

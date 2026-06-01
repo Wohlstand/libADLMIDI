@@ -73,6 +73,12 @@ struct ADLMIDI_CDelete
 template< class T, class Deleter = ADLMIDI_DefaultDelete<T> >
 class AdlMIDI_UPtr
 {
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_begin() {}
+private:
+#endif
+
     T *m_p;
 public:
     explicit AdlMIDI_UPtr(T *p = NULL)
@@ -129,6 +135,11 @@ public:
 private:
     AdlMIDI_UPtr(const AdlMIDI_UPtr &);
     AdlMIDI_UPtr &operator=(const AdlMIDI_UPtr &);
+
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_end() {}
+#endif
 };
 
 template <class T>
