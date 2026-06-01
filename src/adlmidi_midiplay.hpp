@@ -66,8 +66,9 @@ struct MIDIEventHooks
 class MIDIplay
 {
 #if defined(__DJGPP__)
+public:
     void dpmi_lock_begin() {}
-    friend class DPMILocker<MIDIplay>;
+private:
     DPMILocker<MIDIplay> m_dpmi_locker;
 #endif
 
@@ -688,12 +689,14 @@ private:
     //! Local error string
     std::string errorStringOut;
 
+#ifndef ENABLE_HW_OPL_DOS
     //! Missing instruments catches
     std::set<size_t> caugh_missing_instruments;
     //! Missing melodic banks catches
     std::set<size_t> caugh_missing_banks_melodic;
     //! Missing percussion banks catches
     std::set<size_t> caugh_missing_banks_percussion;
+#endif
 
 public:
 
@@ -1177,7 +1180,7 @@ public:
     void describeChannels(char *text, char *attr, size_t size);
 
 #if defined(__DJGPP__)
-private:
+public:
     void dpmi_lock_end() {}
 #endif
 };

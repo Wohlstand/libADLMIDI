@@ -26,7 +26,7 @@
 #if !defined(BW_MIDISEQ_DPMI_ALLOC_HPP)
 #define BW_MIDISEQ_DPMI_ALLOC_HPP
 
-#define DPMI_DEBUG
+// #define DPMI_DEBUG
 
 #if defined(__DJGPP__)
 #include <cstddef>

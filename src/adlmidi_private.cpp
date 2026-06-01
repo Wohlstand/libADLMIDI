@@ -27,7 +27,8 @@
 #include "wopl/wopl_file.h"
 
 #ifdef ENABLE_HW_OPL_DOS
-#include <dpmi.h>
+#   include <dpmi.h>
+#   include "chips/dos_hw_opl.h"
 #endif
 
 
@@ -169,5 +170,39 @@ bool adl_dpmi_unlock_memory(void *address, size_t size)
 bool adl_dpmi_unlock_region(void *begin, void *end)
 {
     return adl_dpmi_unlock_memory(begin, (uint8_t *)end - (uint8_t *)begin);
+}
+
+// Lock code of all known classes
+
+template<class T>
+void dpmi_lock_class_code()
+{
+    void (T::* lock_begin)() = &T::dpmi_lock_begin;
+    void (T::* lock_end)() = &T::dpmi_lock_end;
+    adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+}
+
+template<class T>
+void dpmi_unlock_class_code()
+{
+    void (T::* lock_begin)() = &T::dpmi_lock_begin;
+    void (T::* lock_end)() = &T::dpmi_lock_end;
+    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+}
+
+void adl_lock_code(void)
+{
+    dpmi_lock_class_code<MIDIplay>();
+    dpmi_lock_class_code<OPL3>();
+    dpmi_lock_class_code<DOS_HW_OPL>();
+}
+
+// Unlock code of all known classes
+
+void adl_unlock_code(void)
+{
+    dpmi_unlock_class_code<MIDIplay>();
+    dpmi_unlock_class_code<OPL3>();
+    dpmi_unlock_class_code<DOS_HW_OPL>();
 }
 #endif

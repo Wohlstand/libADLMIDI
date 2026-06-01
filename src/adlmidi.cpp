@@ -103,6 +103,11 @@ ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
 
     midi_device->adl_midiPlayer = player;
     adlCalculateFourOpChannels(player);
+
+#ifdef ENABLE_HW_OPL_DOS
+    adl_lock_code();
+#endif
+
     return midi_device;
 }
 
@@ -117,6 +122,9 @@ ADLMIDI_EXPORT void adl_close(struct ADL_MIDIPlayer *device)
     device->adl_midiPlayer = NULL;
     free(device);
     device = NULL;
+#ifdef ENABLE_HW_OPL_DOS
+    adl_unlock_code();
+#endif
 }
 
 ADLMIDI_EXPORT int adl_setDeviceIdentifier(ADL_MIDIPlayer *device, unsigned id)

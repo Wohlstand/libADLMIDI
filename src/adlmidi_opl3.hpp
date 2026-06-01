@@ -45,8 +45,9 @@
 class OPL3
 {
 #if defined(__DJGPP__)
+public:
     void dpmi_lock_begin() {}
-    friend class DPMILocker<OPL3>;
+private:
     DPMILocker<OPL3> m_dpmi_locker;
 #endif
 
@@ -446,7 +447,7 @@ public:
 #endif
 
 #if defined(__DJGPP__)
-private:
+public:
     void dpmi_lock_end() {}
 #endif
 };

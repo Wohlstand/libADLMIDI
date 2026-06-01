@@ -26,6 +26,7 @@
 #   include <pc.h>
 #endif
 
+#include "../adlmidi_private.hpp"
 #include "dos_hw_opl.h"
 
 static uint16_t                 s_OPLBase[2]    = {0x388, 0x38A};
@@ -81,10 +82,18 @@ static void s_detect()
     s_detected = true;
 }
 
+void DOS_HW_OPL::dpmi_lock_begin()
+{}
+
 DOS_HW_OPL::DOS_HW_OPL()
 {
     s_detect();
     s_updateDevName();
+
+    adl_dpmi_lock(s_OPLBase);
+    adl_dpmi_lock(s_devName);
+    adl_dpmi_lock(s_type);
+    adl_dpmi_lock(s_detected);
 }
 
 void DOS_HW_OPL::setOplAddress(uint16_t address)
@@ -108,6 +117,11 @@ DOS_HW_OPL::~DOS_HW_OPL()
         DOS_HW_OPL::writeReg(0x104, 0);
         DOS_HW_OPL::writeReg(0x105, 0);
     }
+
+    adl_dpmi_unlock(s_OPLBase);
+    adl_dpmi_unlock(s_devName);
+    adl_dpmi_unlock(s_type);
+    adl_dpmi_unlock(s_detected);
 }
 
 void DOS_HW_OPL::writeReg(uint16_t addr, uint8_t data)
@@ -161,3 +175,6 @@ OPLChipBase::ChipType DOS_HW_OPL::chipType()
 {
     return s_type;
 }
+
+void DOS_HW_OPL::dpmi_lock_end()
+{}

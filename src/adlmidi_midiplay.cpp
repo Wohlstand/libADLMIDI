@@ -121,7 +121,11 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
 }
 
 MIDIplay::~MIDIplay()
-{}
+{
+    adl_dpmi_unlock_vector(m_chipChannels);
+    adl_dpmi_unlock_vector(m_reservedChipChannels);
+    adl_dpmi_unlock_vector(m_midiChannels);
+}
 
 void MIDIplay::applySetup()
 {
@@ -169,8 +173,10 @@ void MIDIplay::applySetup()
         adlCalculateFourOpChannels(this, true);
 
     chipReset();
+    adl_dpmi_unlock_vector(m_chipChannels);
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
+    adl_dpmi_lock_vector(m_chipChannels);
 
     // Preserve caller's chip-channel reservations across chip resets;
     // just grow the vector to match the new chip count if needed.
@@ -188,8 +194,11 @@ void MIDIplay::partialReset()
     m_setup.tick_skip_samples_delay = 0;
     synth.m_runAtPcmRate = m_setup.runAtPcmRate;
     chipReset();
+
+    adl_dpmi_unlock_vector(m_chipChannels);
     m_chipChannels.clear();
     m_chipChannels.resize((size_t)synth.m_numChannels);
+    adl_dpmi_lock_vector(m_chipChannels);
 
     if(m_reservedChipChannels.size() < synth.m_numChips)
         m_reservedChipChannels.resize(synth.m_numChips, 0u);
@@ -209,14 +218,18 @@ void MIDIplay::resetMIDI()
     std::memset(m_currentMidiDevice, 0, sizeof(m_currentMidiDevice));
     m_midiDevicesUsed = 0;
 
+    adl_dpmi_unlock_vector(m_midiChannels);
     m_midiChannels.clear();
     m_midiChannels.resize(16, MIDIchannel());
+    adl_dpmi_lock_vector(m_midiChannels);
 
     resetMIDIDefaults();
 
+#ifndef ENABLE_HW_OPL_DOS
     caugh_missing_instruments.clear();
     caugh_missing_banks_melodic.clear();
     caugh_missing_banks_percussion.clear();
+#endif
 }
 
 void MIDIplay::chipReset()
@@ -399,7 +412,10 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
     //Set bank bank
     const Synth::Bank *bnk = NULL;
+#ifndef ENABLE_HW_OPL_DOS
     bool caughtMissingBank = false;
+#endif
+
     if((bank & ~static_cast<uint16_t>(Synth::PercussionTag)) > 0)
     {
         Synth::BankMap::iterator b = synth.m_insBanks.find(bank);
@@ -407,8 +423,10 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
             bnk = &b->second;
         if(bnk)
             ains = &bnk->ins[midiins];
+#ifndef ENABLE_HW_OPL_DOS
         else
             caughtMissingBank = true;
+#endif
     }
 
     //Or fall back to bank ignoring LSB (GS/XG)
@@ -418,16 +436,21 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         if(fallback != bank)
         {
             Synth::BankMap::iterator b = synth.m_insBanks.find(fallback);
+#ifndef ENABLE_HW_OPL_DOS
             caughtMissingBank = false;
+#endif
             if(b != synth.m_insBanks.end())
                 bnk = &b->second;
             if(bnk)
                 ains = &bnk->ins[midiins];
+#ifndef ENABLE_HW_OPL_DOS
             else
                 caughtMissingBank = true;
+#endif
         }
     }
 
+#ifndef ENABLE_HW_OPL_DOS
     if(caughtMissingBank && hooks.onDebugMessage)
     {
         std::set<size_t> &missing = (isPercussion) ?
@@ -441,6 +464,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
                                  channel, text, (bank & ~static_cast<uint16_t>(Synth::PercussionTag)), midiins);
         }
     }
+#endif
 
     //Or fall back to first bank
     if((ains->flags & OplInstMeta::Flag_NoSound) != 0)
@@ -456,16 +480,19 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
     velocity = (uint8_t)std::min(127, std::max(1, (int)velocity + veloffset));
 
     int32_t tone = note;
+
     if(!isPercussion && (bank > 0)) // For non-zero banks
     {
         if(ains->flags & OplInstMeta::Flag_NoSound)
         {
+#ifndef ENABLE_HW_OPL_DOS
             if(hooks.onDebugMessage && caugh_missing_instruments.insert(static_cast<uint8_t>(midiins)).second)
             {
                 hooks.onDebugMessage(hooks.onDebugMessage_userData,
                      "[%i] Caught a blank instrument %i (offset %i) in the MIDI bank %u",
                      channel, m_midiChannels[channel].patch, midiins, bank);
             }
+#endif
             bank = 0;
             midiins = midiChan.patch;
         }
@@ -506,11 +533,13 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
     bool isBlankNote = (ains->flags & OplInstMeta::Flag_NoSound) != 0;
 
+#ifndef ENABLE_HW_OPL_DOS
     if(hooks.onDebugMessage)
     {
         if(isBlankNote && caugh_missing_instruments.insert(static_cast<uint8_t>(midiins)).second)
             hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing instrument %i", channel, midiins);
     }
+#endif
 
     if(isBlankNote)
     {

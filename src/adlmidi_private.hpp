@@ -257,20 +257,11 @@ public:
     {
         // Lock data
         adl_dpmi_lock_memory(ptr, sizeof(T));
-
-        // Lock code
-        void (T::* lock_begin)() = &T::dpmi_lock_begin;
-        void (T::* lock_end)() = &T::dpmi_lock_end;
-        adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
     }
 
     ~DPMILocker()
     {
         adl_dpmi_unlock_memory(this, sizeof(T));
-
-        void (T::* lock_begin)() = &T::dpmi_lock_begin;
-        void (T::* lock_end)() = &T::dpmi_lock_end;
-        adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
     }
 };
 
@@ -291,6 +282,10 @@ void adl_dpmi_unlock_vector(std::vector<T> &v)
 
     adl_dpmi_unlock_memory(v.data(), v.size() * sizeof(T));
 }
+
+extern void adl_lock_code(void);
+extern void adl_unlock_code(void);
+
 #else
 // Dummies
 #   define adl_dpmi_lock_vector(x)
