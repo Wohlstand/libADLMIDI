@@ -107,6 +107,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
      * and avoid a move of "note-off" event over "note-on" while sort.  *
      * Otherwise, after sort those notes will play infinite sound       */
 
+    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
     std::memset(noteStates, 0, sizeof(noteStates));
 
     // Time delay that follows the first event in the track
@@ -135,7 +136,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     evtPos.absPos = abs_position;
     abs_position += evtPos.delay;
     m_trackData[track_idx].push_back(evtPos);
-    evtPos.clear();
+    memset(&evtPos, 0, sizeof(MidiTrackRow));
 
     m_trackState[track_idx].state.track_channel = 0xFF;
 
@@ -189,7 +190,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
         {
             if (!m_trackData[track_idx].empty())
             {
-                MidiTrackRow &previous = m_trackData[track_idx].back();
+                MidiTrackRow &previous = m_trackData[track_idx].m_last->data;
                 previous.delay = 0;
                 previous.timeDelay = 0;
             }
@@ -198,7 +199,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 
         if((evtPos.delay > 0) || loopState.gotLoopEventsInThisRow > 0 || (event.subtype == MidiEvent::ST_ENDTRACK))
         {
-            evtPos.sortEvents(m_eventBank, noteStates);
+            sortEvents(evtPos, m_eventBank, noteStates);
             smf_flushRow(evtPos, abs_position, track_idx, loopState);
         }
     }
@@ -695,7 +696,7 @@ void BW_MidiSequencer::smf_flushRow(MidiTrackRow &evtPos, uint64_t &abs_position
         abs_position += evtPos.delay;
 
     m_trackData[track_num].push_back(evtPos);
-    evtPos.clear();
+    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
     loopState.gotLoopEventsInThisRow = 0;
 }
 

@@ -119,20 +119,6 @@ static void rtSongBegin(void *userdata)
 
 /* NonStandard calls End */
 
-#if defined(__DJGPP__)
-/* DOS-only calls */
-static int rtDPMILock(void *ptr, size_t len)
-{
-    return adl_dpmi_lock_memory(ptr, len) ? 0 : -1;
-}
-
-static int rtDPMIUnlock(void *ptr, size_t len)
-{
-    return adl_dpmi_unlock_memory(ptr, len) ? 0 : -1;
-}
-/* DOS-only calls End */
-#endif
-
 
 void MIDIplay::initSequencerInterface()
 {
@@ -168,11 +154,6 @@ void MIDIplay::initSequencerInterface()
     seq->onloopEnd = hooks.onLoopEnd;
     seq->onloopEnd_userData = hooks.onLoopEnd_userData;
     /* NonStandard calls End */
-
-#if defined(__DJGPP__)
-    seq->dpmi_lock = rtDPMILock;
-    seq->dpmi_unlock = rtDPMIUnlock;
-#endif
 
     m_sequencer->setInterface(seq);
 }

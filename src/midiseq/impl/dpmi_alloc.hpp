@@ -73,6 +73,26 @@ struct dpmi_allocator_impl
 
         return __dpmi_unlock_linear_region(&mem) != -1;
     }
+
+    static bool dpmi_lock_region(void *begin, void *end)
+    {
+        char *b, *e;
+
+        b = (char*)begin;
+        e = (char*)end;
+
+        return dpmi_lock_memory(begin, (e - b));
+    }
+
+    static bool dpmi_unlock_region(void *begin, void *end)
+    {
+        char *b, *e;
+
+        b = (char*)begin;
+        e = (char*)end;
+
+        return dpmi_unlock_memory(begin, (e - b));
+    }
 };
 
 template <typename T>

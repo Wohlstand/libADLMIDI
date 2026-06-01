@@ -169,7 +169,7 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
 
     do
     {
-        if(scanPosition.track.empty())
+        if(scanPosition.track_size == 0)
             break; // Nothing to do!
 
         rowBegin = scanPosition;
@@ -177,18 +177,21 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
         for(size_t tk = 0; tk < m_tracksCount; ++tk)
         {
             Position::TrackInfo &track = scanPosition.track[tk];
-            MidiTrackQueue::iterator end = m_trackData[tk].end();
+            MidiTrackRow *ti = NULL;
+            // MidiTrackQueue::Leaf_t *end = m_trackData[tk].m_end;
 
             if((track.lastHandledEvent >= 0) && (track.delay <= 0))
             {
                 // Check is an end of track has been reached
-                if(track.pos == end)
+                if(track.pos == NULL)
                 {
                     track.lastHandledEvent = -1;
                     break;
                 }
 
-                for(size_t i = track.pos->events_begin; i < track.pos->events_end; ++i)
+                ti = &track.pos->data;
+
+                for(size_t i = ti->events_begin; i < ti->events_end; ++i)
                 {
                     const MidiEvent &evt = m_eventBank[i];
                     track.lastHandledEvent = evt.type;
@@ -287,8 +290,8 @@ void BW_MidiSequencer::installLoop(BW_MidiSequencer::LoopPointParseState &loopSt
                 // Read next event time (unless the track just ended)
                 if(track.lastHandledEvent >= 0)
                 {
-                    track.delay += track.pos->delay;
-                    ++track.pos;
+                    track.delay += ti->delay;
+                    track.pos = track.pos->next;
                 }
             }
         }

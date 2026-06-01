@@ -26,19 +26,23 @@
 #ifndef BW_MIDI_SEQUENCER_HHHHPPP
 #define BW_MIDI_SEQUENCER_HHHHPPP
 
-#include <list>
 #include <vector>
 
 #include "file_reader.hpp"
 #include "midi_sequencer.h"
 
 #include "impl/dpmi_alloc.hpp"
+#include "impl/miditrack_list.hpp"
 
 //! Helper for unused values
 #define BW_MidiSequencer_UNUSED(x) (void)x;
 
 class BW_MidiSequencer
 {
+#if defined(__DJGPP__)
+    void dpmi_lock_begin() {}
+#endif
+
 public:
     /**********************************************************************************
      *                   Public structures and types definitions                      *
@@ -393,16 +397,8 @@ private:
      * Created with purpose to sort events by type in the same position
      * (for example, to keep controllers always first than note on events or lower than note-off events)
      */
-    class MidiTrackRow
+    struct MidiTrackRow
     {
-    public:
-        MidiTrackRow();
-
-        /*!
-         * \brief Clear MIDI row data
-         */
-        void clear();
-
         //! Absolute time position in seconds
         double time;
         //! Delay to next event in ticks
@@ -415,14 +411,14 @@ private:
         size_t events_begin;
         //! End of the events row stored in the bank
         size_t events_end;
-
-        static int typePriority(const MidiEvent &evt);
-        /**
-         * @brief Sort events in this position
-         * @param noteStates Buffer of currently pressed/released note keys in the track
-         */
-        void sortEvents(std::vector<MidiEvent, dpmi_allocator<MidiEvent> > &eventsBank, bool *noteStates = NULL);
     };
+
+    static int typePriority(const MidiEvent &evt);
+    /**
+     * @brief Sort events in this position
+     * @param noteStates Buffer of currently pressed/released note keys in the track
+     */
+    static void sortEvents(MidiTrackRow &row, std::vector<MidiEvent, dpmi_allocator<MidiEvent> > &eventsBank, bool *noteStates = NULL);
 
     /**
      * @brief Tempo change point entry. Used in the MIDI data building function only.
@@ -434,7 +430,7 @@ private:
     };
     //P.S. I declared it here instead of local in-function because C++98 can't process templates with locally-declared structures
 
-    typedef std::list<MidiTrackRow, dpmi_allocator<MidiTrackRow> > MidiTrackQueue;
+    typedef TrackQueueList_t<MidiTrackRow> MidiTrackQueue;
 
     /**
      * @brief The print left by the Note-On event with a duration supplied. Once it expires, the Note-Off event should be sent.
@@ -505,19 +501,13 @@ private:
         struct TrackInfo
         {
             //! MIDI Events queue position iterator
-            MidiTrackQueue::iterator pos;
+            MidiTrackQueue::Leaf_t *pos;
             //! Delay to next event in a track
             uint64_t delay;
             //! Last handled event type
             int32_t lastHandledEvent;
             //! Track's local state
             TrackStateSaved state;
-
-            TrackInfo();
-
-            TrackInfo(const TrackInfo &o);
-
-            TrackInfo &operator=(const TrackInfo &o);
         };
 
         //! Waiting time before next event in seconds
@@ -529,9 +519,16 @@ private:
         //! Was track began playing
         bool began;
         //! Per-track info remembered by the position state
-        std::vector<TrackInfo, dpmi_allocator<TrackInfo> > track;
+        TrackInfo *track;
+        size_t track_size;
+
+        void tracks_resize(size_t size);
+        static void tracks_init_one(TrackInfo &t);
 
         Position();
+        ~Position();
+        Position(const Position &o);
+        Position &operator=(const Position &o);
         void clear();
         void assignOneTrack(const Position *o, size_t tk);
     };
@@ -769,6 +766,8 @@ private:
 
     //! Current position
     Position m_currentPosition;
+    //! A snapshot of the current position before events processing
+    Position m_currentPositionBegin;
     //! Track begin position
     Position m_trackBeginPosition;
     //! Loop start point
@@ -1545,6 +1544,11 @@ public:
      * @param tempo Tempo multiplier: 1.0 - original tempo. >1 - faster, <1 - slower
      */
     void   setTempo(double tempo);
+
+#if defined(__DJGPP__)
+private:
+    void dpmi_lock_end() {}
+#endif
 };
 
 #endif /* BW_MIDI_SEQUENCER_HHHHPPP */

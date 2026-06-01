@@ -88,7 +88,7 @@ void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
     m_tracksCount = tracksCount;
     m_trackData.resize(m_tracksCount, MidiTrackQueue());
     m_trackState.resize(m_tracksCount, MidiTrackState());
-    m_trackBeginPosition.track.resize(m_tracksCount);
+    m_trackBeginPosition.tracks_resize(m_tracksCount);
 }
 
 
@@ -96,15 +96,16 @@ void BW_MidiSequencer::initTracksBegin(size_t track)
 {
     if(m_trackData[track].size() > 0)
     {
-        MidiTrackQueue::iterator pos = m_trackData[track].begin();
+        MidiTrackQueue::Leaf_t *pos = m_trackData[track].m_begin;
         m_trackBeginPosition.track[track].pos = pos;
         // Some events doesn't begin at zero!
-        m_trackBeginPosition.track[track].delay = pos->absPos;
+        m_trackBeginPosition.track[track].delay = pos->data.absPos;
         m_trackBeginPosition.track[track].lastHandledEvent = 0;
         std::memcpy(&m_trackBeginPosition.track[track].state, &m_trackState[track].state, sizeof(TrackStateSaved));
     }
     else
     {
+        m_trackBeginPosition.track[track].pos = NULL;
         m_trackBeginPosition.track[track].delay = 0;
         m_trackBeginPosition.track[track].lastHandledEvent = -1;
     }
@@ -130,6 +131,8 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
 
     std::vector<TempoChangePoint> points;
 
+    std::memset(&fakePos, 0, sizeof(MidiTrackRow));
+
 
     /********************************************************************************/
     // Calculate time basing on collected tempo events
@@ -151,7 +154,7 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
         std::fflush(stdout);
 #endif
 
-        posPrev = &(*(track.begin()));//First element
+        posPrev = &track.m_begin->data;//First element
 
         // If doesn't begins with zero, add a fake one!
         if(posPrev->absPos > 0)
@@ -161,12 +164,12 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
             posPrev = &fakePos;
         }
 
-        for(MidiTrackQueue::iterator it = track.begin(); it != track.end(); it++)
+        for(MidiTrackQueue::Leaf_t *it = track.m_begin; it != NULL; it = it->next)
         {
 #ifdef BWMIDI_DEBUG_TIME_CALCULATION
             bool tempoChanged = false;
 #endif
-            MidiTrackRow &pos = *it;
+            MidiTrackRow &pos = it->data;
             if((posPrev != &pos) && // Skip first event
                (!tempos.empty()) && // Only when in-track tempo events are available
                (tempo_change_index < tempos.size())
@@ -301,13 +304,13 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
                 if((track.lastHandledEvent >= 0) && (track.delay <= 0))
                 {
                     // Check is an end of track has been reached
-                    if(track.pos == m_trackData[tk].end())
+                    if(track.pos == NULL)
                     {
                         track.lastHandledEvent = -1;
                         continue;
                     }
 
-                    for(i = track.pos->events_begin; i < track.pos->events_end; ++i)
+                    for(i = track.pos->data.events_begin; i < track.pos->data.events_end; ++i)
                     {
                         const MidiEvent &evt = m_eventBank[i];
                         if(evt.type == MidiEvent::T_SPECIAL && evt.subtype == MidiEvent::ST_LOOPSTART)
@@ -320,8 +323,8 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
 
                     if(track.lastHandledEvent >= 0)
                     {
-                        track.delay += track.pos->delay;
-                        track.pos++;
+                        track.delay += track.pos->data.delay;
+                        track.pos = track.pos->next;
                     }
                 }
             }

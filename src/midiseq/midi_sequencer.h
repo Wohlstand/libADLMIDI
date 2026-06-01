@@ -72,10 +72,6 @@ typedef void (*RtDeviceSwitch)(void *userdata, size_t track, const char *data, s
 typedef size_t (*RtCurrentDevice)(void *userdata, size_t track);
 /*! [Non-Standard] Pass raw OPL3 data to the chip (when playing IMF files) */
 typedef void (*RtRawOPL)(void *userdata, uint8_t reg, uint8_t value);
-/*! [DOS-32 only] Lock the memory region to keep the virtual memory manager from paging the region out. */
-typedef int (*RtDPMILockMemory)(void *start, size_t length);
-/*! [DOS-32 only] Unlocks a region of memory that was previously locked */
-typedef int (*RtDPMIUnLockMemory)(void *start, size_t length);
 
 /**
   \brief Real-Time MIDI interface between Sequencer and the Synthesizer
@@ -172,12 +168,6 @@ typedef struct BW_MidiRtInterface
      ******************************************/
     /*! [Non-Standard] Pass raw OPL3 data to the chip hook */
     RtRawOPL            rt_rawOPL;
-
-    /******************************************
-     * DOS-only DPMI functions                *
-     ******************************************/
-    RtDPMILockMemory    dpmi_lock;
-    RtDPMIUnLockMemory  dpmi_unlock;
 
 } BW_MidiRtInterface;
 
