@@ -67,6 +67,8 @@ class MIDIplay
 {
 #if defined(__DJGPP__)
     void dpmi_lock_begin() {}
+    friend class DPMILocker<MIDIplay>;
+    DPMILocker<MIDIplay> m_dpmi_locker;
 #endif
 
     friend void adl_reset(struct ADL_MIDIPlayer*);
@@ -242,7 +244,7 @@ public:
             {
                 Phys *ph = NULL;
 
-                for(unsigned i = 0; i < chip_channels_count && !ph; ++i)
+                for(unsigned i = 0; i < chip_channels_count && i < MaxNumPhysItemCount && !ph; ++i)
                 {
                     if(chip_channels[i].chip_chan == chip_chan)
                         ph = &chip_channels[i];
@@ -275,7 +277,7 @@ public:
             {
                 intptr_t pos = ph - chip_channels;
                 assert(pos >= 0 && pos < static_cast<intptr_t>(chip_channels_count));
-                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count); ++i)
+                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count) && i < MaxNumPhysItemCount; ++i)
                     chip_channels[i - 1] = chip_channels[i];
                 --chip_channels_count;
             }

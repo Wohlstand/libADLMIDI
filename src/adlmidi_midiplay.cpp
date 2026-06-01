@@ -64,6 +64,9 @@ void MIDIplay::AdlChannel::addAge(int64_t us)
 }
 
 MIDIplay::MIDIplay(unsigned long sampleRate):
+#ifdef ADLMIDI_ENABLE_HW_DOS
+    m_dpmi_locker(this),
+#endif
     m_cmfPercussionMode(false),
     m_sysExDeviceId(0),
     m_synthMode(Mode_XG),
@@ -115,36 +118,10 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
     resetMIDI();
     applySetup();
     realTime_ResetState();
-
-#ifdef ENABLE_HW_OPL_DOS
-    if(!adl_dpmi_lock_memory(this, sizeof(MIDIplay)))
-    {
-        if(hooks.onDebugMessage)
-            hooks.onDebugMessage(hooks.onDebugMessage_userData, "Error: Failed to lock the DPMI memory region during initialisation");
-    }
-
-    void (MIDIplay::* lock_begin)() = &MIDIplay::dpmi_lock_begin;
-    void (MIDIplay::* lock_end)() = &MIDIplay::dpmi_lock_end;
-
-    if(!adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end))
-    {
-        if(hooks.onDebugMessage)
-            hooks.onDebugMessage(hooks.onDebugMessage_userData, "Error: Failed to lock the DPMI memory region during initialisation");
-    }
-#endif
 }
 
 MIDIplay::~MIDIplay()
-{
-#ifdef ENABLE_HW_OPL_DOS
-    adl_dpmi_unlock_memory(this, sizeof(MIDIplay));
-
-    void (MIDIplay::* lock_begin)() = &MIDIplay::dpmi_lock_begin;
-    void (MIDIplay::* lock_end)() = &MIDIplay::dpmi_lock_end;
-
-    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
-#endif
-}
+{}
 
 void MIDIplay::applySetup()
 {

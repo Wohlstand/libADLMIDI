@@ -46,6 +46,8 @@ class OPL3
 {
 #if defined(__DJGPP__)
     void dpmi_lock_begin() {}
+    friend class DPMILocker<OPL3>;
+    DPMILocker<OPL3> m_dpmi_locker;
 #endif
 
     friend class MIDIplay;
@@ -68,7 +70,7 @@ public:
 private:
     //! Cached patch data, needed by Touch()
     std::vector<const OplTimbre*> m_insCache;
-    std::vector<bool> m_insCacheModified;
+    std::vector<char> m_insCacheModified;
     //! Value written to B0, cached, needed by NoteOff.
     /*! Contains Key on/off state, octave block and frequency number values
      */
