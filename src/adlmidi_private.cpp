@@ -149,7 +149,7 @@ bool adl_dpmi_lock_memory(void *address, size_t size)
 
 bool adl_dpmi_lock_region(void *begin, void *end)
 {
-    return adl_dpmi_lock_memory(begin, (uint8_t *)end - (uint8_t *)begin);
+    return adl_dpmi_lock_memory(begin, (uintptr_t)end - (uintptr_t)begin);
 }
 
 bool adl_dpmi_unlock_memory(void *address, size_t size)
@@ -169,7 +169,7 @@ bool adl_dpmi_unlock_memory(void *address, size_t size)
 
 bool adl_dpmi_unlock_region(void *begin, void *end)
 {
-    return adl_dpmi_unlock_memory(begin, (uint8_t *)end - (uint8_t *)begin);
+    return adl_dpmi_unlock_memory(begin, (uintptr_t)end - (uintptr_t)begin);
 }
 
 // Lock code of all known classes
