@@ -208,7 +208,7 @@ static const char * const emulator_type_descriptions[] =
 {
 #ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
     N_("Nuked OPL3 1.8"),
-    N_("Nuked OPL3 1.7.4 (Optimized)"),
+    N_("Nuked OPL3 Fast"),
 #endif
 
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
