@@ -24,10 +24,57 @@
 #include <assert.h>
 #ifdef __DJGPP__
 #   include <pc.h>
+#   include <sys/segments.h>
+#   include <dpmi.h>
 #endif
 
-#include "../adlmidi_private.hpp"
 #include "dos_hw_opl.h"
+
+static bool s_dpmi_lock_memory(void *address, size_t size)
+{
+#ifdef __DJGPP__
+    unsigned long baseaddr;
+    __dpmi_meminfo mem;
+
+    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
+        return false;
+
+    mem.handle = 0;
+    mem.address = baseaddr + (intptr_t)address;
+    mem.size = size;
+
+    return __dpmi_lock_linear_region(&mem) != -1;
+#else
+#   error "FIXME: Implement DPMI lock for THIS platform!"
+    return -1;
+#endif
+}
+
+static bool s_dpmi_unlock_memory(void *address, size_t size)
+{
+#ifdef __DJGPP__
+    unsigned long baseaddr;
+    __dpmi_meminfo mem;
+
+    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
+        return false;
+
+    mem.handle = 0;
+    mem.address = baseaddr + (intptr_t)address;
+    mem.size = size;
+
+    return __dpmi_unlock_linear_region(&mem) != -1;
+#else
+#   error "FIXME: Implement DPMI unlock for THIS platform!"
+    return -1;
+#endif
+}
+
+#define s_dpmi_lock(obj)\
+    (s_dpmi_lock_memory((void*)&obj, sizeof(obj)))
+
+#define s_dpmi_unlock(obj)\
+    (s_dpmi_unlock_memory((void*)&obj, sizeof(obj)))
 
 static uint16_t                 s_OPLBase[2]    = {0x388, 0x38A};
 static char                     s_devName[80]   = {0};
@@ -90,10 +137,10 @@ DOS_HW_OPL::DOS_HW_OPL()
     s_detect();
     s_updateDevName();
 
-    adl_dpmi_lock(s_OPLBase);
-    adl_dpmi_lock(s_devName);
-    adl_dpmi_lock(s_type);
-    adl_dpmi_lock(s_detected);
+    s_dpmi_lock(s_OPLBase);
+    s_dpmi_lock(s_devName);
+    s_dpmi_lock(s_type);
+    s_dpmi_lock(s_detected);
 }
 
 void DOS_HW_OPL::setOplAddress(uint16_t address)
@@ -118,10 +165,10 @@ DOS_HW_OPL::~DOS_HW_OPL()
         DOS_HW_OPL::writeReg(0x105, 0);
     }
 
-    adl_dpmi_unlock(s_OPLBase);
-    adl_dpmi_unlock(s_devName);
-    adl_dpmi_unlock(s_type);
-    adl_dpmi_unlock(s_detected);
+    s_dpmi_unlock(s_OPLBase);
+    s_dpmi_unlock(s_devName);
+    s_dpmi_unlock(s_type);
+    s_dpmi_unlock(s_detected);
 }
 
 void DOS_HW_OPL::writeReg(uint16_t addr, uint8_t data)
