@@ -106,7 +106,7 @@ void DosTaskman::process()
     if(self->m_clock >= 0x10000000)
         self->m_clock = 0;
 
-    for(std::list<DosTask>::iterator it = self->m_tasks.begin(); it != self->m_tasks.end(); ++it)
+    for(DosTasksList::iterator it = self->m_tasks.begin(); it != self->m_tasks.end(); ++it)
     {
         DosTask &t = *it;
         if(t.active)
@@ -290,7 +290,7 @@ void DosTaskman::changeTaskRate(DosTaskman::DosTask *task, int freq)
 {
     uint32_t flags = disableInterrupts();
 
-    for(std::list<DosTask>::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
     {
         DosTask *t = &*it;
         if(t == task)
@@ -320,7 +320,7 @@ void DosTaskman::setClockToMax()
     uint32_t flags = disableInterrupts();
     long maxRate = 0x10000L;
 
-    for(std::list<DosTask>::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
     {
         DosTask &t = *it;
         if(t.rate_real < maxRate)
@@ -372,7 +372,7 @@ void DosTaskman::dispatch()
 {
     uint32_t flags = disableInterrupts();
 
-    for(std::list<DosTask>::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
     {
         DosTask &t = *it;
         t.active = true;
@@ -385,7 +385,7 @@ bool DosTaskman::terminate(DosTask *task)
 {
     uint32_t flags = disableInterrupts();
 
-    for(std::list<DosTask>::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
     {
         DosTask *t = &*it;
         if(t == task)
