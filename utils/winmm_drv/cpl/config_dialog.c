@@ -86,6 +86,7 @@ static const enum ADL_Emulator emulator_type_id[] =
 #endif
 #ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
     ADLMIDI_EMU_NUKED_OPL2_LITE,
+    ADLMIDI_EMU_NUKED_CQM,
 #endif
     ADLMIDI_EMU_end
 };
@@ -123,6 +124,7 @@ static const char * const emulator_type_descriptions[] =
 #endif
 #ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
     "Nuked OPL2 Lite",
+    "Nuked CQM",
 #endif
     NULL
 };
