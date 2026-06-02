@@ -736,6 +736,8 @@ enum ADL_Emulator
     ADLMIDI_EMU_NUKED_OPL3_LLE,
     /*! Nuked OPL2 Lite */
     ADLMIDI_EMU_NUKED_OPL2_LITE,
+    /*! Nuked CQM */
+    ADLMIDI_EMU_NUKED_CQM,
     /*! Count instrument on the level */
     ADLMIDI_EMU_end,
 

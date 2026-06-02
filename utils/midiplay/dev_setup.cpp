@@ -214,6 +214,7 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
             " --emu-nuked7 Uses Nuked OPL3 Fast emulator\n"
             " --emu-nuked-opl2 Uses Nuked OPL2 Lite emulator\n"
+            " --emu-nuked-cqm Uses Nuked CQM emulator\n"
 #   endif
 #   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
             " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
@@ -351,6 +352,8 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             emulator = ADLMIDI_EMU_NUKED_174;
         else if(!std::strcmp("--emu-nuked-opl2", argv[2]))
             emulator = ADLMIDI_EMU_NUKED_OPL2_LITE;
+        else if(!std::strcmp("--emu-nuked-cqm", argv[2]))
+            emulator = ADLMIDI_EMU_NUKED_CQM;
         else if(!std::strcmp("--emu-dosbox", argv[2]))
             emulator = ADLMIDI_EMU_DOSBOX;
         else if(!std::strcmp("--emu-opal", argv[2]))

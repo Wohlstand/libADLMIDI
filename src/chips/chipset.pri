@@ -13,8 +13,10 @@ SOURCES+= \
     $$PWD/dosbox/dbopl.cpp \
     $$PWD/nuked_opl2.cpp \
     $$PWD/nuked/nukedopl2.c \
-    $$PWD/nuked_opl3_v174.cpp \
+    $$PWD/nuked_opl3_fast.cpp \
     $$PWD/nuked_fast/nukedopl3_fast.c \
+    $$PWD/nuked_cqm.cpp \
+    $$PWD/nuked_cqm/cqm.c \
     $$PWD/vpc_opl3_emu.cpp \
     $$PWD/vpc_opl3/vpc_opl3.c \
     $$PWD/ymf262_lle.cpp \
@@ -42,9 +44,11 @@ HEADERS+= \
     $$PWD/nuked/nukedopl2.h \
     $$PWD/nuked/nukedopl3.h \
     $$PWD/dosbox/dbopl.h \
-    $$PWD/nuked_opl3_v174.h \
+    $$PWD/nuked_opl3_fast.h \
     $$PWD/nuked_fast/nukedopl3_fast.h \
     $$PWD/nuked_fast/wf_rom.h \
+    $$PWD/nuked_cqm.h \
+    $$PWD/nuked_cqm/cqm.h \
     $$PWD/vpc_opl3_emu.h \
     $$PWD/vpc_opl3/vpc_opl3.h \
     $$PWD/ymf262_lle.h \

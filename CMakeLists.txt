@@ -363,6 +363,10 @@ function(handle_options targetLib)
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_opl2.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl2.c
                 ${libADLMIDI_SOURCE_DIR}/src/chips/nuked/nukedopl2.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_cqm.cpp        # CQM
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_cqm.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_cqm/cqm.c
+                ${libADLMIDI_SOURCE_DIR}/src/chips/nuked_cqm/cqm.h
             )
         else()
             target_compile_definitions(${targetLib} PUBLIC ADLMIDI_DISABLE_NUKED_EMULATOR)
