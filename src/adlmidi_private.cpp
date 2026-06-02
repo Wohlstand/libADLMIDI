@@ -24,6 +24,7 @@
 #include "adlmidi_midiplay.hpp"
 #include "adlmidi_opl3.hpp"
 #include "adlmidi_private.hpp"
+#include "adlmidi_bankmap.h"
 #include "wopl/wopl_file.h"
 
 #ifdef ENABLE_HW_OPL_DOS
@@ -201,6 +202,18 @@ void adl_lock_code(void)
     dpmi_lock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
     dpmi_lock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
     dpmi_lock_class_code<AdlMIDI_UPtr<Synth> >();
+    dpmi_lock_class_code<BasicBankMap<OPL3::Bank> >();
+    dpmi_lock_class_code<AdlMIDI_SPtrArray<BasicBankMap<OPL3::Bank>::Slot*> >();
+    dpmi_lock_class_code<AdlMIDI_SPtr<OPLChipBase > >();
+
+    dpmi_lock_class_code<adl_array<AdlMIDI_SPtr<OPLChipBase >, true> >();
+    dpmi_lock_class_code<adl_array<const OplTimbre*> >();
+    dpmi_lock_class_code<adl_array<bool> >();
+    dpmi_lock_class_code<adl_array<uint32_t> >();
+    dpmi_lock_class_code<adl_array<uint8_t> >();
+
+    dpmi_lock_class_code<adl_array<MIDIplay::AdlChannel, true> >();
+    dpmi_lock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
 
     void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
     void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
@@ -217,6 +230,18 @@ void adl_unlock_code(void)
     dpmi_unlock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
     dpmi_unlock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
     dpmi_unlock_class_code<AdlMIDI_UPtr<Synth> >();
+    dpmi_unlock_class_code<BasicBankMap<OPL3::Bank> >();
+    dpmi_unlock_class_code<AdlMIDI_SPtrArray<BasicBankMap<OPL3::Bank>::Slot*> >();
+    dpmi_unlock_class_code<AdlMIDI_SPtr<OPLChipBase > >();
+
+    dpmi_unlock_class_code<adl_array<AdlMIDI_SPtr<OPLChipBase >, true> >();
+    dpmi_unlock_class_code<adl_array<const OplTimbre*> >();
+    dpmi_unlock_class_code<adl_array<bool> >();
+    dpmi_unlock_class_code<adl_array<uint32_t> >();
+    dpmi_unlock_class_code<adl_array<uint8_t> >();
+
+    dpmi_unlock_class_code<adl_array<MIDIplay::AdlChannel, true> >();
+    dpmi_unlock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
 
     void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
     void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;

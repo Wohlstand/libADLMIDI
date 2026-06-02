@@ -270,17 +270,10 @@ bool MIDIplay::LoadMIDI_post()
     m_setup.tick_skip_samples_delay = 0;
     chipReset(); // Reset OPL3 chip
     //opl.Reset(); // ...twice (just in case someone misprogrammed OPL3 previously)
-    adl_dpmi_unlock_vector(m_chipChannels);
-    m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
-    adl_dpmi_lock_vector(m_chipChannels);
 
-    if(m_reservedChipChannels.size() < synth.m_numChips)
-    {
-        adl_dpmi_unlock_vector(m_reservedChipChannels);
-        m_reservedChipChannels.resize(synth.m_numChips, 0u);
-        adl_dpmi_lock_vector(m_reservedChipChannels);
-    }
+    if(m_reservedChipChannels.size < synth.m_numChips)
+        m_reservedChipChannels.resize_fill(synth.m_numChips, 0u);
 
     if(setToOPL2)
         synth.toggleOPL3(false);

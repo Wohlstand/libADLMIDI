@@ -265,11 +265,11 @@ bool BW_MidiSequencer::debugDumpContents(FILE *out)
         fprintf(out, "Device Mask: 0x%04X\r\n", (unsigned)trackState.deviceMask);
         fprintf(out, "\r\n");
 
-        MidiTrackQueue::iterator it = m_trackBeginPosition.track[tk].pos;
+        MidiTrackQueue::Leaf_t *it = m_trackBeginPosition.track[tk].pos;
 
-        while(it != m_trackData[tk].end())
+        while(it != NULL)
         {
-            MidiTrackRow &row = *it;
+            MidiTrackRow &row = it->data;
 
             str2time(row.timeDelay, delayBuff, 100);
             str2time(row.time, timeBuff, 100);
@@ -307,7 +307,7 @@ bool BW_MidiSequencer::debugDumpContents(FILE *out)
             }
 
             fflush(out);
-            ++it;
+            it = it->next;
         }
 
         fprintf(out, "=======================Track %lu=END===================\r\n\r\n\r\n", (unsigned long)tk);

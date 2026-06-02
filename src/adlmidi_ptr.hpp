@@ -55,6 +55,9 @@ struct ADLMIDI_DefaultArrayDelete
 {
     void operator()(T *x)
     {
+#ifdef ENABLE_HW_OPL_DOS
+        adl_dpmi_unlock_memory(x, sizeof(T));
+#endif
         delete[] x;
     }
 };
@@ -179,6 +182,12 @@ public:
 template< class T, class Deleter = ADLMIDI_DefaultDelete<T> >
 class AdlMIDI_SPtr
 {
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_begin() {}
+private:
+#endif
+
     T *m_p;
     size_t *m_counter;
 public:
@@ -247,6 +256,11 @@ public:
     {
         return m_p[index];
     }
+
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_end() {}
+#endif
 };
 
 /**

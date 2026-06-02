@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     int songNumber = 0;
     bool allMode = false;
     std::string outDir;
-    std::vector<std::vector<uint8_t > > song_buf;
+    BW_MidiSequencer::RawSongsList song_buf;
 
     (void)Convert_xmi2midi; /* Shut up the warning */
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if(Convert_xmi2midi_multi(filedata, insize, song_buf, XMIDI_CONVERT_NOCONVERSION) < 0)
+    if(BW_MidiSequencer::Convert_xmi2midi_multi(filedata, insize, song_buf, XMIDI_CONVERT_NOCONVERSION) < 0)
     {
         fprintf(stderr, "Error converting XMI to SMF.\n");
         return 1;

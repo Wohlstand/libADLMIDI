@@ -30,6 +30,7 @@
 #include <stddef.h>
 
 #include "adlmidi_ptr.hpp"
+#include "midiseq/impl/dpmi_alloc.hpp"
 
 /**
  * A simple hash map which accepts bank numbers as keys, can be reserved to a
@@ -39,6 +40,11 @@
 template <class T>
 class BasicBankMap
 {
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_begin() {}
+#endif
+
 public:
     typedef size_t key_type;  /* the bank identifier */
     typedef T mapped_type;
@@ -69,8 +75,11 @@ public:
     T &operator[](key_type key);
 
 private:
-    struct Slot;
-    enum { minimum_allocation = 4 };
+    enum
+    {
+        minimum_allocation = 4
+    };
+
     enum
     {
         hash_bits = 8, /* worst case # of collisions: 128^2/2^hash_bits */
@@ -78,6 +87,8 @@ private:
     };
 
 public:
+    struct Slot;
+
     class iterator
     {
     public:
@@ -102,14 +113,17 @@ public:
 #endif
     };
 
-private:
-    struct Slot {
+public:
+    struct Slot
+    {
         Slot *next, *prev;
         value_type value;
         Slot() : next(NULL), prev(NULL) {}
     };
+
+private:
     AdlMIDI_SPtrArray<Slot *> m_buckets;
-    std::list< AdlMIDI_SPtrArray<Slot> > m_allocations;
+    std::list< AdlMIDI_SPtrArray<Slot>, dpmi_allocator<AdlMIDI_SPtrArray<Slot> > > m_allocations;
     Slot *m_freeslots;
     size_t m_size;
     size_t m_capacity;
@@ -120,6 +134,11 @@ private:
     Slot *bucket_find(size_t index, key_type key);
     void bucket_add(size_t index, Slot *slot);
     void bucket_remove(size_t index, Slot *slot);
+
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_end() {}
+#endif
 };
 
 #include "adlmidi_bankmap.tcc"

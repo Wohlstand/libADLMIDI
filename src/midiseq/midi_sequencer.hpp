@@ -153,6 +153,9 @@ public:
     typedef std::vector<DataBlock, dpmi_allocator<DataBlock> >                  MusTrackTitlesList;
     typedef std::vector<MIDI_MarkerEntry, dpmi_allocator<MIDI_MarkerEntry> >    MusMarkersList;
 
+    typedef std::vector<uint8_t, dpmi_allocator<uint8_t> >                      RawSongEntry;
+    typedef std::vector<RawSongEntry, dpmi_allocator<RawSongEntry> >            RawSongsList;
+
 private:
     /**********************************************************************************
      *                   Private structures and types definitions                     *
@@ -837,9 +840,6 @@ private:
     //! Complete mask that includes all supported devices by loaded files (if 0xFFFF, then file doesn't use track filtering)
     uint32_t m_deviceMaskAvailable;
 
-
-    typedef std::vector<uint8_t, dpmi_allocator<uint8_t> > RawSongEntry;
-    typedef std::vector<RawSongEntry, dpmi_allocator<RawSongEntry> > RawSongsList;
     //! The XMI-specific list of raw songs, converted into SMF format
     RawSongsList m_rawSongsData;
 
@@ -1236,9 +1236,11 @@ private:
      */
     bool parseXMI(FileAndMemReader &fr);
 
+public:
     static int Convert_xmi2midi_multi(uint8_t *in, uint32_t insize,
                                       RawSongsList &out,
                                       uint32_t convert_type);
+private:
 #endif
 
 

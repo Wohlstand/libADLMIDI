@@ -30,7 +30,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dpmi_alloc.hpp"
+#if defined(__DJGPP__)
+#   include "dpmi_alloc.hpp"
+#endif
 
 template<class T>
 struct TrackQueueList_t
@@ -104,9 +106,9 @@ struct TrackQueueList_t
                 cur = m_begin;
                 m_begin = cur->next;
 #if defined(__DJGPP__)
-                dpmi_allocator_impl::dpmi_unlock_memory(m_begin, sizeof(Leaf_t));
+                dpmi_allocator_impl::dpmi_unlock_memory(cur, sizeof(Leaf_t));
 #endif
-                free(m_begin);
+                free(cur);
                 --m_size;
             }
 

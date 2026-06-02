@@ -628,7 +628,7 @@ public:
     };
 
     //! Available MIDI Channels
-    std::vector<MIDIchannel> m_midiChannels;
+    adl_array<MIDIchannel, true> m_midiChannels;
 
     //! CMF Rhythm mode
     bool    m_cmfPercussionMode;
@@ -672,12 +672,12 @@ private:
     char _padding[7];
 
     //! Chip channels map
-    std::vector<AdlChannel> m_chipChannels;
+    adl_array<AdlChannel, true> m_chipChannels;
     //! Per-chip bitmask of chip channels reserved by the user from MIDI voice
     //! allocation. Bit N set = channel N on that chip will be skipped by the
     //! note allocator so raw OPL writes via realTime_rawOPL_Chip won't be
     //! clobbered by MIDI playback.
-    std::vector<uint32_t> m_reservedChipChannels;
+    adl_array<uint32_t> m_reservedChipChannels;
     //! Counter of arpeggio processing
     size_t m_arpeggioCounter;
 

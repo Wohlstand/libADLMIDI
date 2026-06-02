@@ -66,20 +66,20 @@ public:
     //! Just a padding. Reserved.
     char _padding[4];
     //! Running chip emulators
-    std::vector<AdlMIDI_SPtr<OPLChipBase > > m_chips;
+    adl_array<AdlMIDI_SPtr<OPLChipBase >, true> m_chips;
 
 private:
     //! Cached patch data, needed by Touch()
-    std::vector<const OplTimbre*> m_insCache;
-    std::vector<char> m_insCacheModified;
+    adl_array<const OplTimbre*> m_insCache;
+    adl_array<bool> m_insCacheModified;
     //! Value written to B0, cached, needed by NoteOff.
     /*! Contains Key on/off state, octave block and frequency number values
      */
-    std::vector<uint32_t>   m_keyBlockFNumCache;
+    adl_array<uint32_t>   m_keyBlockFNumCache;
     //! Cached BD registry value (flags register: DeepTremolo, DeepVibrato, and RhythmMode)
-    std::vector<uint32_t>   m_regBD;
+    adl_array<uint32_t>   m_regBD;
     //! Cached C0 register value (primarily for the panning state)
-    std::vector<uint8_t>    m_regC0;
+    adl_array<uint8_t>    m_regC0;
 
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
     bool        m_serial;
@@ -285,7 +285,7 @@ public:
         7 = percussion Hihat
         8 = percussion Secondary
     */
-    std::vector<uint32_t> m_channelCategory;
+    adl_array<uint32_t> m_channelCategory;
 
 
     /**

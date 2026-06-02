@@ -292,4 +292,108 @@ extern void adl_unlock_code(void);
 #   define adl_dpmi_unlock_vector(x)
 #endif
 
+template<class T, bool is_class=false>
+struct adl_array
+{
+#if defined(__DJGPP__)
+    void dpmi_lock_begin() {}
+#endif
+
+    T *data;
+    size_t size;
+
+    adl_array() :
+        data(NULL),
+        size(0)
+    {}
+
+    ~adl_array()
+    {
+        clear();
+    }
+
+    bool empty()
+    {
+        return size == 0;
+    }
+
+    void fill(const T &value)
+    {
+        for(size_t i = 0; i < size; ++i)
+            data[i] = value;
+    }
+
+    void resize_fill(size_t count, const T &value)
+    {
+        if(data)
+            clear();
+
+        data = (T*)std::malloc(count * sizeof(T));
+        size = count;
+
+#ifdef ENABLE_HW_OPL_DOS
+        adl_dpmi_lock_memory(data, count * sizeof(T));
+#endif
+
+        for(size_t i = 0; i < size; ++i)
+        {
+            if(is_class)
+                new (data + i) T();
+            data[i] = value;
+        }
+    }
+
+    void resize(size_t count)
+    {
+        if(data)
+            clear();
+
+        data = (T*)std::malloc(count * sizeof(T));
+        size = count;
+#ifdef ENABLE_HW_OPL_DOS
+        adl_dpmi_lock_memory(data, count * sizeof(T));
+#endif
+
+        if(is_class)
+        {
+            for(size_t i = 0; i < size; ++i)
+                new (data + i) T();
+        }
+    }
+
+    void clear()
+    {
+        if(data)
+        {
+            if(is_class)
+            {
+                for(size_t i = 0; i < size; ++i)
+                    data[i].~T();
+            }
+
+#ifdef ENABLE_HW_OPL_DOS
+            adl_dpmi_unlock_memory(data, size * sizeof(T));
+#endif
+            std::free(data);
+        }
+
+        data = NULL;
+        size = 0;
+    }
+
+    T &operator[](size_t i)
+    {
+        return data[i];
+    }
+
+    const T &operator[](size_t i) const
+    {
+        return data[i];
+    }
+
+#if defined(__DJGPP__)
+    void dpmi_lock_end() {}
+#endif
+};
+
 #endif // ADLMIDI_PRIVATE_HPP
