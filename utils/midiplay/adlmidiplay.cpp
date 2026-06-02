@@ -132,6 +132,25 @@ static void debugPrint(void * /*userdata*/, const char *fmt, ...)
     }
 }
 
+#ifdef ADLMIDI_ENABLE_HW_DOS
+static void debugPrintDpmiTail()
+{}
+
+static void debugPrintLock()
+{
+    void (*c_lock_begin)(void * /*userdata*/, const char *fmt, ...) = &debugPrint;
+    void (*c_lock_end)(void) = &debugPrintDpmiTail;
+    adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+}
+
+static void debugPrintUnlock()
+{
+    void (*c_lock_begin)(void * /*userdata*/, const char *fmt, ...) = &debugPrint;
+    void (*c_lock_end)(void) = &debugPrintDpmiTail;
+    adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+}
+#endif
+
 #ifdef DEBUG_TRACE_ALL_EVENTS
 static void debugPrintEvent(void * /*userdata*/, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 channel, const ADL_UInt8 * /*data*/, size_t len)
 {
@@ -527,7 +546,9 @@ int main(int argc, char **argv)
             }
         }
 #   else
+        debugPrintLock();
         runDOSLoop(&taskMan, myDevice);
+        debugPrintUnlock();
 #   endif
 
         s_timeCounter.clearLine();
