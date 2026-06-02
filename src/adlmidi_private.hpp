@@ -246,6 +246,50 @@ extern bool adl_dpmi_unlock_region(void *begin, void *end);
 
 #define adl_dpmi_unlock(obj)\
     (adl_dpmi_unlock_memory((void*)&obj, sizeof(obj)))
+
+template<class T>
+class DPMILocker
+{
+    T *m_self;
+
+public:
+    explicit DPMILocker(T *ptr)
+    {
+        // Lock data
+        adl_dpmi_lock_memory(ptr, sizeof(T));
+    }
+
+    ~DPMILocker()
+    {
+        adl_dpmi_unlock_memory(this, sizeof(T));
+    }
+};
+
+template<class T>
+void adl_dpmi_lock_vector(std::vector<T> &v)
+{
+    if(v.empty())
+        return;
+
+    adl_dpmi_lock_memory(v.data(), v.size() * sizeof(T));
+}
+
+template<class T>
+void adl_dpmi_unlock_vector(std::vector<T> &v)
+{
+    if(v.empty())
+        return;
+
+    adl_dpmi_unlock_memory(v.data(), v.size() * sizeof(T));
+}
+
+extern void adl_lock_code(void);
+extern void adl_unlock_code(void);
+
+#else
+// Dummies
+#   define adl_dpmi_lock_vector(x)
+#   define adl_dpmi_unlock_vector(x)
 #endif
 
 #endif // ADLMIDI_PRIVATE_HPP

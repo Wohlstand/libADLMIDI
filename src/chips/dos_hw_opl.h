@@ -27,6 +27,12 @@
 class DOS_HW_OPL : public OPLChipBaseT<DOS_HW_OPL>
 {
 public:
+    void dpmi_lock_begin();
+
+private:
+    friend void adl_lock_code();
+    friend void adl_unlock_code();
+public:
     DOS_HW_OPL();
     virtual ~DOS_HW_OPL() override;
 
@@ -43,6 +49,9 @@ public:
     const char *emulatorName() override;
     ChipType chipType() override;
     bool hasFullPanning() override;
+
+public:
+    void dpmi_lock_end();
 };
 
 #endif // DOS_HW_OPL_H

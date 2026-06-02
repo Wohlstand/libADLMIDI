@@ -45,6 +45,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     MidiTrackRow    evtPos;
     MidiEvent       event;
 
+    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
     std::memset(&event, 0, sizeof(event));
     event.isValid = 1;
 
@@ -493,7 +494,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                     evtPos.absPos = abs_position;
                     abs_position += evtPos.delay;
                     m_trackData[0].push_back(evtPos);
-                    evtPos.clear();
+                    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
                 }
                 break;
 
@@ -520,7 +521,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                     evtPos.absPos = abs_position;
                     abs_position += evtPos.delay;
                     m_trackData[0].push_back(evtPos);
-                    evtPos.clear();
+                    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
                 }
                 break;
 
@@ -533,7 +534,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
                     m_trackData[0].push_back(evtPos);
                     evtPos.events_begin = 0;
                     evtPos.events_end = 0;
-                    evtPos.clear();
+                    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
                 }
                 break;
 
@@ -563,7 +564,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
     m_trackData[0].push_back(evtPos);
     initTracksBegin(0);
 
-    buildTimeLine(std::vector<TempoEvent>());
+    buildTimeLine(TemposList());
 
     return true;
 }

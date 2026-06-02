@@ -122,10 +122,28 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_tempo.denom = 1;
     m_invDeltaTicks.nom = 0;
     m_invDeltaTicks.denom = 1;
+
+#if defined(__DJGPP__)
+    dpmi_allocator_impl::dpmi_lock_memory(this, sizeof(BW_MidiSequencer));
+
+    void (BW_MidiSequencer::* lock_begin)() = &BW_MidiSequencer::dpmi_lock_begin;
+    void (BW_MidiSequencer::* lock_end)() = &BW_MidiSequencer::dpmi_lock_end;
+
+    dpmi_allocator_impl::dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+#endif
 }
 
 BW_MidiSequencer::~BW_MidiSequencer()
-{}
+{
+#if defined(__DJGPP__)
+    dpmi_allocator_impl::dpmi_unlock_memory(this, sizeof(BW_MidiSequencer));
+
+    void (BW_MidiSequencer::* lock_begin)() = &BW_MidiSequencer::dpmi_lock_begin;
+    void (BW_MidiSequencer::* lock_end)() = &BW_MidiSequencer::dpmi_lock_end;
+
+    dpmi_allocator_impl::dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+#endif
+}
 
 
 void BW_MidiSequencer::setInterface(const BW_MidiRtInterface *intrf)
@@ -330,7 +348,7 @@ void BW_MidiSequencer::setTriggerHandler(TriggerHandler handler, void *userData)
     m_triggerUserData = userData;
 }
 
-const std::vector<BW_MidiSequencer::CmfInstrument> BW_MidiSequencer::getRawCmfInstruments()
+const BW_MidiSequencer::CmfInstrumentsList BW_MidiSequencer::getRawCmfInstruments()
 {
     return m_cmfInstruments;
 }
@@ -383,12 +401,12 @@ const char *BW_MidiSequencer::getMusicCopyright() const
         return reinterpret_cast<const char*>(getData(m_musCopyright));
 }
 
-const std::vector<BW_MidiSequencer::DataBlock> &BW_MidiSequencer::getTrackTitles()
+const BW_MidiSequencer::MusTrackTitlesList &BW_MidiSequencer::getTrackTitles()
 {
     return m_musTrackTitles;
 }
 
-const std::vector<BW_MidiSequencer::MIDI_MarkerEntry> &BW_MidiSequencer::getMarkers()
+const BW_MidiSequencer::MusMarkersList &BW_MidiSequencer::getMarkers()
 {
     return m_musMarkers;
 }

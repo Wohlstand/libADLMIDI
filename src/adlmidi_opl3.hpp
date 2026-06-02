@@ -44,6 +44,13 @@
  */
 class OPL3
 {
+#if defined(__DJGPP__)
+public:
+    void dpmi_lock_begin() {}
+private:
+    DPMILocker<OPL3> m_dpmi_locker;
+#endif
+
     friend class MIDIplay;
     friend class AdlInstrumentTester;
     friend int adlCalculateFourOpChannels(MIDIplay *play, bool silent);
@@ -64,7 +71,7 @@ public:
 private:
     //! Cached patch data, needed by Touch()
     std::vector<const OplTimbre*> m_insCache;
-    std::vector<bool> m_insCacheModified;
+    std::vector<char> m_insCacheModified;
     //! Value written to B0, cached, needed by NoteOff.
     /*! Contains Key on/off state, octave block and frequency number values
      */
@@ -437,6 +444,11 @@ public:
      * @param audioTickHandler
      */
     void resetSerial(const std::string &serialName, unsigned int baud, unsigned int protocol);
+#endif
+
+#if defined(__DJGPP__)
+public:
+    void dpmi_lock_end() {}
 #endif
 };
 

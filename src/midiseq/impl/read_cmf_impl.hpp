@@ -49,7 +49,7 @@ bool BW_MidiSequencer::parseCMF(FileAndMemReader &fr)
     size_t ins_start, mus_start, ticks, ins_count;
     LoopPointParseState loopState;
 
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
 
     std::memset(&loopState, 0, sizeof(loopState));
 

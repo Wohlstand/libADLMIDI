@@ -34,34 +34,48 @@
  *                                 Position                                       *
  **********************************************************************************/
 
-BW_MidiSequencer::Position::TrackInfo::TrackInfo() :
-    delay(0),
-    lastHandledEvent(0)
+void BW_MidiSequencer::Position::tracks_resize(size_t size)
 {
-    std::memset(&state, 0, sizeof(state));
-    std::memset(&state.cc_values, 0xFF, sizeof(state.cc_values));
-    std::memset(&state.reserve_note_att, 0xFF, sizeof(state.reserve_note_att));
-    state.reserve_patch = 0xFF;
-    state.reserve_wheel[0] = 0xFF;
-    state.reserve_wheel[1] = 0xFF;
-    state.reserve_channel_att = 0xFF;
+    if(track_size != size)
+    {
+        if(size == 0)
+        {
+            clear();
+            return;
+        }
+
+        size_t rawSize = size * sizeof(TrackInfo);
+        if(track)
+        {
+#if defined(__DJGPP__)
+            dpmi_allocator_impl::dpmi_unlock_memory(track, rawSize);
+#endif
+            track = (TrackInfo*)std::realloc(track, rawSize);
+        }
+        else
+            track = (TrackInfo*)std::malloc(rawSize);
+
+#if defined(__DJGPP__)
+        dpmi_allocator_impl::dpmi_lock_memory(track, rawSize);
+#endif
+        track_size = size;
+    }
+
+    for(size_t i = 0; i < track_size; ++i)
+        tracks_init_one(track[i]);
 }
 
-BW_MidiSequencer::Position::TrackInfo::TrackInfo(const TrackInfo &o) :
-    pos(o.pos),
-    delay(o.delay),
-    lastHandledEvent(o.lastHandledEvent)
+void BW_MidiSequencer::Position::tracks_init_one(TrackInfo &t)
 {
-    std::memcpy(&state, &o.state, sizeof(state));
-}
-
-BW_MidiSequencer::Position::TrackInfo &BW_MidiSequencer::Position::TrackInfo::operator=(const TrackInfo &o)
-{
-    pos = o.pos;
-    delay = o.delay;
-    lastHandledEvent = o.lastHandledEvent;
-    std::memcpy(&state, &o.state, sizeof(state));
-    return *this;
+    t.delay = 0;
+    t.lastHandledEvent = 0;
+    std::memset(&t.state, 0, sizeof(t.state));
+    std::memset(&t.state.cc_values, 0xFF, sizeof(t.state.cc_values));
+    std::memset(&t.state.reserve_note_att, 0xFF, sizeof(t.state.reserve_note_att));
+    t.state.reserve_patch = 0xFF;
+    t.state.reserve_wheel[0] = 0xFF;
+    t.state.reserve_wheel[1] = 0xFF;
+    t.state.reserve_channel_att = 0xFF;
 }
 
 BW_MidiSequencer::Position::Position():
@@ -69,8 +83,42 @@ BW_MidiSequencer::Position::Position():
     absTimePosition(0.0),
     absTickPosition(0),
     began(false),
-    track()
+    track(NULL),
+    track_size(0)
 {}
+
+BW_MidiSequencer::Position::~Position()
+{
+    clear();
+}
+
+BW_MidiSequencer::Position::Position(const Position &o):
+    wait(o.wait),
+    absTimePosition(o.absTimePosition),
+    absTickPosition(o.absTickPosition),
+    began(o.began),
+    track(NULL),
+    track_size(0)
+{
+    tracks_resize(o.track_size);
+
+    if(track && o.track)
+        std::memcpy(track, o.track, o.track_size * sizeof(TrackInfo));
+}
+
+BW_MidiSequencer::Position &BW_MidiSequencer::Position::operator=(const Position &o)
+{
+    wait = o.wait;
+    absTimePosition = o.absTimePosition;
+    absTickPosition = o.absTickPosition;
+    began = o.began;
+
+    tracks_resize(o.track_size);
+    if(track && o.track)
+        std::memcpy(track, o.track, o.track_size * sizeof(TrackInfo));
+
+    return *this;
+}
 
 void BW_MidiSequencer::Position::clear()
 {
@@ -78,7 +126,17 @@ void BW_MidiSequencer::Position::clear()
     began = false;
     absTimePosition = 0.0;
     absTickPosition = 0;
-    track.clear();
+
+    if(track)
+    {
+#if defined(__DJGPP__)
+        dpmi_allocator_impl::dpmi_unlock_memory(track, track_size * sizeof(TrackInfo));
+#endif
+        std::free(track);
+        track = NULL;
+    }
+
+    track_size = 0;
 }
 
 void BW_MidiSequencer::Position::assignOneTrack(const Position *o, size_t tk)
@@ -87,36 +145,15 @@ void BW_MidiSequencer::Position::assignOneTrack(const Position *o, size_t tk)
     wait = o->wait;
     began = o->began;
     absTickPosition = o->absTickPosition;
-    track.clear();
-    track.push_back(o->track[tk]);
+    tracks_resize(1);
+    std::memcpy(&track[0], &o->track[tk], sizeof(TrackInfo));
 }
 
 /**********************************************************************************
  *                                 MidiTrackRow                                   *
  **********************************************************************************/
 
-
-BW_MidiSequencer::MidiTrackRow::MidiTrackRow() :
-    time(0.0),
-    delay(0),
-    absPos(0),
-    timeDelay(0.0),
-    events_begin(0),
-    events_end(0)
-{}
-
-
-void BW_MidiSequencer::MidiTrackRow::clear()
-{
-    time = 0.0;
-    delay = 0;
-    absPos = 0;
-    timeDelay = 0.0;
-    events_begin = 0;
-    events_end = 0;
-}
-
-int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEvent &evt)
+int BW_MidiSequencer::typePriority(const BW_MidiSequencer::MidiEvent &evt)
 {
     switch(evt.type)
     {
@@ -181,7 +218,7 @@ int BW_MidiSequencer::MidiTrackRow::typePriority(const BW_MidiSequencer::MidiEve
     }
 }
 
-void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBank, bool *noteStates)
+void BW_MidiSequencer::sortEvents(MidiTrackRow &row, std::vector<MidiEvent, dpmi_allocator<MidiEvent> > &eventsBank, bool *noteStates)
 {
     size_t arr_size = 0, max_size, i, j, k, note_i, note_j;
     MidiEvent tmp, *dst, *src, *mi, *mj, *arr = NULL, *arr_end = NULL;
@@ -191,11 +228,11 @@ void BW_MidiSequencer::MidiTrackRow::sortEvents(std::vector<MidiEvent> &eventsBa
     /*
      * Sort events by type priority
      */
-    if(events_begin != events_end && events_begin < events_end)
+    if(row.events_begin != row.events_end && row.events_begin < row.events_end)
     {
-        arr = eventsBank.data() + events_begin;
-        arr_end = eventsBank.data() + events_end;
-        arr_size = events_end - events_begin;
+        arr = eventsBank.data() + row.events_begin;
+        arr_end = eventsBank.data() + row.events_end;
+        arr_size = row.events_end - row.events_begin;
 
         for(mi = arr + 1; mi < arr_end; ++mi)
         {

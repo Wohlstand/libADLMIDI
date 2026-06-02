@@ -31,14 +31,14 @@
 
 #include "../midi_sequencer.hpp"
 
-void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length)
+void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, U8List &bank, const uint8_t *data, size_t length)
 {
     evt.data_block.offset = bank.size();
     std::copy(data, data + length, std::back_inserter(bank));
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
-void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length)
+void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, U8List &bank, FileAndMemReader &fr, size_t length)
 {
     evt.data_block.offset = bank.size();
     bank.resize(bank.size() + length);
@@ -46,7 +46,7 @@ void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, std::v
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
-void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, const uint8_t *data, size_t length)
+void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, U8List &bank, uint8_t begin_byte, const uint8_t *data, size_t length)
 {
     evt.data_block.offset = bank.size();
     bank.push_back(begin_byte);
@@ -54,7 +54,7 @@ void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
-void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length)
+void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, U8List &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length)
 {
     evt.data_block.offset = bank.size();
     bank.push_back(begin_byte);
@@ -63,7 +63,7 @@ void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
-void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, const uint8_t *data, size_t length)
+void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, U8List &bank, const uint8_t *data, size_t length)
 {
     evt.data_block.offset = bank.size();
     std::copy(data, data + length, std::back_inserter(bank));
@@ -72,7 +72,7 @@ void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt
     evt.data_block.size = bank.size() - evt.data_block.offset;
 }
 
-void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, std::vector<uint8_t> &bank, FileAndMemReader &fr, size_t length)
+void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, U8List &bank, FileAndMemReader &fr, size_t length)
 {
     evt.data_block.offset = bank.size();
     bank.resize(bank.size() + length);

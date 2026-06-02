@@ -288,6 +288,9 @@ static OplInstMeta makeEmptyInstrument()
 const OplInstMeta OPL3::m_emptyInstrument = makeEmptyInstrument();
 
 OPL3::OPL3() :
+#ifdef ENABLE_HW_OPL_DOS
+    m_dpmi_locker(this),
+#endif
 #ifdef ADLMIDI_ENABLE_HW_SERIAL
     m_serial(false),
     m_serialBaud(0),
@@ -332,6 +335,16 @@ OPL3::~OPL3()
     writeRegI(0, 0x104, 0);
     writeRegI(0, 0x105, 0);
     silenceAll();
+#endif
+
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_unlock_vector(m_insCache);
+    adl_dpmi_unlock_vector(m_insCacheModified);
+    adl_dpmi_unlock_vector(m_keyBlockFNumCache);
+    adl_dpmi_unlock_vector(m_regBD);
+    adl_dpmi_unlock_vector(m_regC0);
+    adl_dpmi_unlock_vector(m_channelCategory);
+    adl_dpmi_unlock_vector(m_chips);
 #endif
 }
 
@@ -481,7 +494,7 @@ void OPL3::setEmbeddedBank(uint32_t bank)
 void OPL3::clearInstCache()
 {
     adl_fill_vector<const OplTimbre*>(m_insCache, &c_defaultInsCache);
-    adl_fill_vector<bool>(m_insCacheModified, false);
+    adl_fill_vector<char>(m_insCacheModified, false);
 }
 
 void OPL3::writeReg(size_t chip, uint16_t address, uint8_t value)
@@ -529,7 +542,7 @@ void OPL3::noteOn(size_t c1, size_t c2, double tone)
     uint16_t ftone = 0;
     const OplTimbre *patch1 = m_insCache[c1];
     const OplTimbre *patch2 = m_insCache[chan2];
-    bool cacheModded[2] = {m_insCacheModified[c1], m_insCacheModified[chan2]};
+    char cacheModded[2] = {m_insCacheModified[c1], m_insCacheModified[chan2]};
 
     if(tone < 0.0)
         tone = 0.0; // Lower than 0 is impossible!
@@ -1055,12 +1068,25 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
 
     if(rebuild_needed)
     {
+        adl_dpmi_unlock_vector(m_insCache);
         m_insCache.clear();
+
+        adl_dpmi_unlock_vector(m_insCacheModified);
         m_insCacheModified.clear();
+
+        adl_dpmi_unlock_vector(m_keyBlockFNumCache);
         m_keyBlockFNumCache.clear();
+
+        adl_dpmi_unlock_vector(m_regBD);
         m_regBD.clear();
+
+        adl_dpmi_unlock_vector(m_regC0);
         m_regC0.clear();
+
+        adl_dpmi_unlock_vector(m_channelCategory);
         m_channelCategory.clear();
+
+        adl_dpmi_unlock_vector(m_chips);
         m_chips.resize(m_numChips, AdlMIDI_SPtr<OPLChipBase>());
     }
     else
@@ -1069,7 +1095,7 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
             silenceAll(); // Ensure no junk will be played after bank change
 
         adl_fill_vector<const OplTimbre*>(m_insCache, &c_defaultInsCache);
-        adl_fill_vector<bool>(m_insCacheModified, false);
+        adl_fill_vector<char>(m_insCacheModified, false);
         adl_fill_vector<uint32_t>(m_channelCategory, 0);
         adl_fill_vector<uint32_t>(m_keyBlockFNumCache, 0);
         adl_fill_vector<uint32_t>(m_regBD, 0);
@@ -1084,12 +1110,30 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     if(rebuild_needed)
     {
         m_numChannels = m_numChips * NUM_OF_CHANNELS;
+
+        adl_dpmi_unlock_vector(m_insCache);
         m_insCache.resize(m_numChannels, &c_defaultInsCache);
+        adl_dpmi_lock_vector(m_insCache);
+
+        adl_dpmi_unlock_vector(m_insCacheModified);
         m_insCacheModified.resize(m_numChannels, false);
+        adl_dpmi_lock_vector(m_insCacheModified);
+
+        adl_dpmi_unlock_vector(m_channelCategory);
         m_channelCategory.resize(m_numChannels, 0);
+        adl_dpmi_lock_vector(m_channelCategory);
+
+        adl_dpmi_unlock_vector(m_keyBlockFNumCache);
         m_keyBlockFNumCache.resize(m_numChannels,   0);
+        adl_dpmi_lock_vector(m_keyBlockFNumCache);
+
+        adl_dpmi_unlock_vector(m_regBD);
         m_regBD.resize(m_numChips,    0);
+        adl_dpmi_lock_vector(m_regBD);
+
+        adl_dpmi_unlock_vector(m_regC0);
         m_regC0.resize(m_numChips * m_numChannels, OPL_PANNING_BOTH);
+        adl_dpmi_lock_vector(m_regC0);
     }
 
     if(!rebuild_needed)

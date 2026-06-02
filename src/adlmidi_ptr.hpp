@@ -28,22 +28,43 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#ifdef ENABLE_HW_OPL_DOS
+#   ifndef ADLMIDI_PRIVATE_HPP
+extern bool adl_dpmi_lock_memory(void *address, size_t size);
+extern bool adl_dpmi_unlock_memory(void *address, size_t size);
+#   endif
+#endif
+
 /*
   Generic deleters for smart pointers
  */
 template <class T>
 struct ADLMIDI_DefaultDelete
 {
-    void operator()(T *x) { delete x; }
+    void operator()(T *x)
+    {
+#ifdef ENABLE_HW_OPL_DOS
+        adl_dpmi_unlock_memory(x, sizeof(T));
+#endif
+        delete x;
+    }
 };
+
 template <class T>
 struct ADLMIDI_DefaultArrayDelete
 {
-    void operator()(T *x) { delete[] x; }
+    void operator()(T *x)
+    {
+        delete[] x;
+    }
 };
+
 struct ADLMIDI_CDelete
 {
-    void operator()(void *x) { free(x); }
+    void operator()(void *x)
+    {
+        free(x);
+    }
 };
 
 /*
@@ -52,10 +73,17 @@ struct ADLMIDI_CDelete
 template< class T, class Deleter = ADLMIDI_DefaultDelete<T> >
 class AdlMIDI_UPtr
 {
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_begin() {}
+private:
+#endif
+
     T *m_p;
 public:
     explicit AdlMIDI_UPtr(T *p = NULL)
         : m_p(p) {}
+
     ~AdlMIDI_UPtr()
     {
         reset();
@@ -63,12 +91,19 @@ public:
 
     void reset(T *p = NULL)
     {
-        if(p != m_p) {
-            if(m_p) {
+        if(p != m_p)
+        {
+            if(m_p)
+            {
                 Deleter del;
                 del(m_p);
             }
+
             m_p = p;
+#ifdef ENABLE_HW_OPL_DOS
+            if(m_p)
+                adl_dpmi_lock_memory(m_p, sizeof(T));
+#endif
         }
     }
 
@@ -81,21 +116,30 @@ public:
     {
         return m_p;
     }
+
     T &operator*() const
     {
         return *m_p;
     }
+
     T *operator->() const
     {
         return m_p;
     }
+
     T &operator[](size_t index) const
     {
         return m_p[index];
     }
+
 private:
     AdlMIDI_UPtr(const AdlMIDI_UPtr &);
     AdlMIDI_UPtr &operator=(const AdlMIDI_UPtr &);
+
+#ifdef ENABLE_HW_OPL_DOS
+public:
+    void dpmi_lock_end() {}
+#endif
 };
 
 template <class T>
@@ -188,14 +232,17 @@ public:
     {
         return m_p;
     }
+
     T &operator*() const
     {
         return *m_p;
     }
+
     T *operator->() const
     {
         return m_p;
     }
+
     T &operator[](size_t index) const
     {
         return m_p[index];

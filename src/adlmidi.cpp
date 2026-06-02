@@ -80,6 +80,10 @@ static const ADLMIDI_AudioFormat adl_DefaultAudioFormat =
     2 * sizeof(int16_t),
 };
 
+#ifdef ENABLE_HW_OPL_DOS
+void adl_pub_dpmi_lock_begin() {}
+#endif
+
 /*---------------------------EXPORTS---------------------------*/
 
 ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
@@ -103,6 +107,12 @@ ADLMIDI_EXPORT struct ADL_MIDIPlayer *adl_init(long sample_rate)
 
     midi_device->adl_midiPlayer = player;
     adlCalculateFourOpChannels(player);
+
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_lock_memory(midi_device, sizeof(ADL_MIDIPlayer));
+    adl_lock_code();
+#endif
+
     return midi_device;
 }
 
@@ -111,12 +121,19 @@ ADLMIDI_EXPORT void adl_close(struct ADL_MIDIPlayer *device)
     if(!device)
         return;
 
+#ifdef ENABLE_HW_OPL_DOS
+    adl_dpmi_unlock_memory(device, sizeof(ADL_MIDIPlayer));
+#endif
+
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
     delete play;
     device->adl_midiPlayer = NULL;
     free(device);
     device = NULL;
+#ifdef ENABLE_HW_OPL_DOS
+    adl_unlock_code();
+#endif
 }
 
 ADLMIDI_EXPORT int adl_setDeviceIdentifier(ADL_MIDIPlayer *device, unsigned id)
@@ -1217,7 +1234,7 @@ ADLMIDI_EXPORT const char *adl_metaTrackTitle(struct ADL_MIDIPlayer *device, siz
 
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    const std::vector<BW_MidiSequencer::DataBlock> &titles = play->m_sequencer->getTrackTitles();
+    const std::vector<BW_MidiSequencer::DataBlock, dpmi_allocator<BW_MidiSequencer::DataBlock> > &titles = play->m_sequencer->getTrackTitles();
 
     if(index >= titles.size())
         return "INVALID";
@@ -1262,7 +1279,7 @@ ADLMIDI_EXPORT Adl_MarkerEntry adl_metaMarker(struct ADL_MIDIPlayer *device, siz
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
 
-    const std::vector<MidiSequencer::MIDI_MarkerEntry> &markers = play->m_sequencer->getMarkers();
+    const MidiSequencer::MusMarkersList &markers = play->m_sequencer->getMarkers();
     if(index >= markers.size())
     {
         marker.label = "INVALID";
@@ -2118,3 +2135,7 @@ ADLMIDI_EXPORT unsigned int adl_getReservedChipChannels(struct ADL_MIDIPlayer *d
 
     return static_cast<unsigned int>(play->getReservedChipChannels(static_cast<size_t>(chipId)));
 }
+
+#ifdef ENABLE_HW_OPL_DOS
+void adl_pub_dpmi_lock_end() {}
+#endif

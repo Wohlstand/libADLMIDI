@@ -415,7 +415,8 @@ void BW_MidiSequencer::handleLoopStart(LoopRuntimeState &state, LoopState &loop,
 {
     if(loop.caughtStackStart)
     {
-        if(glob && m_interface->onloopStart && (m_loopStartTime >= tk.pos->time)) // Loop Start hook
+        // assert(tk.pos);
+        if(glob && m_interface->onloopStart && (m_loopStartTime >= tk.pos->data.time)) // Loop Start hook
             m_interface->onloopStart(m_interface->onloopStart_userData);
 
         state.numStackLoopStarts++;
@@ -448,7 +449,7 @@ bool BW_MidiSequencer::handleLoopEnd(LoopRuntimeState &state, LoopState &loop, P
         {
             loop.caughtStackEnd = false;
             state.numStackLoopEnds++;
-            state.stackLoopEndsTime = tk.pos->time;
+            state.stackLoopEndsTime = tk.pos->data.time;
         }
 
         if(glob)
@@ -640,10 +641,10 @@ void BW_MidiSequencer::jumpToPosition(size_t track, const Position *pos)
 
 bool BW_MidiSequencer::jumpToBranch(uint32_t dstTrack, uint16_t dstBranch)
 {
-    if(dstTrack != BRANCH_GLOBAL_TRACK && dstTrack >= m_currentPosition.track.size())
+    if(dstTrack != BRANCH_GLOBAL_TRACK && dstTrack >= m_currentPosition.track_size)
         return false; // Invalid query!
 
-    for(std::vector<BranchEntry>::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
+    for(BranchesList::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
     {
         BranchEntry &e = *it;
         if(e.id == dstBranch && e.track == dstTrack)
@@ -658,17 +659,18 @@ bool BW_MidiSequencer::jumpToBranch(uint32_t dstTrack, uint16_t dstBranch)
 
 bool BW_MidiSequencer::processEvents(bool isSeek)
 {
-    if(m_currentPosition.track.size() == 0)
+    if(m_currentPosition.track_size == 0)
         m_atEnd = true; // No MIDI track data to play
 
     if(m_atEnd)
         return false;   // No more events in the queue
 
     m_loop.caughtEnd = false;
-    const size_t        trackCount = m_currentPosition.track.size();
-    const Position      rowBeginPosition(m_currentPosition);
+    const size_t        trackCount = m_currentPosition.track_size;
     LoopRuntimeState    loopState, loopStateLoc;
     Tempo_t t;
+
+    m_currentPositionBegin = m_currentPosition;
 
     std::memset(&loopState, 0, sizeof(loopState));
 
@@ -679,7 +681,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     for(size_t tk = 0; tk < trackCount; ++tk)
     {
         Position::TrackInfo &track = m_currentPosition.track[tk];
-        MidiTrackQueue::iterator end = m_trackData[tk].end();
+        // MidiTrackQueue::Leaf_t* end = m_trackData[tk].end();
         MidiTrackState &trackState = m_trackState[tk];
         LoopState &trackLoop = trackState.loop;
 
@@ -691,14 +693,14 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
         if((track.lastHandledEvent >= 0) && (track.delay <= 0))
         {
             // Check is an end of track has been reached
-            if(track.pos == end)
+            if(track.pos == NULL)
             {
                 track.lastHandledEvent = -1;
                 break;
             }
 
             // Handle event
-            for(size_t i = track.pos->events_begin; i < track.pos->events_end; ++i)
+            for(size_t i = track.pos->data.events_begin; i < track.pos->data.events_end; ++i)
             {
                 const MidiEvent &evt = m_eventBank[i];
 #ifdef ENABLE_BEGIN_SILENCE_SKIPPING
@@ -739,16 +741,16 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
             // Read next event time (unless the track just ended)
             if(track.lastHandledEvent >= 0)
             {
-                track.delay += track.pos->delay;
-                ++track.pos;
+                track.delay += track.pos->data.delay;
+                track.pos = track.pos->next;
             }
 
             // Register global loop start position
             if(loopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
-                m_loopBeginPosition = rowBeginPosition;
+                m_loopBeginPosition = m_currentPositionBegin;
 
             // Process local loop
-            if(processLoopPoints(loopStateLoc, trackLoop, false, tk, rowBeginPosition))
+            if(processLoopPoints(loopStateLoc, trackLoop, false, tk, m_currentPositionBegin))
                 continue; // Done with this track for now
 
             if(loopState.doLoopJump)
@@ -813,9 +815,9 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     }
 
     if(loopState.numGlobLoopStarts > 0 && m_loopBeginPosition.absTimePosition <= 0.0)
-        m_loopBeginPosition = rowBeginPosition;
+        m_loopBeginPosition = m_currentPositionBegin;
 
-    if(processLoopPoints(loopState, m_loop, true, 0, rowBeginPosition))
+    if(processLoopPoints(loopState, m_loop, true, 0, m_currentPositionBegin))
         return true; // When loop jump happen, quit the function
 
     if(shortestDelayNotFound || m_loop.caughtEnd)

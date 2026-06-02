@@ -58,7 +58,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
     uint64_t abs_position = 0;
     int32_t delay = 0;
     std::vector<uint16_t> mus_instrs;
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
 
     const uint8_t controller_map[15] =
     {
@@ -139,6 +139,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
 
     MidiTrackRow evtPos;
     MidiEvent event;
+    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
     std::memset(&event, 0, sizeof(event));
     event.isValid = 1;
     event.type = MidiEvent::T_SPECIAL;
@@ -371,7 +372,7 @@ bool BW_MidiSequencer::parseMUS(FileAndMemReader &fr)
             evtPos.absPos = abs_position;
             abs_position += evtPos.delay;
             m_trackData[0].push_back(evtPos);
-            evtPos.clear();
+            std::memset(&evtPos, 0, sizeof(MidiTrackRow));
         }
     }
 

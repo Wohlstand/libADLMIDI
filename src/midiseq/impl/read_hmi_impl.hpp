@@ -887,9 +887,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     Tempo_t t;
 #endif
 
-    std::vector<TempoEvent> temposList;
+    TemposList temposList;
     std::vector<HMITrackDir> dir;
 
+    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
     std::memset(&loopState, 0, sizeof(loopState));
     std::memset(&hmi_data, 0, sizeof(hmi_data));
 
@@ -1263,7 +1264,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
     evtPos.delay = 0;
     evtPos.absPos = 0;
     m_trackData[0].push_back(evtPos);
-    evtPos.clear();
+    std::memset(&evtPos, 0, sizeof(MidiTrackRow));
 
 #ifdef BWMIDI_DEBUG_HMI_PARSE
     printf("==Tempo %g, Div %g=========================\n", tempo_get(&m_tempo), tempo_get(&m_invDeltaTicks));
@@ -1405,7 +1406,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
             {
                 if(!m_trackData[tk_v].empty())
                 {
-                    MidiTrackRow &previous = m_trackData[tk_v].back();
+                    MidiTrackRow &previous = m_trackData[tk_v].m_last->data;
                     previous.delay = 0;
                     previous.timeDelay = 0;
                 }

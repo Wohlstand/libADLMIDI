@@ -65,6 +65,13 @@ struct MIDIEventHooks
 
 class MIDIplay
 {
+#if defined(__DJGPP__)
+public:
+    void dpmi_lock_begin() {}
+private:
+    DPMILocker<MIDIplay> m_dpmi_locker;
+#endif
+
     friend void adl_reset(struct ADL_MIDIPlayer*);
 public:
     explicit MIDIplay(unsigned long sampleRate = 22050);
@@ -238,7 +245,7 @@ public:
             {
                 Phys *ph = NULL;
 
-                for(unsigned i = 0; i < chip_channels_count && !ph; ++i)
+                for(unsigned i = 0; i < chip_channels_count && i < MaxNumPhysItemCount && !ph; ++i)
                 {
                     if(chip_channels[i].chip_chan == chip_chan)
                         ph = &chip_channels[i];
@@ -271,7 +278,7 @@ public:
             {
                 intptr_t pos = ph - chip_channels;
                 assert(pos >= 0 && pos < static_cast<intptr_t>(chip_channels_count));
-                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count); ++i)
+                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count) && i < MaxNumPhysItemCount; ++i)
                     chip_channels[i - 1] = chip_channels[i];
                 --chip_channels_count;
             }
@@ -682,12 +689,14 @@ private:
     //! Local error string
     std::string errorStringOut;
 
+#ifndef ENABLE_HW_OPL_DOS
     //! Missing instruments catches
     std::set<size_t> caugh_missing_instruments;
     //! Missing melodic banks catches
     std::set<size_t> caugh_missing_banks_melodic;
     //! Missing percussion banks catches
     std::set<size_t> caugh_missing_banks_percussion;
+#endif
 
 public:
 
@@ -1169,6 +1178,11 @@ public:
      * @param size number of characters available to write
      */
     void describeChannels(char *text, char *attr, size_t size);
+
+#if defined(__DJGPP__)
+public:
+    void dpmi_lock_end() {}
+#endif
 };
 
 #endif //  ADLMIDI_MIDIPLAY_HPP
