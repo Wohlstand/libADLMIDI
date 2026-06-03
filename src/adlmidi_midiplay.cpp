@@ -531,7 +531,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
     if(isBlankNote)
     {
         // Don't even try to play the blank instrument! But, insert the dummy note.
-        if(midiChan.has_free_active_notes())
+        if(!midiChan.has_free_active_notes())
             return false; // Overflow!
 
         MIDIchannel::notes_iterator i = midiChan.ensure_create_activenote(note);
