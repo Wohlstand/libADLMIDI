@@ -120,7 +120,7 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
         bits = 32; format = WAVE_FORMAT_IEEE_FLOAT; break;
     }
 
-    g_bufferSize = in_spec->samples * (bits / 8) * in_spec->channels;
+    g_bufferSize = (size_t)in_spec->samples * (bits / 8) * in_spec->channels;
     g_buffer = (UINT8 *)malloc(g_bufferSize * BUFFERS_COUNT);
     if(!g_buffer)
     {
