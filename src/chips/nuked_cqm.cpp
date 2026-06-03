@@ -68,6 +68,8 @@ void NukedCQM::nativeGenerate(int16_t *frame)
 {
     cqm_t *chip_r = reinterpret_cast<cqm_t*>(m_chip);
     CQM_Generate(chip_r, frame);
+    frame[0] /= 2;
+    frame[1] /= 2;
 }
 
 const char *NukedCQM::emulatorName()
