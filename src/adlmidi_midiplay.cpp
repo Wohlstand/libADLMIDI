@@ -1332,7 +1332,7 @@ void MIDIplay::noteUpdOff(size_t midCh,
         bool do_erase_user = (!k.is_end() && ((k->value.sustained & AdlChannel::LocationData::Sustain_Sostenuto) == 0));
 
         if(do_erase_user)
-            m_chipChannels[ins.chip_chan].users.erase(k);
+            m_chipChannels[c].users.erase(k);
 
         if(hooks.onNote)
             hooks.onNote(hooks.onNote_userData, ins.chip_chan, info.noteTone, info.midiins, 0, 0.0);
@@ -1497,8 +1497,7 @@ void MIDIplay::noteUpdate(size_t midCh,
 
 void MIDIplay::noteUpdateAll(size_t midCh, unsigned props_mask)
 {
-    for(MIDIchannel::notes_iterator
-        i = m_midiChannels[midCh].activenotes.begin(); !i.is_end();)
+    for(MIDIchannel::notes_iterator i = m_midiChannels[midCh].activenotes.begin(); !i.is_end();)
     {
         MIDIchannel::notes_iterator j(i++);
         noteUpdate(midCh, j, props_mask);
@@ -1884,8 +1883,7 @@ void MIDIplay::killSustainingNotes(int32_t midCh, int32_t this_adlchn, uint32_t 
             AdlChannel::LocationData &jd = j->value;
             ++jnext;
 
-            if((midCh < 0 || jd.loc.MidCh == midCh)
-                && ((jd.sustained & sustain_type) != 0))
+            if((midCh < 0 || jd.loc.MidCh == midCh) && ((jd.sustained & sustain_type) != 0))
             {
                 int midiins = '?';
                 if(hooks.onNote)
@@ -1972,8 +1970,10 @@ void MIDIplay::updatePortamento(size_t midCh)
 {
     double rate = HUGE_VAL;
     uint16_t midival = m_midiChannels[midCh].portamento;
+
     if(m_midiChannels[midCh].portamentoEnable && midival > 0)
         rate = 350.0 * std::pow(2.0, -0.062 * (1.0 / 128) * midival);
+
     m_midiChannels[midCh].portamentoRate = rate;
 }
 
@@ -2035,7 +2035,7 @@ size_t MIDIplay::chooseDevice(const char *name, size_t len)
     std::memcpy(m_midiDevices[j].name, name, cmpSize);
     m_midiDevices[j].track = n;
 
-    m_midiChannels.resize(n + 16);
+    m_midiChannels.expand(n + 16);
 
     resetMIDIDefaults(static_cast<int>(n));
     return n;

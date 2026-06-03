@@ -361,6 +361,48 @@ struct adl_array
         }
     }
 
+    void expand(size_t count)
+    {
+        T *old_data = data;
+
+        if(size > count)
+            return; // Nothing to expand!
+
+        data = (T*)std::malloc(count * sizeof(T));
+
+#ifdef ENABLE_HW_OPL_DOS
+        adl_dpmi_lock_memory(data, count * sizeof(T));
+#endif
+
+        if(is_class)
+        {
+            // Copy old data
+            for(size_t i = 0; i < size; ++i)
+                new (data + i) T(old_data[i]);
+
+            // Initialize new data
+            for(size_t i = size; i < count; ++i)
+                new (data + i) T();
+
+            // Delete old data
+            for(size_t i = 0; i < size; ++i)
+                data[i].~T();
+        }
+        else
+        {
+            // Copy old data
+            for(size_t i = 0; i < size; ++i)
+                data[i] = old_data[i];
+        }
+
+#ifdef ENABLE_HW_OPL_DOS
+        adl_dpmi_unlock_memory(old_data, size * sizeof(T));
+#endif
+        std::free(old_data);
+
+        size = count;
+    }
+
     void clear()
     {
         if(data)
