@@ -370,6 +370,46 @@ public:
         }
 
         /**
+         * @brief Emergency attempt to retrieve a free active note slot by clean-up from the junk
+         * @return true if got one extra free channel, otherwise it's a dead end
+         */
+        bool drop_oldest_blank_note()
+        {
+            // Attempt to clean blank notes
+            for(notes_iterator it = activenotes.begin(); it != activenotes.end(); ++it)
+            {
+                if(it->value.isBlank)
+                {
+                    activenotes.erase(it);
+                    return true;
+                }
+            }
+
+            // Then attempt to clean MIDI notes that has no active chip voices
+            for(notes_iterator it = activenotes.begin(); it != activenotes.end(); ++it)
+            {
+                if(it->value.chip_channels_count == 0)
+                {
+                    activenotes.erase(it);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        bool has_free_active_notes()
+        {
+            if(activenotes.size() >= activenotes.capacity())
+            {
+                if(!drop_oldest_blank_note()) // Attempt to rescue the situation
+                    return false; // Overflow!
+            }
+
+            return true;
+        }
+
+        /**
          * @brief Reset channel into initial state
          */
         void reset()

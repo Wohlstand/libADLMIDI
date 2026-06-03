@@ -202,6 +202,7 @@ To build that example you will need to have installed SDL2 library.
  * The Nuked OPL3 v1.8 got been slightly updated to sync with the mainstream to have all recent envelope generator fixes.
  * The old Nuked OPL3 v1.7 emulator is replaced with an optimised alternative fork by tgies.
  * Added Nuked CQM emulator (Emulator of the Creative's OPL3 clone chip known as Creative Quadratic Modulation).
+ * Fixed the silence problem at the MIDI channel after playing too many notes without Note OFF event.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
