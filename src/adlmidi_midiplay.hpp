@@ -278,8 +278,10 @@ public:
             {
                 intptr_t pos = ph - chip_channels;
                 assert(pos >= 0 && pos < static_cast<intptr_t>(chip_channels_count));
+
                 for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count) && i < MaxNumPhysItemCount; ++i)
                     chip_channels[i - 1] = chip_channels[i];
+
                 --chip_channels_count;
             }
 
