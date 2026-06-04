@@ -28,9 +28,8 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <list>
 
-#include "../../src/midiseq/impl/dpmi_alloc.hpp"
+#include "../../src/midiseq/impl/miditrack_list.hpp"
 
 #define DOS_TASK_CLOCK_BASE 1192030L
 
@@ -38,6 +37,8 @@ extern bool adl_dpmi_lock_memory(void *address, size_t size);
 extern bool adl_dpmi_lock_region(void *begin, void *end);
 extern bool adl_dpmi_unlock_memory(void *address, size_t size);
 extern bool adl_dpmi_unlock_region(void *begin, void *end);
+
+struct DosTask;
 
 class DosTaskman
 {
@@ -58,37 +59,13 @@ class DosTaskman
     void resetClockRate();
 
 public:
-
-    struct DosTask
-    {
-        DosTask() :
-            callback(NULL),
-            data(NULL),
-            freq(0),
-            rate_real(0),
-            count(0),
-            priority(0),
-            active(false)
-        {}
-
-        friend class DosTaskman;
-        inline void *getData() const { return data; }
-        inline long getFreq() const { return freq; }
-        inline long getCount() const { return count; }
-        inline long getRate() const { return rate_real; }
-
-    private:
-        void (*callback)(struct DosTask*);
-        void *data;
-        long freq;
-        long rate_real;
-        volatile long count;
-        int priority;
-        bool active;
-    };
-
     DosTaskman();
     ~DosTaskman();
+
+    static void* task_getData(DosTask *task);
+    static long task_getFreq(DosTask *task);
+    static long task_getCount(DosTask *task);
+    static long task_getRate(DosTask *task);
 
     static bool isInsideInterrupt();
     static int reserve_fprintf(FILE *stream, const char *format, va_list args);
@@ -144,7 +121,7 @@ private:
     void clearTasks();
     DosTask *addTask(DosTask &task);
 
-    typedef std::list<DosTask, dpmi_allocator<DosTask> > DosTasksList;
+    typedef TrackQueueList_t<DosTask> DosTasksList;
     DosTasksList m_tasks;
     void dpmi_lock_end() {}
 };

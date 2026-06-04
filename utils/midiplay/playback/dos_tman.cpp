@@ -50,6 +50,21 @@ static char s_reserve_print_buffer_err[2048] = "";
 void dos_taskman_dpmi_lock_head(void) {}
 void dos_taskman_dpmi_lock_tail(void);
 
+template<class T>
+void dpmi_lock_class_code()
+{
+    void (T::* lock_begin)() = &T::dpmi_lock_begin;
+    void (T::* lock_end)() = &T::dpmi_lock_end;
+    adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+}
+
+template<class T>
+void dpmi_unlock_class_code()
+{
+    void (T::* lock_begin)() = &T::dpmi_lock_begin;
+    void (T::* lock_end)() = &T::dpmi_lock_end;
+    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+}
 
 static __attribute__((always_inline)) inline uint32_t disableInterrupts(void)
 {
@@ -98,6 +113,18 @@ static __attribute__((always_inline)) inline void restoreInterrupts(uint32_t fla
         : "m" (oldIRQ.pm_offset) \
     )
 
+struct DosTask
+{
+    void (*callback)(struct DosTask*);
+    void *data;
+    long freq;
+    long rate_real;
+    volatile long count;
+    int priority;
+    bool active;
+};
+
+
 void DosTaskman::process()
 {
     self->m_insideInterrupt = true;
@@ -106,9 +133,9 @@ void DosTaskman::process()
     if(self->m_clock >= 0x10000000)
         self->m_clock = 0;
 
-    for(DosTasksList::iterator it = self->m_tasks.begin(); it != self->m_tasks.end(); ++it)
+    for(DosTasksList::Leaf_t *it = self->m_tasks.m_begin; it != NULL; it = it->next)
     {
-        DosTask &t = *it;
+        DosTask &t = it->data;
         if(t.active)
         {
             t.count += self->m_timerRate;
@@ -153,6 +180,7 @@ DosTaskman::DosTaskman()
     void (DosTaskman::* lock_begin)() = &DosTaskman::dpmi_lock_begin;
     void (DosTaskman::* lock_end)() = &DosTaskman::dpmi_lock_end;
     adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+    dpmi_lock_class_code<TrackQueueList_t<DosTask> >();
 
     // setSystemClockRate();
     void (*c_lock_begin)() = &dos_taskman_dpmi_lock_head;
@@ -175,6 +203,7 @@ DosTaskman::~DosTaskman()
     void (DosTaskman::* lock_begin)() = &DosTaskman::dpmi_lock_begin;
     void (DosTaskman::* lock_end)() = &DosTaskman::dpmi_lock_end;
     adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+    dpmi_unlock_class_code<TrackQueueList_t<DosTask> >();
 
     adl_dpmi_unlock_memory(this, sizeof(DosTaskman));
     void (*c_lock_begin)() = &dos_taskman_dpmi_lock_head;
@@ -187,6 +216,26 @@ DosTaskman::~DosTaskman()
     adl_dpmi_unlock_memory(s_snpirntf, sizeof(s_snpirntf));
     adl_dpmi_unlock_memory(s_reserve_print_buffer_out, sizeof(s_reserve_print_buffer_out));
     adl_dpmi_unlock_memory(s_reserve_print_buffer_err, sizeof(s_reserve_print_buffer_err));
+}
+
+void *DosTaskman::task_getData(DosTask *task)
+{
+    return task->data;
+}
+
+long DosTaskman::task_getFreq(DosTask *task)
+{
+    return task->freq;
+}
+
+long DosTaskman::task_getCount(DosTask *task)
+{
+    return task->count;
+}
+
+long DosTaskman::task_getRate(DosTask *task)
+{
+    return task->rate_real;
 }
 
 bool DosTaskman::isInsideInterrupt()
@@ -268,9 +317,11 @@ unsigned long DosTaskman::getCurClockRate() const
     return m_timerRate;
 }
 
-DosTaskman::DosTask *DosTaskman::addTask(void (*callback)(DosTaskman::DosTask *), int freq, int priority, void *userData)
+DosTask *DosTaskman::addTask(void (*callback)(DosTask *), int freq, int priority, void *userData)
 {
     DosTask task;
+
+    memset(&task, 0, sizeof(DosTask));
 
     if(!m_running)
         start();
@@ -286,13 +337,13 @@ DosTaskman::DosTask *DosTaskman::addTask(void (*callback)(DosTaskman::DosTask *)
     return addTask(task);
 }
 
-void DosTaskman::changeTaskRate(DosTaskman::DosTask *task, int freq)
+void DosTaskman::changeTaskRate(DosTask *task, int freq)
 {
     uint32_t flags = disableInterrupts();
 
-    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::Leaf_t *it = m_tasks.m_begin; it != NULL; it = it->next)
     {
-        DosTask *t = &*it;
+        DosTask *t = &it->data;
         if(t == task)
         {
             t->rate_real = adjustTimer(freq);
@@ -320,9 +371,9 @@ void DosTaskman::setClockToMax()
     uint32_t flags = disableInterrupts();
     long maxRate = 0x10000L;
 
-    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::Leaf_t *it = m_tasks.m_begin; it != NULL; it = it->next)
     {
-        DosTask &t = *it;
+        DosTask &t = it->data;
         if(t.rate_real < maxRate)
             maxRate = t.rate_real;
     }
@@ -372,9 +423,9 @@ void DosTaskman::dispatch()
 {
     uint32_t flags = disableInterrupts();
 
-    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::Leaf_t *it = m_tasks.m_begin; it != NULL; it = it->next)
     {
-        DosTask &t = *it;
+        DosTask &t = it->data;
         t.active = true;
     }
 
@@ -385,9 +436,9 @@ bool DosTaskman::terminate(DosTask *task)
 {
     uint32_t flags = disableInterrupts();
 
-    for(DosTasksList::iterator it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    for(DosTasksList::Leaf_t *it = m_tasks.m_begin; it != NULL; it = it->next)
     {
-        DosTask *t = &*it;
+        DosTask *t = &it->data;
         if(t == task)
         {
             m_tasks.erase(it);
@@ -405,22 +456,22 @@ bool DosTaskman::terminate(DosTask *task)
 void DosTaskman::clearTasks()
 {
     uint32_t flags = disableInterrupts();
-    m_tasks.clear();
+    m_tasks.clean();
     restoreInterrupts(flags);
 }
 
-DosTaskman::DosTask *DosTaskman::addTask(DosTaskman::DosTask &task)
+DosTask *DosTaskman::addTask(DosTask &task)
 {
-    DosTasksList::iterator it = m_tasks.begin();
+    DosTasksList::Leaf_t *it = m_tasks.m_begin;
 
-    for(; it != m_tasks.end(); ++it)
+    for(; it != NULL; it = it->next)
     {
-        DosTask &t = *it;
+        DosTask &t = it->data;
         if(t.priority < task.priority)
-            return &*m_tasks.insert(it, task);
+            return &m_tasks.insert(it, task);
     }
 
-    return &*m_tasks.insert(m_tasks.end(), task);
+    return &m_tasks.insert(m_tasks.m_last, task);
 }
 
 

@@ -37,6 +37,8 @@
 template<class T>
 struct TrackQueueList_t
 {
+    void dpmi_lock_begin() {}
+
     struct Leaf_t
     {
         Leaf_t *prev;
@@ -69,13 +71,17 @@ struct TrackQueueList_t
 
     T &make()
     {
+        Leaf_t *prev_last = m_last;
+
         if(!m_begin && !m_last)
         {
             m_last = m_begin = (Leaf_t*)malloc(sizeof(Leaf_t));
+            memset(m_last, 0, sizeof(Leaf_t));
         }
         else
         {
             m_last->next = (Leaf_t*)malloc(sizeof(Leaf_t));
+            memset(m_last->next, 0, sizeof(Leaf_t));
             m_last->next->prev = m_last;
             m_last = m_last->next;
         }
@@ -84,15 +90,73 @@ struct TrackQueueList_t
         dpmi_allocator_impl::dpmi_lock_memory(m_last, sizeof(Leaf_t));
 #endif
 
-        memset(m_last, 0, sizeof(Leaf_t));
+        m_last->prev = prev_last;
         ++m_size;
         return m_last->data;
+    }
+
+    T &makeAt(Leaf_t *pos)
+    {
+        Leaf_t *cur = NULL;
+
+        if(!pos || (!m_begin && !m_last))
+            return make(); // Empty list!
+
+        cur = (Leaf_t*)malloc(sizeof(Leaf_t));
+        memset(cur, 0, sizeof(Leaf_t));
+
+        if(pos->next)
+            pos->next->prev = cur;
+
+        cur->next = pos->next;
+        pos->next = cur;
+        cur->prev = pos;
+
+#if defined(__DJGPP__)
+        dpmi_allocator_impl::dpmi_lock_memory(cur, sizeof(Leaf_t));
+#endif
+
+        memset(cur, 0, sizeof(Leaf_t));
+        ++m_size;
+        return cur->data;
+    }
+
+    T &insert(Leaf_t *pos, const T &o)
+    {
+        T &dst = makeAt(pos);
+        memcpy(&dst, &o, sizeof(T));
+        return dst;
     }
 
     void push_back(const T &o)
     {
         T &dst = make();
         memcpy(&dst, &o, sizeof(T));
+    }
+
+    // TODO: Verify the correctness of this!
+    Leaf_t *erase(Leaf_t *it)
+    {
+        Leaf_t *ret = NULL;
+
+        if(it->prev)
+            it->prev->next = it->next;
+        else
+            m_begin = it->next;
+
+        if(it->next)
+            ret = it->next->prev = it->prev;
+        else
+            m_last = it->prev;
+
+#if defined(__DJGPP__)
+        dpmi_allocator_impl::dpmi_unlock_memory(it, sizeof(Leaf_t));
+#endif
+        free(it);
+
+        --m_size;
+
+        return ret;
     }
 
     void clean()
@@ -115,6 +179,8 @@ struct TrackQueueList_t
             m_last = NULL;
         }
     }
+
+    void dpmi_lock_end() {}
 };
 
 #endif // MIDITRAC_LIST_HPP

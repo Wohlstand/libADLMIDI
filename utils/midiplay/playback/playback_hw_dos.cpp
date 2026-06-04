@@ -36,16 +36,16 @@ static double s_extra_delay = 0.0;
 static DosTaskman *s_taskman = NULL;
 static bool s_pause = false;
 
-static void s_midiLoop(DosTaskman::DosTask *task)
+static void s_midiLoop(DosTask *task)
 {
     if(stop || s_pause)
         return;
 
-    ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
-    const double mindelay = 1.0 / task->getFreq();
+    ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(DosTaskman::task_getData(task));
+    const double mindelay = 1.0 / DosTaskman::task_getFreq(task);
     double tickDelay;
 
-    if(task->getCount() >= task->getRate())
+    if(DosTaskman::task_getCount(task) >= DosTaskman::task_getRate(task))
     {
         s_extra_delay += mindelay;
         return; // Skip this iteration
@@ -82,8 +82,8 @@ static void dos_dpmi_tail() {}
 
 void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice)
 {
-    DosTaskman::DosTask *midiTask;
-    void (*c_lock_begin)(DosTaskman::DosTask *task) = &s_midiLoop;
+    DosTask *midiTask;
+    void (*c_lock_begin)(DosTask *task) = &s_midiLoop;
     void (*c_lock_end)() = &dos_dpmi_tail;
     adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
 
@@ -193,5 +193,6 @@ void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice)
     adl_panic(myDevice); //Shut up all sustaining notes
 
     taskMan->terminate(midiTask);
+    midiTask = NULL;
     adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
 }

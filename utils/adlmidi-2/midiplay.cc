@@ -1682,12 +1682,13 @@ static bool is_number(const std::string &s)
 #ifdef __DJGPP__
 static double s_midi_tick_delay = 0.00000001;
 
-static void s_midiLoop(DosTaskman::DosTask *task)
+static void s_midiLoop(DosTask *task)
 {
     if(QuitFlag)
         return;
-    ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(task->getData());
-    const double mindelay = 1.0 / task->getFreq();
+
+    ADL_MIDIPlayer *player = reinterpret_cast<ADL_MIDIPlayer *>(DosTaskman::task_getData(task));
+    const double mindelay = 1.0 / DosTaskman::task_getFreq(task);
 
     s_midi_tick_delay = adl_tickEvents(player, s_midi_tick_delay < mindelay ? s_midi_tick_delay : mindelay, mindelay);
 
@@ -2240,10 +2241,11 @@ int main(int argc, char **argv)
 
     UI.TetrisLaunched = true;
 #ifdef __DJGPP__
-    DosTaskman::DosTask *midiTask = taskMan.addTask(s_midiLoop, NewTimerFreq, 1, myDevice);
+    DosTask *midiTask = taskMan.addTask(s_midiLoop, NewTimerFreq, 1, myDevice);
     taskMan.dispatch();
     runPlaybackLoop(myDevice, InstrumentTester);
     taskMan.terminate(midiTask);
+    midiTask = NULL;
 #else
     runPlaybackLoop(myDevice, InstrumentTester, spec, obtained);
 #endif
