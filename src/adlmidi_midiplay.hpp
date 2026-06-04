@@ -373,7 +373,7 @@ public:
          * @brief Emergency attempt to retrieve a free active note slot by clean-up from the junk
          * @return true if got one extra free channel, otherwise it's a dead end
          */
-        bool drop_oldest_blank_note()
+        bool drop_oldest_blank_note(MIDIplay *play, size_t midCh)
         {
             // Attempt to clean blank notes
             for(notes_iterator it = activenotes.begin(); it != activenotes.end(); ++it)
@@ -395,14 +395,21 @@ public:
                 }
             }
 
+            // And then attempt to off one of working notes
+            for(notes_iterator it = activenotes.begin(); it != activenotes.end(); ++it)
+            {
+                play->noteUpdate(midCh, it, Upd_Off);
+                return true;
+            }
+
             return false;
         }
 
-        bool has_free_active_notes()
+        bool has_free_active_notes(MIDIplay *play, size_t midCh)
         {
             if(activenotes.size() >= activenotes.capacity())
             {
-                if(!drop_oldest_blank_note()) // Attempt to rescue the situation
+                if(!drop_oldest_blank_note(play, midCh)) // Attempt to rescue the situation
                     return false; // Overflow!
             }
 
