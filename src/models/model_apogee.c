@@ -132,7 +132,7 @@ void oplModel_apogeeOrigVolume(struct OPLVolume_t *v)
         mod *= v->vel + 0x80;
 
         if(v->voiceMode > OPLVoice_MODE_2op_AM)
-            tmpMod = mod; /* Fix the AM voices bug ащк 4-op voices */
+            tmpMod = mod; /* Fix the AM voices bug for 4-op voices */
 
         /*
             NOTE: Here is a bug of Apogee Sound System that makes modulator
