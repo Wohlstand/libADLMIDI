@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <new> // nothrow
 #include "adlmidi_midiplay.hpp"
 #include "adlmidi_opl3.hpp"
 #include "adlmidi_private.hpp"
@@ -754,6 +755,21 @@ ADLMIDI_EXPORT int adl_getChannelAllocMode(struct ADL_MIDIPlayer *device)
     assert(play);
 
     return static_cast<int>(play->m_synth->m_channelAlloc);
+}
+
+ADLMIDI_EXPORT void adl_setDeviceFilterMask(struct ADL_MIDIPlayer *device, ADL_UInt32 mask)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return;
+
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_sequencerDeviceMask = mask;
+#else
+    (void)device;
+    (void)mask;
+#endif
 }
 
 ADLMIDI_EXPORT int adl_openBankFile(struct ADL_MIDIPlayer *device, const char *filePath)

@@ -70,16 +70,10 @@ typedef int32_t ssize_t;
 #   endif
 #endif
 
-#include <vector>
-#include <list>
 #include <string>
 //#ifdef __WATCOMC__
 //#include <myset.h> //TODO: Implemnet a workaround for OpenWatcom to fix a crash while using those containers
 //#include <mymap.h>
-//#else
-#include <map>
-#include <set>
-#include <new> // nothrow
 //#endif
 #include <cstdlib>
 #include <cstring>
@@ -268,24 +262,6 @@ public:
         adl_dpmi_unlock_memory(this, sizeof(T));
     }
 };
-
-template<class T>
-void adl_dpmi_lock_vector(std::vector<T> &v)
-{
-    if(v.empty())
-        return;
-
-    adl_dpmi_lock_memory(v.data(), v.size() * sizeof(T));
-}
-
-template<class T>
-void adl_dpmi_unlock_vector(std::vector<T> &v)
-{
-    if(v.empty())
-        return;
-
-    adl_dpmi_unlock_memory(v.data(), v.size() * sizeof(T));
-}
 
 extern void adl_lock_code(void);
 extern void adl_unlock_code(void);

@@ -47,13 +47,16 @@ extern "C" {
 #include <stdint.h>
 typedef uint8_t         ADL_UInt8;
 typedef uint16_t        ADL_UInt16;
+typedef uint32_t        ADL_UInt32;
 typedef int8_t          ADL_SInt8;
 typedef int16_t         ADL_SInt16;
 #else
 typedef unsigned char   ADL_UInt8;
 typedef unsigned short  ADL_UInt16;
+typedef unsigned int    ADL_UInt32;
 typedef char            ADL_SInt8;
 typedef short           ADL_SInt16;
+typedef int             ADL_SInt32;
 #endif
 
 /* == Deprecated function markers == */
@@ -151,6 +154,34 @@ enum ADLMIDI_ChannelAlloc
     ADLMIDI_ChanAlloc_AnyReleased,
     /*! Count of available channel allocation modes */
     ADLMIDI_ChanAlloc_Count
+};
+
+/**
+ * @brief Device types to filter incompatible MIDI tracks, primarily used by HMI/HMP and EMIDI.
+ * Can be combined to enable more tracks.
+ */
+enum ADLMIDI_DeviceFilter
+{
+    ADLMIDI_Device_GeneralMidi      = 0x0001, // MPU-401 counted as here
+    ADLMIDI_Device_OPL2             = 0x0002,
+    ADLMIDI_Device_OPL3             = 0x0004,
+    ADLMIDI_Device_MT32             = 0x0008,
+    ADLMIDI_Device_AWE32            = 0x0010,
+    ADLMIDI_Device_WaveBlaster      = 0x0020,
+    ADLMIDI_Device_ProAudioSpectrum = 0x0040,
+    ADLMIDI_Device_SoundMan16       = 0x0080,
+    ADLMIDI_Device_DIGI             = 0x0100, // Digital samples controlled by MIDI
+    ADLMIDI_Device_SoundScape       = 0x0200,
+    ADLMIDI_Device_WaveTable        = 0x0400,
+    ADLMIDI_Device_GravisUltrasound = 0x0800,
+    ADLMIDI_Device_PCSpeaker        = 0x1000,
+    ADLMIDI_Device_Callback         = 0x2000,
+    ADLMIDI_Device_SoundMasterII    = 0x4000,
+
+    ADLMIDI_Device_FM               = ADLMIDI_Device_OPL2|ADLMIDI_Device_OPL3|ADLMIDI_Device_ProAudioSpectrum|ADLMIDI_Device_SoundMan16,
+    ADLMIDI_Device_AdLib            = ADLMIDI_Device_OPL2,
+    ADLMIDI_Device_SoundBlaster     = ADLMIDI_Device_OPL2|ADLMIDI_Device_OPL3,
+    ADLMIDI_Device_ANY              = 0xFFFF
 };
 
 /**
@@ -665,6 +696,18 @@ extern ADLMIDI_DECLSPEC void adl_setChannelAllocMode(struct ADL_MIDIPlayer *devi
  * @return Channel allocation mode (#ADLMIDI_ChannelAlloc)
  */
 extern ADLMIDI_DECLSPEC int adl_getChannelAllocMode(struct ADL_MIDIPlayer *device);
+
+/**
+ * @brief Assigns the device filter to enable/disable tracks in special formats like HMI/HMP or EMIDI
+ *
+ * The value must be assigned before loading a file, otherwise it will not work as intended.
+ *
+ * When library was built without MIDI sequencer, this function gives no effect.
+ *
+ * @param device Instance of the library
+ * @param mask Mask of the device (#ADLMIDI_DeviceFilter)
+ */
+extern ADLMIDI_DECLSPEC void adl_setDeviceFilterMask(struct ADL_MIDIPlayer *device, ADL_UInt32 mask);
 
 /**
  * @brief Load WOPL bank file from File System

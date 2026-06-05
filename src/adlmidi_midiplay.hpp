@@ -24,6 +24,10 @@
 #ifndef ADLMIDI_MIDIPLAY_HPP
 #define ADLMIDI_MIDIPLAY_HPP
 
+#ifndef ENABLE_HW_OPL_DOS
+#   include <set>
+#endif
+
 #include "oplinst.h"
 #include "adlmidi_private.hpp"
 #include "adlmidi_ptr.hpp"
@@ -616,6 +620,11 @@ public:
      * @brief Interface between MIDI sequencer and this library
      */
     AdlMIDI_UPtr<BW_MidiRtInterface> m_sequencerInterface;
+
+    /**
+     * @brief Devices filter mask state (#ADLMIDI_DeviceFilter)
+     */
+    uint32_t m_sequencerDeviceMask;
 
     /**
      * @brief Initialize MIDI sequencer interface

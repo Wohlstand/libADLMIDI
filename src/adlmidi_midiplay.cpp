@@ -67,6 +67,9 @@ MIDIplay::MIDIplay(unsigned long sampleRate):
 #ifdef ADLMIDI_ENABLE_HW_DOS
     m_dpmi_locker(this),
 #endif
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    m_sequencerDeviceMask(ADLMIDI_Device_OPL2 | ADLMIDI_Device_OPL3),
+#endif
     m_cmfPercussionMode(false),
     m_sysExDeviceId(0),
     m_synthMode(Mode_XG),
