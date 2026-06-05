@@ -888,7 +888,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 #endif
 
     TemposList temposList;
-    std::vector<HMITrackDir> dir;
+    miditrack_arr<HMITrackDir> dir;
 
     std::memset(&evtPos, 0, sizeof(MidiTrackRow));
     std::memset(&loopState, 0, sizeof(loopState));
@@ -951,7 +951,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         m_tempo.denom = hmi_data.division;
 
         dir.resize(hmi_data.tracksCount);
-        std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
+        std::memset(dir.data, 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
 
         // Read track sizes
         for(size_t tk = 0; tk < hmi_data.tracksCount; ++tk)
@@ -1152,7 +1152,7 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
         m_tempo.denom = hmi_data.division;
 
         dir.resize(hmi_data.tracksCount);
-        std::memset(dir.data(), 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
+        std::memset(dir.data, 0, sizeof(HMITrackDir) * hmi_data.tracksCount);
 
         for(size_t tk = 0; tk < hmi_data.tracksCount; ++tk)
         {

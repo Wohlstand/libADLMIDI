@@ -20,8 +20,6 @@ int main(int argc, char *argv[])
     std::string outDir;
     BW_MidiSequencer::RawSongsList song_buf;
 
-    (void)Convert_xmi2midi; /* Shut up the warning */
-
     if(argc != 2 && argc != 3 && argc != 4)
     {
         fprintf(stderr, "Usage: xmi2mid <midi-file> [song-number 0...N-1] [--all <out-dir>]\n");
@@ -51,6 +49,7 @@ int main(int argc, char *argv[])
     struct stat st;
     if(fstat(fileno(fh), &st) != 0)
     {
+        fclose(fh);
         fprintf(stderr, "Error reading file status.\n");
         return 1;
     }
@@ -58,6 +57,7 @@ int main(int argc, char *argv[])
     size_t insize = (size_t)st.st_size;
     if(insize > 8 * 1024 * 1024)
     {
+        fclose(fh);
         fprintf(stderr, "File too large.\n");
         return 1;
     }
@@ -65,12 +65,16 @@ int main(int argc, char *argv[])
     uint8_t *filedata = new uint8_t[insize];
     if(fread(filedata, 1, insize, fh) != insize)
     {
+        fclose(fh);
+        delete [] filedata;
         fprintf(stderr, "Error reading file data.\n");
         return 1;
     }
 
     if(BW_MidiSequencer::Convert_xmi2midi_multi(filedata, insize, song_buf, XMIDI_CONVERT_NOCONVERSION) < 0)
     {
+        fclose(fh);
+        delete [] filedata;
         fprintf(stderr, "Error converting XMI to SMF.\n");
         return 1;
     }
@@ -93,16 +97,20 @@ int main(int argc, char *argv[])
         else
             len = strlen(fileName);
 
-        for(size_t i = 0; i < song_buf.size(); ++i)
+        for(size_t i = 0; i < song_buf.size; ++i)
         {
-            size_t outSize = song_buf[i].size();
+            size_t outSize = song_buf[i].size;
             sprintf(outFile, "%s/%s-%u.mid", outDir.c_str(), std::string(fileName, len).c_str(), (unsigned)i);
             fprintf(stderr, "Writing file %s ...\n", outFile);
 
             FILE *out = fopen(outFile, "wb");
-            if (!out || fwrite(song_buf[i].data(), 1, outSize, out) != outSize || fflush(out) != 0)
+            if (!out || fwrite(song_buf[i].data, 1, outSize, out) != outSize || fflush(out) != 0)
             {
                 fprintf(stderr, "Error writing SMF data (%u, %s).\n", (unsigned)i, outFile);
+                if(out)
+                    fclose(out);
+                fclose(fh);
+                delete [] filedata;
                 return 1;
             }
             fclose(out);
@@ -111,19 +119,28 @@ int main(int argc, char *argv[])
     else
     {
         FILE *out = stdout;
+
         if(isatty(fileno(out)))
         {
             fprintf(stderr, "Not writing SMF data on the text terminal.\n");
         }
         else
         {
-            if (fwrite(song_buf[songNumber].data(), 1, song_buf[songNumber].size(), out) != song_buf[songNumber].size() || fflush(out) != 0)
+            if (fwrite(song_buf[songNumber].data, 1, song_buf[songNumber].size, out) != song_buf[songNumber].size || fflush(out) != 0)
             {
+                delete [] filedata;
+                fclose(fh);
+                fclose(out);
                 fprintf(stderr, "Error writing SMF data.\n");
                 return 1;
             }
         }
+
+        fclose(out);
     }
+
+    delete [] filedata;
+    fclose(fh);
 
     return 0;
 }

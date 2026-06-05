@@ -148,12 +148,47 @@ bool adl_dpmi_lock_memory(void *address, size_t size)
     return __dpmi_lock_linear_region(&mem) != -1;
 }
 
+bool adl_dpmi_lock_memory_code(void *address, size_t size)
+{
+    unsigned long baseaddr;
+    __dpmi_meminfo mem;
+
+    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
+        return false;
+
+    mem.handle = 0;
+    mem.address = baseaddr + (intptr_t)address;
+    mem.size = size;
+
+    return __dpmi_lock_linear_region(&mem) != -1;
+}
+
 bool adl_dpmi_lock_region(void *begin, void *end)
 {
     return adl_dpmi_lock_memory(begin, (uintptr_t)end - (uintptr_t)begin);
 }
 
+bool adl_dpmi_lock_code_region(void *begin, void *end)
+{
+    return adl_dpmi_lock_memory_code(begin, (uintptr_t)end - (uintptr_t)begin);
+}
+
 bool adl_dpmi_unlock_memory(void *address, size_t size)
+{
+    unsigned long baseaddr;
+    __dpmi_meminfo mem;
+
+    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
+        return false;
+
+    mem.handle = 0;
+    mem.address = baseaddr + (intptr_t)address;
+    mem.size = size;
+
+    return __dpmi_unlock_linear_region(&mem) != -1;
+}
+
+bool adl_dpmi_unlock_memory_code(void *address, size_t size)
 {
     unsigned long baseaddr;
     __dpmi_meminfo mem;
@@ -173,6 +208,11 @@ bool adl_dpmi_unlock_region(void *begin, void *end)
     return adl_dpmi_unlock_memory(begin, (uintptr_t)end - (uintptr_t)begin);
 }
 
+bool adl_dpmi_unlock_code_region(void *begin, void *end)
+{
+    return adl_dpmi_unlock_memory_code(begin, (uintptr_t)end - (uintptr_t)begin);
+}
+
 // Lock code of all known classes
 
 template<class T>
@@ -180,7 +220,7 @@ void dpmi_lock_class_code()
 {
     void (T::* lock_begin)() = &T::dpmi_lock_begin;
     void (T::* lock_end)() = &T::dpmi_lock_end;
-    adl_dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+    adl_dpmi_lock_code_region((void*&)lock_begin, (void*&)lock_end);
 }
 
 template<class T>
@@ -188,7 +228,7 @@ void dpmi_unlock_class_code()
 {
     void (T::* lock_begin)() = &T::dpmi_lock_begin;
     void (T::* lock_end)() = &T::dpmi_lock_end;
-    adl_dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+    adl_dpmi_unlock_code_region((void*&)lock_begin, (void*&)lock_end);
 }
 
 extern void adl_pub_dpmi_lock_begin();
@@ -217,7 +257,7 @@ void adl_lock_code(void)
 
     void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
     void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
-    adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_lock_code_region((void*&)c_lock_begin, (void*&)c_lock_end);
 }
 
 // Unlock code of all known classes
@@ -245,6 +285,6 @@ void adl_unlock_code(void)
 
     void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
     void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
-    adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_unlock_code_region((void*&)c_lock_begin, (void*&)c_lock_end);
 }
 #endif

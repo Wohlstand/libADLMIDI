@@ -352,7 +352,7 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
             fflush(stdout);
 #endif
 
-            if(data[0] >= m_cmfInstruments.size())
+            if(data[0] >= m_cmfInstruments.size)
             {
                 fr.close();
                 m_cmfInstruments.clear();

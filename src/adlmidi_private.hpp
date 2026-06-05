@@ -237,9 +237,13 @@ extern void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, OplInstM
 // DOS specific tricks
 #ifdef ENABLE_HW_OPL_DOS
 extern bool adl_dpmi_lock_memory(void *address, size_t size);
+extern bool adl_dpmi_lock_memory_code(void *address, size_t size);
 extern bool adl_dpmi_lock_region(void *begin, void *end);
+extern bool adl_dpmi_lock_code_region(void *begin, void *end);
 extern bool adl_dpmi_unlock_memory(void *address, size_t size);
+extern bool adl_dpmi_unlock_memory_code(void *address, size_t size);
 extern bool adl_dpmi_unlock_region(void *begin, void *end);
+extern bool adl_dpmi_unlock_code_region(void *begin, void *end);
 
 #define adl_dpmi_lock(obj)\
     (adl_dpmi_lock_memory((void*)&obj, sizeof(obj)))
@@ -386,7 +390,7 @@ struct adl_array
 
             // Delete old data
             for(size_t i = 0; i < size; ++i)
-                data[i].~T();
+                old_data[i].~T();
         }
         else
         {

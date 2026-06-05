@@ -44,7 +44,7 @@ bool BW_MidiSequencer::duratedNoteAlloc(size_t track, DuratedNote **note)
 
 void BW_MidiSequencer::duratedNoteClear()
 {
-    for(MidiTrackStateList::iterator it = m_trackState.begin(); it != m_trackState.end(); ++it)
+    for(MidiTrackState *it = m_trackState.begin(); it != m_trackState.end(); ++it)
         it->duratedNotes.notes_count = 0;
 }
 

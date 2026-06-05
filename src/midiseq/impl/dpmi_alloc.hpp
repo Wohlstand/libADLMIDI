@@ -95,6 +95,23 @@ struct dpmi_allocator_impl
     }
 };
 
+template<class T>
+void midi_dpmi_lock_class_code()
+{
+    void (T::* lock_begin)() = &T::dpmi_lock_begin;
+    void (T::* lock_end)() = &T::dpmi_lock_end;
+    dpmi_allocator_impl::dpmi_lock_region((void*&)lock_begin, (void*&)lock_end);
+}
+
+template<class T>
+void midi_dpmi_unlock_class_code()
+{
+    void (T::* lock_begin)() = &T::dpmi_lock_begin;
+    void (T::* lock_end)() = &T::dpmi_lock_end;
+    dpmi_allocator_impl::dpmi_unlock_region((void*&)lock_begin, (void*&)lock_end);
+}
+
+
 template <typename T>
 struct dpmi_allocator
 {

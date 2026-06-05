@@ -43,7 +43,7 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
     RawSongsList song_buf;
     bool ret;
 
-    (void)Convert_xmi2midi; /* Shut up the warning */
+    // (void)Convert_xmi2midi; /* Shut up the warning */
 
     fsize = fr.read(headerBuf, 1, headerSize);
     if(fsize < headerSize)
@@ -102,20 +102,20 @@ bool BW_MidiSequencer::parseXMI(FileAndMemReader &fr)
         return false;
     }
 
-    if(m_loadTrackNumber >= (int)song_buf.size())
-        m_loadTrackNumber = song_buf.size() - 1;
+    if(m_loadTrackNumber >= (int)song_buf.size)
+        m_loadTrackNumber = song_buf.size - 1;
 
-    for(size_t i = 0; i < song_buf.size(); ++i)
-    {
-        m_rawSongsData.push_back(song_buf[i]);
-    }
+    m_rawSongsData.resize(song_buf.size);
+
+    for(size_t i = 0; i < song_buf.size; ++i)
+        song_buf[i].move_to(m_rawSongsData[i]);
 
     song_buf.clear();
 
     // cvt_buf.set(mid);
     // Open converted MIDI file
-    fr.openData(m_rawSongsData[m_loadTrackNumber].data(),
-                m_rawSongsData[m_loadTrackNumber].size());
+    fr.openData(m_rawSongsData[m_loadTrackNumber].data,
+                m_rawSongsData[m_loadTrackNumber].size);
     // Set format as XMIDI
     m_format = Format_XMIDI;
 

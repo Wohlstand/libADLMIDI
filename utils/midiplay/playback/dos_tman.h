@@ -38,6 +38,12 @@ extern bool adl_dpmi_lock_region(void *begin, void *end);
 extern bool adl_dpmi_unlock_memory(void *address, size_t size);
 extern bool adl_dpmi_unlock_region(void *begin, void *end);
 
+#define adl_dpmi_lock(obj)\
+    (adl_dpmi_lock_memory((void*)&obj, sizeof(obj)))
+
+#define adl_dpmi_unlock(obj)\
+    (adl_dpmi_unlock_memory((void*)&obj, sizeof(obj)))
+
 struct DosTask;
 
 class DosTaskman

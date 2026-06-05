@@ -24,10 +24,12 @@
 #ifndef ADLMIDI_BANKMAP_H
 #define ADLMIDI_BANKMAP_H
 
+// IWYU pragma: begin_exports
 #include <list>
 #include <utility>
 #include <stdint.h>
 #include <stddef.h>
+// IWYU pragma: end_exports
 
 #include "adlmidi_ptr.hpp"
 #include "midiseq/impl/dpmi_alloc.hpp"

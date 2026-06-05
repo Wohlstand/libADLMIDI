@@ -33,6 +33,9 @@
 #ifndef ADLMIDI_ENABLE_HW_DOS
 #   include <signal.h>
 #   include "utf8main.h" // IWYU pragma: keep
+#else
+#   include <crt0.h>
+int _crt0_startup_flags = _CRT0_FLAG_LOCK_MEMORY;
 #endif
 
 #include <adlmidi.h>
@@ -210,9 +213,6 @@ static bool oplChipInit(ADL_UInt16 address)
 }
 
 #endif // ADLMIDI_ENABLE_HW_DOS
-
-
-
 
 
 int main(int argc, char **argv)

@@ -230,8 +230,8 @@ void BW_MidiSequencer::sortEvents(MidiTrackRow &row, MidiEventsList &eventsBank,
      */
     if(row.events_begin != row.events_end && row.events_begin < row.events_end)
     {
-        arr = eventsBank.data() + row.events_begin;
-        arr_end = eventsBank.data() + row.events_end;
+        arr = eventsBank.data + row.events_begin;
+        arr_end = eventsBank.data + row.events_end;
         arr_size = row.events_end - row.events_begin;
 
         for(mi = arr + 1; mi < arr_end; ++mi)

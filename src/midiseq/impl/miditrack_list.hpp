@@ -92,6 +92,7 @@ struct TrackQueueList_t
 
         m_last->prev = prev_last;
         ++m_size;
+
         return m_last->data;
     }
 
@@ -118,6 +119,7 @@ struct TrackQueueList_t
 
         memset(cur, 0, sizeof(Leaf_t));
         ++m_size;
+
         return cur->data;
     }
 
@@ -169,6 +171,7 @@ struct TrackQueueList_t
             {
                 cur = m_begin;
                 m_begin = cur->next;
+
 #if defined(__DJGPP__)
                 dpmi_allocator_impl::dpmi_unlock_memory(cur, sizeof(Leaf_t));
 #endif

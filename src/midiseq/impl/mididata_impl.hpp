@@ -86,8 +86,8 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
 {
     m_tracksCount = tracksCount;
-    m_trackData.resize(m_tracksCount, MidiTrackQueue());
-    m_trackState.resize(m_tracksCount, MidiTrackState());
+    m_trackData.resize_fill(m_tracksCount, MidiTrackQueue());
+    m_trackState.resize_fill(m_tracksCount, MidiTrackState());
     m_trackBeginPosition.tracks_resize(m_tracksCount);
 }
 
@@ -129,9 +129,11 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
     bool shortestDelayNotFound = true, scanDone = false;
     double time = 0.0;
 
-    std::vector<TempoChangePoint> points;
+    miditrack_arr<TempoChangePoint> points;
 
     std::memset(&fakePos, 0, sizeof(MidiTrackRow));
+
+    points.reserve(100);
 
 
     /********************************************************************************/
@@ -172,7 +174,7 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
             MidiTrackRow &pos = it->data;
             if((posPrev != &pos) && // Skip first event
                (!tempos.empty()) && // Only when in-track tempo events are available
-               (tempo_change_index < tempos.size())
+               (tempo_change_index < tempos.size)
               )
             {
                 // If tempo event is going between of current and previous event
@@ -194,14 +196,14 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
                         points.push_back(tempoMarker);
                         tempo_change_index++;
                     }
-                    while((tempo_change_index < tempos.size()) &&
+                    while((tempo_change_index < tempos.size) &&
                           (tempos[tempo_change_index].absPosition <= pos.absPos));
 
                     // Re-calculate time delay of previous event
                     time -= posPrev->timeDelay;
                     posPrev->timeDelay = 0.0;
 
-                    for(i = 0, j = 1; j < points.size(); i++, j++)
+                    for(i = 0, j = 1; j < points.size; i++, j++)
                     {
                         /* If one or more tempo events are appears between of two events,
                          * calculate delays between each tempo point, begin and end */
@@ -220,7 +222,7 @@ void BW_MidiSequencer::buildTimeLine(const TemposList &tempos,
                     }
 
                     // Then calculate time between last tempo change point and end point
-                    tailTempo = &points.back();
+                    tailTempo = points.back();
                     postDelay = pos.absPos - tailTempo->absPos;
                     tempo_mul(&t, &currentTempo, postDelay);
                     posPrev->timeDelay += tempo_get(&t);

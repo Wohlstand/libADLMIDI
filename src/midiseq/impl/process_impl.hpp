@@ -644,7 +644,7 @@ bool BW_MidiSequencer::jumpToBranch(uint32_t dstTrack, uint16_t dstBranch)
     if(dstTrack != BRANCH_GLOBAL_TRACK && dstTrack >= m_currentPosition.track_size)
         return false; // Invalid query!
 
-    for(BranchesList::iterator it = m_branches.begin(); it != m_branches.end(); ++it)
+    for(BranchEntry *it = m_branches.begin(); it != m_branches.end(); ++it)
     {
         BranchEntry &e = *it;
         if(e.id == dstBranch && e.track == dstTrack)

@@ -26,13 +26,11 @@
 #ifndef BW_MIDI_SEQUENCER_HHHHPPP
 #define BW_MIDI_SEQUENCER_HHHHPPP
 
-#include <vector>
-
 #include "file_reader.hpp"
 #include "midi_sequencer.h"
 
-#include "impl/dpmi_alloc.hpp"
 #include "impl/miditrack_list.hpp"
+#include "impl/miditrack_arr.hpp"
 
 //! Helper for unused values
 #define BW_MidiSequencer_UNUSED(x) (void)x;
@@ -118,7 +116,7 @@ public:
      */
     inline const uint8_t *getData(const DataBlock &b) const
     {
-        return m_dataBank.data() + b.offset;
+        return m_dataBank.data + b.offset;
     };
 
     /**
@@ -150,11 +148,13 @@ public:
     };
 
     /* Public typedefs */
-    typedef std::vector<DataBlock, dpmi_allocator<DataBlock> >                  MusTrackTitlesList;
-    typedef std::vector<MIDI_MarkerEntry, dpmi_allocator<MIDI_MarkerEntry> >    MusMarkersList;
+    typedef miditrack_arr<DataBlock>            MusTrackTitlesList;
+    typedef miditrack_arr<MIDI_MarkerEntry>     MusMarkersList;
 
-    typedef std::vector<uint8_t, dpmi_allocator<uint8_t> >                      RawSongEntry;
-    typedef std::vector<RawSongEntry, dpmi_allocator<RawSongEntry> >            RawSongsList;
+    typedef miditrack_arr<uint8_t>              RawSongEntry;
+    typedef miditrack_arr<RawSongEntry, true>   RawSongsList;
+
+    typedef miditrack_arr<CmfInstrument>        CmfInstrumentsList;
 
 private:
     /**********************************************************************************
@@ -385,7 +385,7 @@ private:
         DataBlock data_block;
     };
 
-    typedef std::vector<MidiEvent, dpmi_allocator<MidiEvent> > MidiEventsList;
+    typedef miditrack_arr<MidiEvent> MidiEventsList;
 
     /*!
      * \brief Individual tempo value used for the timeline calculation
@@ -744,7 +744,7 @@ private:
     //! MIDI Output interface context
     const BW_MidiRtInterface *m_interface;
 
-    typedef std::vector<uint8_t, dpmi_allocator<uint8_t> > U8List;
+    typedef miditrack_arr<uint8_t> U8List;
 
     //! Storage of data block refered in tracks
     U8List m_dataBank;
@@ -795,15 +795,15 @@ private:
     //! Global loop end time
     double m_loopEndTime;
 
-    typedef std::vector<MidiTrackQueue, dpmi_allocator<MidiTrackQueue> > TrackDataList;
+    typedef miditrack_arr<MidiTrackQueue, true> TrackDataList;
     //! Pre-processed track data storage
     TrackDataList m_trackData;
 
-    typedef std::vector<MidiTrackState, dpmi_allocator<MidiTrackState> > MidiTrackStateList;
+    typedef miditrack_arr<MidiTrackState, true> MidiTrackStateList;
     //! State of every MIDI track
     MidiTrackStateList m_trackState;
 
-    typedef std::vector<BranchEntry, dpmi_allocator<BranchEntry> > BranchesList;
+    typedef miditrack_arr<BranchEntry> BranchesList;
     //! List of available branches
     BranchesList m_branches;
 
@@ -813,7 +813,6 @@ private:
     //! Current count of MIDI tracks
     size_t m_tracksCount;
 
-    typedef std::vector<CmfInstrument, dpmi_allocator<CmfInstrument> > CmfInstrumentsList;
     //! CMF instruments
     CmfInstrumentsList m_cmfInstruments;
 
@@ -972,7 +971,7 @@ private:
      */
     void initTracksBegin(size_t track);
 
-    typedef std::vector<TempoEvent, dpmi_allocator<TempoEvent> > TemposList;
+    typedef miditrack_arr<TempoEvent> TemposList;
     /**
      * @brief Build the time line from off loaded events
      * @param tempos Pre-collected list of tempo events
@@ -1372,7 +1371,7 @@ public:
      * @brief Get the list of CMF instruments (CMF only)
      * @return Array of raw CMF instruments entries
      */
-    const CmfInstrumentsList getRawCmfInstruments();
+    const CmfInstrumentsList &getRawCmfInstruments();
 
     /**
      * @brief Get string that describes reason of error

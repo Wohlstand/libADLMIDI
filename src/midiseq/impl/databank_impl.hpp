@@ -26,69 +26,66 @@
 #ifndef BW_MIDISEQ_DATA_BANK_IMPL_HPP
 #define BW_MIDISEQ_DATA_BANK_IMPL_HPP
 
-#include <iterator>  // std::back_inserter
-#include <algorithm> // std::copy
-
 #include "../midi_sequencer.hpp"
 
 void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, U8List &bank, const uint8_t *data, size_t length)
 {
-    evt.data_block.offset = bank.size();
-    std::copy(data, data + length, std::back_inserter(bank));
-    evt.data_block.size = bank.size() - evt.data_block.offset;
+    evt.data_block.offset = bank.size;
+    bank.push_back_list(data, length);
+    evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::insertDataToBank(BW_MidiSequencer::MidiEvent &evt, U8List &bank, FileAndMemReader &fr, size_t length)
 {
-    evt.data_block.offset = bank.size();
-    bank.resize(bank.size() + length);
-    fr.read(bank.data() + evt.data_block.offset, 1, length);
-    evt.data_block.size = bank.size() - evt.data_block.offset;
+    evt.data_block.offset = bank.size;
+    bank.resize(bank.size + length);
+    fr.read(bank.data + evt.data_block.offset, 1, length);
+    evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, U8List &bank, uint8_t begin_byte, const uint8_t *data, size_t length)
 {
-    evt.data_block.offset = bank.size();
+    evt.data_block.offset = bank.size;
     bank.push_back(begin_byte);
-    std::copy(data, data + length, std::back_inserter(bank));
-    evt.data_block.size = bank.size() - evt.data_block.offset;
+    bank.push_back_list(data, length);
+    evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt, U8List &bank, uint8_t begin_byte, FileAndMemReader &fr, size_t length)
 {
-    evt.data_block.offset = bank.size();
+    evt.data_block.offset = bank.size;
     bank.push_back(begin_byte);
-    bank.resize(bank.size() + length);
-    fr.read(bank.data() + evt.data_block.offset, 1, length);
-    evt.data_block.size = bank.size() - evt.data_block.offset;
+    bank.resize(bank.size + length);
+    fr.read(bank.data + evt.data_block.offset, 1, length);
+    evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, U8List &bank, const uint8_t *data, size_t length)
 {
-    evt.data_block.offset = bank.size();
-    std::copy(data, data + length, std::back_inserter(bank));
+    evt.data_block.offset = bank.size;
+    bank.push_back_list(data, length);
     bank.push_back(0);
     bank.push_back(0); /* Second terminator is an ending fix for UTF16 strings */
-    evt.data_block.size = bank.size() - evt.data_block.offset;
+    evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, U8List &bank, FileAndMemReader &fr, size_t length)
 {
-    evt.data_block.offset = bank.size();
-    bank.resize(bank.size() + length);
-    fr.read(bank.data() + evt.data_block.offset, 1, length);
+    evt.data_block.offset = bank.size;
+    bank.expand(bank.size + length);
+    fr.read(bank.data + evt.data_block.offset, 1, length);
     bank.push_back(0);
     bank.push_back(0); /* Second terminator is an ending fix for UTF16 strings */
-    evt.data_block.size = bank.size() - evt.data_block.offset;
+    evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::addEventToBank(BW_MidiSequencer::MidiTrackRow &row, const MidiEvent &evt)
 {
     if(row.events_begin == row.events_end)
-        row.events_begin = m_eventBank.size();
+        row.events_begin = m_eventBank.size;
 
     m_eventBank.push_back(evt);
-    row.events_end = m_eventBank.size();
+    row.events_end = m_eventBank.size;
 }
 
 #endif /* BW_MIDISEQ_DATA_BANK_IMPL_HPP */

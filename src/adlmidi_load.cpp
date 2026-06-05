@@ -187,10 +187,10 @@ bool MIDIplay::LoadMIDI_post()
 
     if(format == MidiSequencer::Format_CMF)
     {
-        const std::vector<MidiSequencer::CmfInstrument, dpmi_allocator<MidiSequencer::CmfInstrument> > &instruments = seq.getRawCmfInstruments();
+        const MidiSequencer::CmfInstrumentsList &instruments = seq.getRawCmfInstruments();
         synth.m_insBanks.clear();//Clean up old banks
 
-        uint16_t ins_count = static_cast<uint16_t>(instruments.size());
+        uint16_t ins_count = static_cast<uint16_t>(instruments.size);
         for(uint16_t i = 0; i < ins_count; ++i)
         {
             const uint8_t *insData = instruments[i].data;

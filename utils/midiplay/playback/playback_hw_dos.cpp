@@ -86,6 +86,12 @@ void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice)
     void (*c_lock_begin)(DosTask *task) = &s_midiLoop;
     void (*c_lock_end)() = &dos_dpmi_tail;
     adl_dpmi_lock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_lock(s_curSong);
+    adl_dpmi_lock(s_tempo);
+    adl_dpmi_lock(s_extra_delay);
+    adl_dpmi_lock(s_taskman);
+    adl_dpmi_lock(s_pause);
+    adl_dpmi_lock(s_devSetup);
 
     midiTask = taskMan->addTask(s_midiLoop, s_devSetup.clock_freq, 1, myDevice);
     s_taskman = taskMan;
@@ -195,4 +201,11 @@ void runDOSLoop(DosTaskman *taskMan, ADL_MIDIPlayer *myDevice)
     taskMan->terminate(midiTask);
     midiTask = NULL;
     adl_dpmi_unlock_region((void*&)c_lock_begin, (void*&)c_lock_end);
+
+    adl_dpmi_unlock(s_curSong);
+    adl_dpmi_unlock(s_tempo);
+    adl_dpmi_unlock(s_extra_delay);
+    adl_dpmi_unlock(s_taskman);
+    adl_dpmi_unlock(s_pause);
+    adl_dpmi_unlock(s_devSetup);
 }
