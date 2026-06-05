@@ -312,6 +312,7 @@ void MIDIplay::TickIterators(double s)
 void MIDIplay::realTime_ResetState()
 {
     Synth &synth = *m_synth;
+
     for(size_t ch = 0; ch < m_midiChannels.size; ch++)
     {
         MIDIchannel &chan = m_midiChannels[ch];
@@ -325,6 +326,7 @@ void MIDIplay::realTime_ResetState()
         noteUpdateAll(uint16_t(ch), Upd_All);
         noteUpdateAll(uint16_t(ch), Upd_Off);
     }
+
     synth.m_masterVolume = MasterVolumeDefault;
 }
 
@@ -332,7 +334,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 {
     Synth &synth = *m_synth;
 
-    if(note >= 128)
+    if(note > 127)
         note = 127;
 
     if((synth.m_musicMode == Synth::MODE_RSXX) && (velocity != 0))
@@ -343,7 +345,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         {
             MIDIchannel::NoteInfo &ni = i->value;
             const int veloffset = ni.ains ? ni.ains->midiVelocityOffset : 0;
-            velocity = (uint8_t)std::min(127, std::max(1, (int)velocity + veloffset));
+            velocity = static_cast<uint8_t>(std::min(127, std::max(1, static_cast<int>(velocity) + veloffset)));
             ni.vol = velocity;
             if(ni.ains)
                 noteUpdate(channel, i, Upd_Volume);
@@ -354,7 +356,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
     if(static_cast<size_t>(channel) > m_midiChannels.size)
         channel = channel % 16;
 
-    //noteOff(channel, note, velocity != 0);
+    // noteOff(channel, note, velocity != 0);
     // On Note on, Keyoff the note first, just in case keyoff
     // was omitted; this fixes Dance of sugar-plum fairy
     // by Microsoft. Now that we've done a Keyoff,
@@ -411,6 +413,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
         Synth::BankMap::iterator b = synth.m_insBanks.find(bank);
         if(b != synth.m_insBanks.end())
             bnk = &b->second;
+
         if(bnk)
             ains = &bnk->ins[midiins];
 #ifndef ENABLE_HW_OPL_DOS
@@ -431,6 +434,7 @@ bool MIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 #endif
             if(b != synth.m_insBanks.end())
                 bnk = &b->second;
+
             if(bnk)
                 ains = &bnk->ins[midiins];
 #ifndef ENABLE_HW_OPL_DOS
@@ -856,7 +860,6 @@ void MIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t value)
 
     case 10: // Change panning
         m_midiChannels[channel].panning = value;
-
         noteUpdateAll(channel, Upd_Pan);
         break;
 
@@ -1935,11 +1938,11 @@ void MIDIplay::setRPN(size_t midCh, unsigned value, bool MSB)
     switch(addr + nrpn * 0x10000 + MSB * 0x20000)
     {
     case 0x0000 + 0*0x10000 + 1*0x20000: // Pitch-bender sensitivity
-        m_midiChannels[midCh].bendsense_msb = value;
+        m_midiChannels[midCh].bendsense_msb = static_cast<int>(value);
         m_midiChannels[midCh].updateBendSensitivity();
         break;
     case 0x0000 + 0*0x10000 + 0*0x20000: // Pitch-bender sensitivity LSB
-        m_midiChannels[midCh].bendsense_lsb = value;
+        m_midiChannels[midCh].bendsense_lsb = static_cast<int>(value);
         m_midiChannels[midCh].updateBendSensitivity();
         break;
     case 0x0108 + 1*0x10000 + 1*0x20000:
@@ -2151,7 +2154,7 @@ void MIDIplay::updateGlide(double amount)
             bool glideFinished = !(directionUp ? (currentTone < finalTone) : (currentTone > finalTone));
             currentTone = glideFinished ? finalTone : currentTone;
 
-            if(currentTone != previousTone)
+            if(int64_t(currentTone * 1000000.0) != int64_t(previousTone * 1000000.0))
             {
                 info.currentTone = currentTone;
                 noteUpdate(static_cast<uint16_t>(channel), it, Upd_Pitch);
@@ -2211,7 +2214,7 @@ void MIDIplay::describeChannels(char *str, char *attr, size_t size)
         if(!loc.is_end())  // 4-bit color index of MIDI channel
             attribute |= (uint8_t)(loc->value.loc.MidCh & 0xF);
 
-        attr[index_out] = (char)attribute;
+        attr[index] = static_cast<char>(attribute);
         ++index;
         ++index_out;
     }
