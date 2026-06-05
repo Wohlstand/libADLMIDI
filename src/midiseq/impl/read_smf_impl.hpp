@@ -60,6 +60,10 @@ bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks
 
     buildSmfSetupReset(tracks_count);
 
+    // Attempt to rougly reserve the events bank
+    m_eventBank.reserve((fr.fileSize() / sizeof(MidiEvent)));
+    m_dataBank.reserve(10000);
+
     offset_next = tracks_offset;
 
     for(size_t tk = 0; tk < tracks_count; ++tk)

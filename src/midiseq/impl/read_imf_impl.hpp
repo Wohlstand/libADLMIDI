@@ -55,6 +55,9 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
 
     buildSmfSetupReset(trackCount);
 
+    // Attempt to rougly reserve the events bank
+    m_eventBank.reserve(fr.fileSize() / 4);
+
     m_invDeltaTicks.nom = 1;
     m_invDeltaTicks.denom = 1000000l * deltaTicks;
     m_tempo.nom = 1;

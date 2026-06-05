@@ -72,6 +72,10 @@ bool BW_MidiSequencer::parseKLM(FileAndMemReader &fr)
 
     buildSmfSetupReset(1);
 
+    // Attempt to rougly reserve the events bank
+    m_eventBank.reserve((fr.fileSize() / sizeof(MidiEvent)));
+    m_dataBank.reserve(1000);
+
     m_invDeltaTicks.nom = 1;
     m_invDeltaTicks.denom = 1000000l * tempo;
     m_tempo.nom = 1;

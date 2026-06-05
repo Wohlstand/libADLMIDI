@@ -106,6 +106,10 @@ bool BW_MidiSequencer::parseRSXX(FileAndMemReader &fr)
 
     buildSmfSetupReset(1);
 
+    // Attempt to rougly reserve the events bank
+    m_eventBank.reserve((trackLength / sizeof(MidiEvent)));
+    m_dataBank.reserve(1000);
+
     // Build new MIDI events table
     if(!smf_buildOneTrack(fr, 0, trackLength, temposList, loopState))
     {

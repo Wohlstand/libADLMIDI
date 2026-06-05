@@ -107,7 +107,7 @@ struct miditrack_arr
         return size == 0;
     }
 
-    void reserve(size_t count)
+    void reserve_extend(size_t count)
     {
         if(capacity == 0)
         {
@@ -145,10 +145,18 @@ struct miditrack_arr
 #endif
     }
 
+    void reserve(size_t count)
+    {
+        if(count <= capacity)
+            return;
+
+        reserve_extend(count - capacity);
+    }
+
     void push_back(const T &value)
     {
         if(size + 1 >= capacity)
-            reserve(1024);
+            reserve_extend(4096);
 
         if(is_class)
             new (data + size) T(value);
@@ -161,7 +169,7 @@ struct miditrack_arr
     void push_back_list(const T*in_data, size_t count)
     {
         if(size + count >= capacity)
-            reserve(count + 1024);
+            reserve_extend(count + 1024);
 
         for(size_t i = 0; i < count; ++i)
         {

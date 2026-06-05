@@ -1230,6 +1230,10 @@ bool BW_MidiSequencer::parseHMI(FileAndMemReader &fr)
 
     buildSmfSetupReset(hmi_data.tracksCount);
 
+    // Attempt to rougly reserve the events bank
+    m_eventBank.reserve((file_size / sizeof(MidiEvent)));
+    m_dataBank.reserve(1000);
+
     m_loopFormat = Loop_HMI;
     m_stateRestoreSetup = TRACK_RESTORE_DEFAULT_HMI;
 
