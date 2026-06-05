@@ -162,7 +162,7 @@ enum ADLMIDI_ChannelAlloc
  */
 enum ADLMIDI_DeviceFilter
 {
-    ADLMIDI_Device_GeneralMidi      = 0x0001, // MPU-401 counted as here
+    ADLMIDI_Device_GeneralMidi      = 0x0001, /* MPU-401 counted as here */
     ADLMIDI_Device_OPL2             = 0x0002,
     ADLMIDI_Device_OPL3             = 0x0004,
     ADLMIDI_Device_MT32             = 0x0008,
@@ -170,7 +170,7 @@ enum ADLMIDI_DeviceFilter
     ADLMIDI_Device_WaveBlaster      = 0x0020,
     ADLMIDI_Device_ProAudioSpectrum = 0x0040,
     ADLMIDI_Device_SoundMan16       = 0x0080,
-    ADLMIDI_Device_DIGI             = 0x0100, // Digital samples controlled by MIDI
+    ADLMIDI_Device_DIGI             = 0x0100, /* Digital samples controlled by MIDI */
     ADLMIDI_Device_SoundScape       = 0x0200,
     ADLMIDI_Device_WaveTable        = 0x0400,
     ADLMIDI_Device_GravisUltrasound = 0x0800,
