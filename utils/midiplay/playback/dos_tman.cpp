@@ -85,7 +85,8 @@ static __attribute__((always_inline)) inline void restoreInterrupts(uint32_t fla
     asm
     (
         "pushl %0 \n"
-        "popfl"
+        "popfl \n"
+        "sti"
         :
         : "r" (flags)
     );
