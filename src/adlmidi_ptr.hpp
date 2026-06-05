@@ -193,7 +193,7 @@ private:
 public:
     explicit AdlMIDI_SPtr(T *p = NULL)
         : m_p(p), m_counter(p ? new size_t(1) : NULL) {}
-    ~AdlMIDI_SPtr()
+    virtual ~AdlMIDI_SPtr()
     {
         reset(NULL);
     }
@@ -219,17 +219,27 @@ public:
 
     void reset(T *p = NULL)
     {
-        if(p != m_p) {
-            if(m_p && --*m_counter == 0) {
+        if(p != m_p)
+        {
+            if(m_p && --*m_counter == 0)
+            {
                 Deleter del;
                 del(m_p);
-                if(!p) {
+                if(!p)
+                {
                     delete m_counter;
                     m_counter = NULL;
                 }
             }
+
             m_p = p;
-            if(p) {
+
+            if(p)
+            {
+#ifdef ENABLE_HW_OPL_DOS
+                if(m_p)
+                    adl_dpmi_lock_memory(m_p, sizeof(T));
+#endif
                 if(!m_counter)
                     m_counter = new size_t;
                 *m_counter = 1;
@@ -270,9 +280,35 @@ template<class T>
 class AdlMIDI_SPtrArray :
     public AdlMIDI_SPtr< T, ADLMIDI_DefaultArrayDelete<T> >
 {
+#ifdef ENABLE_HW_OPL_DOS
 public:
-    explicit AdlMIDI_SPtrArray(T *p = NULL)
-        : AdlMIDI_SPtr< T, ADLMIDI_DefaultArrayDelete<T> >(p) {}
+    void dpmi_lock_begin() {}
+private:
+#endif
+    size_t arr_size;
+public:
+    explicit AdlMIDI_SPtrArray(T *p = NULL, size_t size = 0)
+        : AdlMIDI_SPtr< T, ADLMIDI_DefaultArrayDelete<T> >(p), arr_size(size)
+    {}
+
+    ~AdlMIDI_SPtrArray()
+    {
+#ifdef ENABLE_HW_OPL_DOS
+        T *ptr = AdlMIDI_SPtr< T, ADLMIDI_DefaultArrayDelete<T> >::get();
+        if(ptr)
+            adl_dpmi_unlock_memory(ptr, arr_size * sizeof(T));
+#endif
+    }
+
+    void reset_arr(T *ptr, size_t size)
+    {
+        arr_size = size;
+#ifdef ENABLE_HW_OPL_DOS
+        if(ptr)
+            adl_dpmi_lock_memory(ptr, arr_size * sizeof(T));
+#endif
+        AdlMIDI_SPtr< T, ADLMIDI_DefaultArrayDelete<T> >::reset(ptr);
+    }
 };
 
 #endif //ADLMIDI_PTR_HPP_THING
