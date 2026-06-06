@@ -58,9 +58,15 @@ void BW_MidiSequencer::Position::tracks_resize(size_t size)
 #if defined(__DJGPP__)
         dpmi_allocator_impl::dpmi_lock_memory(track, rawSize);
 #endif
+        for(size_t i = track_size; i < size; ++i)
+            tracks_init_one(track[i]);
+
         track_size = size;
     }
+}
 
+void BW_MidiSequencer::Position::tracks_reset()
+{
     for(size_t i = 0; i < track_size; ++i)
         tracks_init_one(track[i]);
 }
@@ -70,8 +76,8 @@ void BW_MidiSequencer::Position::tracks_init_one(TrackInfo &t)
     t.delay = 0;
     t.lastHandledEvent = 0;
     std::memset(&t.state, 0, sizeof(t.state));
-    std::memset(&t.state.cc_values, 0xFF, sizeof(t.state.cc_values));
-    std::memset(&t.state.reserve_note_att, 0xFF, sizeof(t.state.reserve_note_att));
+    std::memset(t.state.cc_values, 0xFF, sizeof(t.state.cc_values));
+    std::memset(t.state.reserve_note_att, 0xFF, sizeof(t.state.reserve_note_att));
     t.state.reserve_patch = 0xFF;
     t.state.reserve_wheel[0] = 0xFF;
     t.state.reserve_wheel[1] = 0xFF;

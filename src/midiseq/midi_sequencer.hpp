@@ -528,6 +528,7 @@ private:
         size_t track_size;
 
         void tracks_resize(size_t size);
+        void tracks_reset();
         static void tracks_init_one(TrackInfo &t);
 
         Position();
@@ -803,7 +804,7 @@ private:
     //! State of every MIDI track
     MidiTrackStateList m_trackState;
 
-    typedef miditrack_arr<BranchEntry> BranchesList;
+    typedef miditrack_arr<BranchEntry, true> BranchesList;
     //! List of available branches
     BranchesList m_branches;
 
