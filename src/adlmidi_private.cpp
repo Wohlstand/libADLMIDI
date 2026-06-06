@@ -30,6 +30,7 @@
 #ifdef ENABLE_HW_OPL_DOS
 #   include <dpmi.h>
 #   include "chips/dos_hw_opl.h"
+#   include "adlmidi_dos.h"
 #endif
 
 
@@ -133,158 +134,57 @@ void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, OplInstMeta &in
 #endif
 
 #ifdef ENABLE_HW_OPL_DOS
-bool adl_dpmi_lock_memory(void *address, size_t size)
-{
-    unsigned long baseaddr;
-    __dpmi_meminfo mem;
-
-    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
-        return false;
-
-    mem.handle = 0;
-    mem.address = baseaddr + (intptr_t)address;
-    mem.size = size;
-
-    return __dpmi_lock_linear_region(&mem) != -1;
-}
-
-bool adl_dpmi_lock_memory_code(void *address, size_t size)
-{
-    unsigned long baseaddr;
-    __dpmi_meminfo mem;
-
-    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
-        return false;
-
-    mem.handle = 0;
-    mem.address = baseaddr + (intptr_t)address;
-    mem.size = size;
-
-    return __dpmi_lock_linear_region(&mem) != -1;
-}
-
-bool adl_dpmi_lock_region(void *begin, void *end)
-{
-    return adl_dpmi_lock_memory(begin, (uintptr_t)end - (uintptr_t)begin);
-}
-
-bool adl_dpmi_lock_code_region(void *begin, void *end)
-{
-    return adl_dpmi_lock_memory_code(begin, (uintptr_t)end - (uintptr_t)begin);
-}
-
-bool adl_dpmi_unlock_memory(void *address, size_t size)
-{
-    unsigned long baseaddr;
-    __dpmi_meminfo mem;
-
-    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
-        return false;
-
-    mem.handle = 0;
-    mem.address = baseaddr + (intptr_t)address;
-    mem.size = size;
-
-    return __dpmi_unlock_linear_region(&mem) != -1;
-}
-
-bool adl_dpmi_unlock_memory_code(void *address, size_t size)
-{
-    unsigned long baseaddr;
-    __dpmi_meminfo mem;
-
-    if(__dpmi_get_segment_base_address(_my_ds(), &baseaddr) == -1)
-        return false;
-
-    mem.handle = 0;
-    mem.address = baseaddr + (intptr_t)address;
-    mem.size = size;
-
-    return __dpmi_unlock_linear_region(&mem) != -1;
-}
-
-bool adl_dpmi_unlock_region(void *begin, void *end)
-{
-    return adl_dpmi_unlock_memory(begin, (uintptr_t)end - (uintptr_t)begin);
-}
-
-bool adl_dpmi_unlock_code_region(void *begin, void *end)
-{
-    return adl_dpmi_unlock_memory_code(begin, (uintptr_t)end - (uintptr_t)begin);
-}
-
 // Lock code of all known classes
-
-template<class T>
-void dpmi_lock_class_code()
-{
-    void (T::* lock_begin)() = &T::dpmi_lock_begin;
-    void (T::* lock_end)() = &T::dpmi_lock_end;
-    adl_dpmi_lock_code_region((void*&)lock_begin, (void*&)lock_end);
-}
-
-template<class T>
-void dpmi_unlock_class_code()
-{
-    void (T::* lock_begin)() = &T::dpmi_lock_begin;
-    void (T::* lock_end)() = &T::dpmi_lock_end;
-    adl_dpmi_unlock_code_region((void*&)lock_begin, (void*&)lock_end);
-}
-
 extern void adl_pub_dpmi_lock_begin();
 extern void adl_pub_dpmi_lock_end();
 
 void adl_lock_code(void)
 {
-    dpmi_lock_class_code<MIDIplay>();
-    dpmi_lock_class_code<OPL3>();
-    dpmi_lock_class_code<DOS_HW_OPL>();
-    dpmi_lock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
-    dpmi_lock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
-    dpmi_lock_class_code<AdlMIDI_UPtr<Synth> >();
-    dpmi_lock_class_code<BasicBankMap<OPL3::Bank> >();
-    dpmi_lock_class_code<AdlMIDI_SPtrArray<BasicBankMap<OPL3::Bank>::Slot*> >();
-    dpmi_lock_class_code<AdlMIDI_SPtr<OPLChipBase > >();
+    adl_dpmi_lock_class_code<MIDIplay>();
+    adl_dpmi_lock_class_code<OPL3>();
+    adl_dpmi_lock_class_code<DOS_HW_OPL>();
+    adl_dpmi_lock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
+    adl_dpmi_lock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
+    adl_dpmi_lock_class_code<AdlMIDI_UPtr<Synth> >();
+    adl_dpmi_lock_class_code<BasicBankMap<OPL3::Bank> >();
+    adl_dpmi_lock_class_code<AdlMIDI_SPtrArray<BasicBankMap<OPL3::Bank>::Slot*> >();
+    adl_dpmi_lock_class_code<AdlMIDI_SPtr<OPLChipBase > >();
 
-    dpmi_lock_class_code<adl_array<AdlMIDI_SPtr<OPLChipBase >, true> >();
-    dpmi_lock_class_code<adl_array<const OplTimbre*> >();
-    dpmi_lock_class_code<adl_array<bool> >();
-    dpmi_lock_class_code<adl_array<uint32_t> >();
-    dpmi_lock_class_code<adl_array<uint8_t> >();
+    adl_dpmi_lock_class_code<adl_array<AdlMIDI_SPtr<OPLChipBase >, true> >();
+    adl_dpmi_lock_class_code<adl_array<const OplTimbre*> >();
+    adl_dpmi_lock_class_code<adl_array<bool> >();
+    adl_dpmi_lock_class_code<adl_array<uint32_t> >();
+    adl_dpmi_lock_class_code<adl_array<uint8_t> >();
 
-    dpmi_lock_class_code<adl_array<MIDIplay::AdlChannel, true> >();
-    dpmi_lock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
+    adl_dpmi_lock_class_code<adl_array<MIDIplay::AdlChannel, true> >();
+    adl_dpmi_lock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
 
-    void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
-    void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
-    adl_dpmi_lock_code_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_lock_code_region_fn(adl_pub_dpmi_lock_begin, adl_pub_dpmi_lock_end);
 }
 
 // Unlock code of all known classes
 
 void adl_unlock_code(void)
 {
-    dpmi_unlock_class_code<MIDIplay>();
-    dpmi_unlock_class_code<OPL3>();
-    dpmi_unlock_class_code<DOS_HW_OPL>();
-    dpmi_unlock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
-    dpmi_unlock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
-    dpmi_unlock_class_code<AdlMIDI_UPtr<Synth> >();
-    dpmi_unlock_class_code<BasicBankMap<OPL3::Bank> >();
-    dpmi_unlock_class_code<AdlMIDI_SPtrArray<BasicBankMap<OPL3::Bank>::Slot*> >();
-    dpmi_unlock_class_code<AdlMIDI_SPtr<OPLChipBase > >();
+    adl_dpmi_unlock_class_code<MIDIplay>();
+    adl_dpmi_unlock_class_code<OPL3>();
+    adl_dpmi_unlock_class_code<DOS_HW_OPL>();
+    adl_dpmi_unlock_class_code<AdlMIDI_UPtr<BW_MidiRtInterface> >();
+    adl_dpmi_unlock_class_code<AdlMIDI_UPtr<MidiSequencer> >();
+    adl_dpmi_unlock_class_code<AdlMIDI_UPtr<Synth> >();
+    adl_dpmi_unlock_class_code<BasicBankMap<OPL3::Bank> >();
+    adl_dpmi_unlock_class_code<AdlMIDI_SPtrArray<BasicBankMap<OPL3::Bank>::Slot*> >();
+    adl_dpmi_unlock_class_code<AdlMIDI_SPtr<OPLChipBase > >();
 
-    dpmi_unlock_class_code<adl_array<AdlMIDI_SPtr<OPLChipBase >, true> >();
-    dpmi_unlock_class_code<adl_array<const OplTimbre*> >();
-    dpmi_unlock_class_code<adl_array<bool> >();
-    dpmi_unlock_class_code<adl_array<uint32_t> >();
-    dpmi_unlock_class_code<adl_array<uint8_t> >();
+    adl_dpmi_unlock_class_code<adl_array<AdlMIDI_SPtr<OPLChipBase >, true> >();
+    adl_dpmi_unlock_class_code<adl_array<const OplTimbre*> >();
+    adl_dpmi_unlock_class_code<adl_array<bool> >();
+    adl_dpmi_unlock_class_code<adl_array<uint32_t> >();
+    adl_dpmi_unlock_class_code<adl_array<uint8_t> >();
 
-    dpmi_unlock_class_code<adl_array<MIDIplay::AdlChannel, true> >();
-    dpmi_unlock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
+    adl_dpmi_unlock_class_code<adl_array<MIDIplay::AdlChannel, true> >();
+    adl_dpmi_unlock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
 
-    void (*c_lock_begin)(void) = &adl_pub_dpmi_lock_begin;
-    void (*c_lock_end)(void) = &adl_pub_dpmi_lock_end;
-    adl_dpmi_unlock_code_region((void*&)c_lock_begin, (void*&)c_lock_end);
+    adl_dpmi_unlock_code_region_fn(adl_pub_dpmi_lock_begin, adl_pub_dpmi_lock_end);
 }
 #endif

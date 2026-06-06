@@ -139,17 +139,20 @@ struct TrackQueueList_t
     // TODO: Verify the correctness of this!
     Leaf_t *erase(Leaf_t *it)
     {
-        Leaf_t *ret = NULL;
+        Leaf_t *ret = NULL, *old_prev, *old_next;
 
-        if(it->prev)
-            it->prev->next = it->next;
-        else
-            m_begin = it->next;
+        old_prev = it->prev;
+        old_next = it->next;
 
-        if(it->next)
-            ret = it->next->prev = it->prev;
+        if(old_prev)
+            old_prev->next = old_next;
         else
-            m_last = it->prev;
+            m_begin = old_next;
+
+        if(old_next)
+            ret = old_next->prev = old_prev;
+        else
+            m_last = old_prev;
 
 #if defined(__DJGPP__)
         dpmi_allocator_impl::dpmi_unlock_memory(it, sizeof(Leaf_t));

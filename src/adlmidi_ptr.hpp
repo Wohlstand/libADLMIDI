@@ -29,10 +29,7 @@
 #include <stdlib.h>
 
 #ifdef ENABLE_HW_OPL_DOS
-#   ifndef ADLMIDI_PRIVATE_HPP
-extern bool adl_dpmi_lock_memory(void *address, size_t size);
-extern bool adl_dpmi_unlock_memory(void *address, size_t size);
-#   endif
+#   include "adlmidi_dos.h"
 #endif
 
 /*

@@ -23,6 +23,7 @@
  */
 
 #include <cstdio>
+#include "adlmidi_dos.h"
 #include "playback.h"
 #include "../dev_setup.h"
 #include "../misc.h"

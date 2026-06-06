@@ -29,20 +29,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "../../src/midiseq/impl/miditrack_list.hpp"
-
 #define DOS_TASK_CLOCK_BASE 1192030L
-
-extern bool adl_dpmi_lock_memory(void *address, size_t size);
-extern bool adl_dpmi_lock_region(void *begin, void *end);
-extern bool adl_dpmi_unlock_memory(void *address, size_t size);
-extern bool adl_dpmi_unlock_region(void *begin, void *end);
-
-#define adl_dpmi_lock(obj)\
-    (adl_dpmi_lock_memory((void*)&obj, sizeof(obj)))
-
-#define adl_dpmi_unlock(obj)\
-    (adl_dpmi_unlock_memory((void*)&obj, sizeof(obj)))
 
 struct DosTask;
 
@@ -127,8 +114,17 @@ private:
     void clearTasks();
     DosTask *addTask(DosTask &task);
 
-    typedef TrackQueueList_t<DosTask> DosTasksList;
-    DosTasksList m_tasks;
+    DosTask *m_tasks_begin;
+    DosTask *m_tasks_end;
+    size_t   m_tasks_size;
+
+    DosTask *task_erase(DosTask *it);
+    DosTask *task_insert(DosTask *pos, DosTask *o);
+    void task_clean();
+
+    DosTask *task_make();
+    DosTask *task_make_at(DosTask *pos);
+
     void dpmi_lock_end() {}
 };
 

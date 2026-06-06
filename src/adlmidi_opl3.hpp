@@ -26,6 +26,7 @@
 
 #include "oplinst.h"
 #include "adlmidi_ptr.hpp"
+#include "adlmidi_arr.hpp"
 #include "adlmidi_private.hpp"
 #include "adlmidi_bankmap.h"
 

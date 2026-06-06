@@ -31,6 +31,7 @@
 #include "oplinst.h"
 #include "adlmidi_private.hpp"
 #include "adlmidi_ptr.hpp"
+#include "adlmidi_arr.hpp"
 #include "structures/pl_list.hpp"
 
 /**

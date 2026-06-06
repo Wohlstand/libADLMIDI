@@ -540,9 +540,12 @@ set(libADLMIDI_SOURCES
     ${OPL_MODELS_SOURCES}
 )
 
+if(ADLMIDI_DOS)
+    list(APPEND libADLMIDI_SOURCES ${libADLMIDI_SOURCE_DIR}/src/adlmidi_dos.c)
+endif()
+
 # Make headers being properly visible at IDEs
 file(GLOB libADLMIDI_HEADERS
-    ${libADLMIDI_SOURCE_DIR}/include/*.h
     ${libADLMIDI_SOURCE_DIR}/src/*.h
     ${libADLMIDI_SOURCE_DIR}/src/*.hpp
     ${libADLMIDI_SOURCE_DIR}/src/midiseq/*.h
@@ -558,6 +561,14 @@ file(GLOB libADLMIDI_HEADERS
     ${libADLMIDI_SOURCE_DIR}/src/chips/opal/*.h
 )
 list(APPEND libADLMIDI_SOURCES ${libADLMIDI_HEADERS})
+
+if(ADLMIDI_DOS)
+    set(ADLMIDI_PUBLIC_HEADERS include/adlmidi.h include/adlmidi_dos.h)
+else()
+    set(ADLMIDI_PUBLIC_HEADERS include/adlmidi.h)
+endif()
+
+list(APPEND libADLMIDI_SOURCES ${ADLMIDI_PUBLIC_HEADERS})
 
 # === Static library ====
 if(libADLMIDI_STATIC OR WITH_VLC_PLUGIN)
@@ -723,7 +734,7 @@ if(libADLMIDI_SHARED)
 endif()
 
 install(FILES
-        include/adlmidi.h
+        ${ADLMIDI_PUBLIC_HEADERS}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 include(CMakePackageConfigHelpers)

@@ -33,6 +33,8 @@
 #ifndef ADLMIDI_ENABLE_HW_DOS
 #   include <signal.h>
 #   include "utf8main.h" // IWYU pragma: keep
+#else
+#   include <adlmidi_dos.h>
 #endif
 
 #include <adlmidi.h>
