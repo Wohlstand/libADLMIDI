@@ -135,8 +135,6 @@ void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, OplInstMeta &in
 
 #ifdef ENABLE_HW_OPL_DOS
 // Lock code of all known classes
-extern void adl_pub_dpmi_lock_begin();
-extern void adl_pub_dpmi_lock_end();
 
 void adl_lock_code(void)
 {
@@ -160,6 +158,7 @@ void adl_lock_code(void)
     adl_dpmi_lock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
 
     adl_dpmi_lock_code_region_fn(adl_pub_dpmi_lock_begin, adl_pub_dpmi_lock_end);
+    adl_dpmi_lock_code_region_fn(adl_seq_dpmi_lock_begin, adl_seq_dpmi_lock_end);
 }
 
 // Unlock code of all known classes
@@ -186,5 +185,6 @@ void adl_unlock_code(void)
     adl_dpmi_unlock_class_code<adl_array<MIDIplay::MIDIchannel, true> >();
 
     adl_dpmi_unlock_code_region_fn(adl_pub_dpmi_lock_begin, adl_pub_dpmi_lock_end);
+    adl_dpmi_unlock_code_region_fn(adl_seq_dpmi_lock_begin, adl_seq_dpmi_lock_end);
 }
 #endif

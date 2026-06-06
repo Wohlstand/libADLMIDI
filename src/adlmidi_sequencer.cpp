@@ -37,6 +37,10 @@
  *           Real-Time MIDI calls proxies           *
  ****************************************************/
 
+#ifdef ENABLE_HW_OPL_DOS
+void adl_seq_dpmi_lock_begin() {}
+#endif
+
 static void rtNoteOn(void *userdata, uint8_t channel, uint8_t note, uint8_t velocity)
 {
     MIDIplay *context = reinterpret_cast<MIDIplay *>(userdata);
@@ -162,5 +166,9 @@ double MIDIplay::Tick(double s, double granularity)
 
     return ret;
 }
+
+#ifdef ENABLE_HW_OPL_DOS
+void adl_seq_dpmi_lock_end() {}
+#endif
 
 #endif /* ADLMIDI_DISABLE_MIDI_SEQUENCER */

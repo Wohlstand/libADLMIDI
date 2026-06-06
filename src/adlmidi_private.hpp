@@ -235,6 +235,14 @@ extern void adlFromInstrument(const BanksDump::InstrumentEntry &instIn, OplInstM
 #ifdef ENABLE_HW_OPL_DOS
 extern void adl_lock_code(void);
 extern void adl_unlock_code(void);
+
+// Dummies to identify the code position addresses
+
+extern void adl_pub_dpmi_lock_begin();
+extern void adl_pub_dpmi_lock_end();
+
+extern void adl_seq_dpmi_lock_begin();
+extern void adl_seq_dpmi_lock_end();
 #endif
 
 #endif // ADLMIDI_PRIVATE_HPP
