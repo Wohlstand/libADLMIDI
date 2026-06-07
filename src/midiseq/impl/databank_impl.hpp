@@ -62,21 +62,22 @@ void BW_MidiSequencer::insertDataToBankWithByte(BW_MidiSequencer::MidiEvent &evt
 
 void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, U8List &bank, const uint8_t *data, size_t length)
 {
+    const uint8_t null[] = {0, 0};
     evt.data_block.offset = bank.size;
     bank.push_back_list(data, length);
-    bank.push_back(0);
-    bank.push_back(0); /* Second terminator is an ending fix for UTF16 strings */
+    bank.push_back_list(null, 2); /* Second terminator is an ending fix for UTF16 strings */
     evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
 void BW_MidiSequencer::insertDataToBankWithTerm(BW_MidiSequencer::MidiEvent &evt, U8List &bank, FileAndMemReader &fr, size_t length)
 {
+    size_t tail = bank.size + length;
     evt.data_block.offset = bank.size;
     bank.resize(bank.size + length + 2);
     fr.read(bank.data + evt.data_block.offset, 1, length);
     /* Second terminator is an ending fix for UTF16 strings */
-    bank.data[length] = 0;
-    bank.data[length + 1] = 0;
+    bank.data[tail] = 0;
+    bank.data[tail + 1] = 0;
     evt.data_block.size = bank.size - evt.data_block.offset;
 }
 
