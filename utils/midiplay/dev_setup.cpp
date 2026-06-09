@@ -208,6 +208,13 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             " --song <song ID 0...N-1>   Selects a song to play (if XMI)\n"
             " -ea   Enable the auto-arpeggio\n"
 #ifndef ADLMIDI_ENABLE_HW_DOS
+            " -mono Monophonic audio output (Stereo by default, Emulators only).\n"
+            " -s8   Try to output as 8bit signed PCM.\n"
+            " -u8   Try to output as 8bit unsigned PCM.\n"
+            " -s16  Try to output as 16bit signed PCM.\n"
+            " -u16  Try to output as 16bit unsigned PCM.\n"
+            " -s32  Try to output as 32bit signed PCM.\n"
+            " -f32  Try to output as 32bit float samples.\n"
             " -fp Enables full-panning stereo support\n"
             " --gain <value> Set the gaining factor (default 2.0)\n"
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
@@ -316,6 +323,8 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             recordWave = true;//Record library output into WAV file
         }
 #   endif
+        else if(!std::strcmp("-mono", argv[2]))
+            spec.channels = 1;
         else if(!std::strcmp("-s8", argv[2]))
             spec.format = ADLMIDI_SampleType_S8;
         else if(!std::strcmp("-u8", argv[2]))

@@ -40,6 +40,8 @@ int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, con
     s_fprintf(stdout, " - Output WAV spec (format=%s,samples=%d,rate=%u,channels=%u);\n",
               audio_format_to_str(obtained.format, obtained.is_msb), obtained.samples, obtained.freq, obtained.channels);
 
+    bool isMono = obtained.channels == 1;
+
     int wav_format = obtained.format == ADLMIDI_SampleType_F32 ? WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
     int wav_has_sign = obtained.format != ADLMIDI_SampleType_U8 && obtained.format != ADLMIDI_SampleType_U16;
 
@@ -70,6 +72,9 @@ int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, con
                                                  &g_audioFormat) * g_audioFormat.containerSize;
             if(got <= 0)
                 break;
+
+            if(isMono)
+                got = stereoToMono(buff, got);
 
             applyGain(buff, got);
 

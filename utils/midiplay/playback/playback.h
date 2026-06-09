@@ -44,6 +44,7 @@ const char* audio_format_to_str(int format, int is_msb);
 void fillAudioFormat(const AudioOutputSpec &spec);
 
 void applyGain(uint8_t *buffer, size_t bufferSize);
+size_t stereoToMono(uint8_t *buffer, size_t bufferSize);
 #endif
 
 
