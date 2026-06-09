@@ -208,6 +208,8 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             " --song <song ID 0...N-1>   Selects a song to play (if XMI)\n"
             " -ea   Enable the auto-arpeggio\n"
 #ifndef ADLMIDI_ENABLE_HW_DOS
+            " -fp Enables full-panning stereo support\n"
+            " --gain <value> Set the gaining factor (default 2.0)\n"
             " -mono Monophonic audio output (Stereo by default, Emulators only).\n"
             " -s8   Try to output as 8bit signed PCM.\n"
             " -u8   Try to output as 8bit unsigned PCM.\n"
@@ -215,8 +217,6 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             " -u16  Try to output as 16bit unsigned PCM.\n"
             " -s32  Try to output as 32bit signed PCM.\n"
             " -f32  Try to output as 32bit float samples.\n"
-            " -fp Enables full-panning stereo support\n"
-            " --gain <value> Set the gaining factor (default 2.0)\n"
 #   ifndef ADLMIDI_DISABLE_NUKED_EMULATOR
             " --emu-nuked  Uses Nuked OPL3 v 1.8 emulator\n"
             " --emu-nuked7 Uses Nuked OPL3 Fast emulator\n"

@@ -31,10 +31,12 @@
 #include "wave_writer.h"
 
 
-int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, const AudioOutputSpec &obtained, unsigned sampleRate)
+int runWaveOutLoopLoop(ADL_MIDIPlayer *myDevice, const std::string &musPath, const AudioOutputSpec &spec, unsigned sampleRate)
 {
+    AudioOutputSpec obtained;
     std::string wave_out = musPath + ".wav";
 
+    getWavFormat(spec, obtained);
     fillAudioFormat(obtained);
 
     s_fprintf(stdout, " - Output WAV spec (format=%s,samples=%d,rate=%u,channels=%u);\n",

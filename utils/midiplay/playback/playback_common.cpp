@@ -23,6 +23,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 #include "playback.h"
 #include "../dev_setup.h"
 
@@ -88,6 +89,32 @@ void fillAudioFormat(const AudioOutputSpec &spec)
     }
 }
 
+void getWavFormat(const AudioOutputSpec &wanted, AudioOutputSpec &obtained)
+{
+    memcpy(&obtained, &wanted, sizeof(AudioOutputSpec));
+
+    // Filter out unsupported formats!
+    switch(obtained.format)
+    {
+    case ADLMIDI_SampleType_S8:
+        obtained.format = ADLMIDI_SampleType_U8;
+        break;
+    case ADLMIDI_SampleType_U16:
+        obtained.format = ADLMIDI_SampleType_S16;
+        break;
+    case ADLMIDI_SampleType_U24:
+        obtained.format = ADLMIDI_SampleType_S24;
+        break;
+    case ADLMIDI_SampleType_U32:
+        obtained.format = ADLMIDI_SampleType_S32;
+        break;
+    case ADLMIDI_SampleType_F64:
+        obtained.format = ADLMIDI_SampleType_F32;
+        break;
+    default:
+        break;
+    }
+}
 
 void applyGain(uint8_t *buffer, size_t bufferSize)
 {

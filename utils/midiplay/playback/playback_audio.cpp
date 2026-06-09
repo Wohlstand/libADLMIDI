@@ -230,9 +230,7 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         g_audioBuffer_lock.Unlock();
 
         while(!stop && (g_audioBuffer.size() > out_buffer_size))
-        {
             audio_delay(1);
-        }
 
 #       if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
         if(kbhit())
