@@ -142,11 +142,16 @@ void TimeCounter::printTime(double pos)
 void TimeCounter::printProgress(double pos)
 {
     int complete = static_cast<int>(std::floor(100.0 * pos / totalTime));
+    int len;
 
     if(complete_prev != complete)
     {
-        s_fprintf(stdout, "                                                                              \r");
-        s_fprintf(stdout, "Recording WAV... [%d%% completed]\r", complete);
+        len = snprintf(linebuff, 79, "Recording WAV... [%d%% completed]", complete);
+
+        if(len > 0)
+            memset(linebuff + len, ' ',  79 - len);
+        linebuff[79] = '\r';
+        s_fprintf(stdout, "%s", linebuff);
         flushout(stdout);
         complete_prev = complete;
     }
