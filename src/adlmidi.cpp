@@ -624,6 +624,21 @@ ADLMIDI_EXPORT int adl_getAutoArpeggio(ADL_MIDIPlayer *device)
     return play->m_setup.enableAutoArpeggio ? 1 : 0;
 }
 
+ADLMIDI_EXPORT void adl_setModeEMIDI(struct ADL_MIDIPlayer *device, int emidiEn)
+{
+#ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return;
+
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_sequencer->setModeEMIDI(emidiEn != 0);
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(emidiEn);
+#endif
+}
+
 ADLMIDI_EXPORT void adl_setLoopEnabled(ADL_MIDIPlayer *device, int loopEn)
 {
 #ifndef ADLMIDI_DISABLE_MIDI_SEQUENCER

@@ -205,6 +205,8 @@ To build that example you will need to have installed SDL2 library.
  * Fixed the silence problem at the MIDI channel after playing too many notes without Note OFF event.
  * Fixed the work of the DOS-built MIDI player under Windows 9x without the dead freeze.
  * Added `adl_setDeviceFilterMask()` public API to assign the device filter mask for the HMI/HMP/EMIDI tracks disabling/enabling.
+ * Added handling of music files designed for the EMIDI standard from the Apogee Sound System. This feature must be enabled manually to avoid heuristics and possible conflicts.
+ * Added `adl_setModeEMIDI()` public API to enable handling EMIDI specification events without conflicts to other formats.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.

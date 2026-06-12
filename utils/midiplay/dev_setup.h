@@ -53,6 +53,7 @@ struct Args
     bool    recordWave;
     int     loopEnabled;
 #endif
+    int     modeEMIDI;
 
     unsigned int    sampleRate;
 

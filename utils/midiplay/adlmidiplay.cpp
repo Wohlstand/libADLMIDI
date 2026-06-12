@@ -285,6 +285,8 @@ int main(int argc, char **argv)
     adl_setLoopEnabled(myDevice, s_devSetup.recordWave ? 0 : s_devSetup.loopEnabled);
 #endif
 
+    adl_setModeEMIDI(myDevice, s_devSetup.modeEMIDI);
+
     adl_setAutoArpeggio(myDevice, s_devSetup.autoArpeggioEnabled);
     adl_setChannelAllocMode(myDevice, s_devSetup.chanAlloc);
 

@@ -86,6 +86,9 @@ bool BW_MidiSequencer::smf_buildTracks(FileAndMemReader &fr, const size_t tracks
             return false; // Failed to parse track (error already written!)
     }
 
+    if(m_modeEMIDI)
+        debugPrintDevices();
+
     installLoop(loopState);
     buildTimeLine(temposList, loopState.loopStartTicks, loopState.loopEndTicks);
 
@@ -101,7 +104,8 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     MidiTrackRow evtPos;
     MidiEvent event;
     uint64_t abs_position = 0;
-    int status = 0;
+    TrackParseStatus status;
+    MidiTrackState &trackState = m_trackState[track_idx];
     const size_t end = fr.tell() + track_size;
     bool ok = false, trackChannelNeeded = false, trackChannelHas = false;
 
@@ -112,6 +116,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
      * Otherwise, after sort those notes will play infinite sound       */
 
     std::memset(&evtPos, 0, sizeof(MidiTrackRow));
+    std::memset(&status, 0, sizeof(TrackParseStatus));
     std::memset(noteStates, 0, sizeof(noteStates));
 
     // Time delay that follows the first event in the track
@@ -142,7 +147,9 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     m_trackData[track_idx].push_back(evtPos);
     memset(&evtPos, 0, sizeof(MidiTrackRow));
 
-    m_trackState[track_idx].state.track_channel = 0xFF;
+    trackState.state.track_channel = 0xFF;
+    status.devMask = Device_ANY;
+    status.devMaskExclude = 0;
 
     if((m_format == Format_MIDI && m_smfFormat == 1 && track_idx > 0) || m_format == Format_HMI)
         trackChannelNeeded = true;
@@ -160,7 +167,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 
         if(trackChannelNeeded && !trackChannelHas && event.type > 0x00 && event.type < 0xF0)
         {
-            m_trackState[track_idx].state.track_channel = event.channel;
+            trackState.state.track_channel = event.channel;
             trackChannelHas = true;
         }
 
@@ -209,6 +216,27 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
     }
     while((fr.tell() <= end) && (event.subtype != MidiEvent::ST_ENDTRACK));
 
+    // When EMIDI is active
+    if(m_modeEMIDI)
+    {
+        trackState.deviceMask = status.devMask & ~status.devMaskExclude;
+
+        if(trackState.deviceMask != Device_ANY)
+        {
+            if(m_deviceMaskAvailable == Device_ANY)
+                m_deviceMaskAvailable = trackState.deviceMask;
+            else
+                m_deviceMaskAvailable |= trackState.deviceMask;
+        }
+
+        if(m_deviceMask != Device_ANY && (m_deviceMask & trackState.deviceMask) == 0)
+        {
+            // Exclude this track completely: make it have no events at all
+            m_trackData[track_idx].clean();
+            trackState.disabled = true;
+        }
+    }
+
     if(loopState.ticksSongLength < abs_position)
         loopState.ticksSongLength = abs_position;
 
@@ -219,7 +247,7 @@ bool BW_MidiSequencer::smf_buildOneTrack(FileAndMemReader &fr,
 }
 
 
-BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status)
+BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &fr, const size_t end, TrackParseStatus &status)
 {
     uint8_t byte, midCh, evType;
     size_t locSize;
@@ -417,7 +445,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
             break;
 
         case MidiEvent::ST_ENDTRACK:
-            status = -1; // Finalize track
+            status.status = -1; // Finalize track
             break;
 
         default: // Unknown special event
@@ -432,11 +460,11 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
     if(byte < 0x80)
     {
         // Extra data for the same type of event and channel
-        byte = static_cast<uint8_t>(status | 0x80);
+        byte = static_cast<uint8_t>(status.status | 0x80);
         fr.seek(-1, FileAndMemReader::CUR);
     }
 
-    status = byte;
+    status.status = byte;
 
     // RSXX-specific song end event
     if(m_format == Format_RSXX && byte == 0xFC)
@@ -456,7 +484,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
         else
         {
             evt.subtype = MidiEvent::ST_ENDTRACK;
-            status = -1;
+            status.status = -1;
         }
 
         evt.channel = 0;
@@ -511,35 +539,161 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
             evt.type = MidiEvent::T_NOTEOFF; // Note ON with zero velocity is Note OFF!
         break;
 
+    case MidiEvent::T_PATCHCHANGE:
+        if(m_modeEMIDI && status.emidiCC112)
+        {
+            // Exclude this event when EMIDI caught CC112 controller at least once
+            evt.type = MidiEvent::T_UNKNOWN;
+        }
+        break;
     case MidiEvent::T_CTRLCHANGE:
         switch(m_format)
         {
         case Format_MIDI:
             switch(evt.data_loc[0])
             {
+            case 7:
+                if(m_modeEMIDI && status.emidiCC113)
+                {
+                    // Exclude this event when EMIDI caught CC113 controller at least once
+                    evt.type = MidiEvent::T_UNKNOWN;
+                }
+                break;
             case 110:
-                if(m_loopFormat == Loop_Default)
+                if(m_modeEMIDI) // Allow only device
+                {
+                    if(!status.emidiCC110)
+                    {
+                        status.devMask = 0;
+                        status.emidiCC110 = true;
+                    }
+
+                    switch(evt.data_loc[1])
+                    {
+                    case 0: // General MIDI
+                        status.devMask |= Device_GeneralMidi;
+                        break;
+
+                    case 1: // Roland Sound Canvas
+                        status.devMask |= Device_WaveTable;
+                        break;
+
+                    case 2: // SB AWE32
+                        status.devMask |= Device_AWE32;
+                        break;
+
+                    case 3: // Wave Blaster
+                        status.devMask |= Device_WaveBlaster;
+                        break;
+
+                    case 4: // Sound Blaster (OPL2/opL3)
+                        status.devMask |= Device_SoundBlaster;
+                        break;
+
+                    case 5: // Media Vision Pro Audio
+                        status.devMask |= Device_ProAudioSpectrum;
+                        break;
+
+                    case 6: // Logitech Sound Man 16
+                        status.devMask |= Device_SoundMan16;
+                        break;
+
+                    case 7: // AdLib
+                        status.devMask |= Device_AdLib;
+                        break;
+
+                    case 8: // Ensoniq Soundscape
+                        status.devMask |= Device_SoundScape;
+                        break;
+
+                    case 9: // Gravis Ultrasound
+                        status.devMask |= Device_GravisUltrasound;
+                        break;
+
+                    default:
+                    case 127:
+                        status.devMask |= Device_ANY;
+                        break;
+                    }
+                }
+                else if(m_loopFormat == Loop_Default) // RPG Maker format loop start
                 {
                     // Change event type to custom Loop Start event and clear data
                     evt.type = MidiEvent::T_SPECIAL;
                     evt.subtype = MidiEvent::ST_LOOPSTART;
                     m_loopFormat = Loop_HMI;
                 }
-                else if(m_loopFormat == Loop_HMI)
+                else if(m_loopFormat == Loop_HMI) // Invalid HMI loop point
                 {
-                    // Repeating of 110'th point is BAD practice, treat as EMIDI
-                    m_loopFormat = Loop_EMIDI;
+                    // Repeating of 110'th point is BAD practice, treat as default
+                    m_loopFormat = Loop_Default;
                 }
                 break;
 
             case 111:
-                if(m_loopFormat == Loop_HMI)
+                if(m_modeEMIDI) // Exclude device if allowed anything
+                {
+                    if(!status.emidiCC111)
+                    {
+                        status.devMaskExclude = 0;
+                        status.emidiCC111 = true;
+                    }
+
+                    switch(evt.data_loc[1])
+                    {
+                    case 0: // General MIDI
+                        status.devMaskExclude |= Device_GeneralMidi;
+                        break;
+
+                    case 1: // Roland Sound Canvas
+                        status.devMaskExclude |= Device_WaveTable;
+                        break;
+
+                    case 2: // SB AWE32
+                        status.devMaskExclude |= Device_AWE32;
+                        break;
+
+                    case 3: // Wave Blaster
+                        status.devMaskExclude |= Device_WaveBlaster;
+                        break;
+
+                    case 4: // Sound Blaster (OPL2/opL3)
+                        status.devMaskExclude |= Device_SoundBlaster;
+                        break;
+
+                    case 5: // Media Vision Pro Audio
+                        status.devMaskExclude |= Device_ProAudioSpectrum;
+                        break;
+
+                    case 6: // Logitech Sound Man 16
+                        status.devMaskExclude |= Device_SoundMan16;
+                        break;
+
+                    case 7: // AdLib
+                        status.devMaskExclude |= Device_AdLib;
+                        break;
+
+                    case 8: // Ensoniq Soundscape
+                        status.devMaskExclude |= Device_SoundScape;
+                        break;
+
+                    case 9: // Gravis Ultrasound
+                        status.devMaskExclude |= Device_GravisUltrasound;
+                        break;
+
+                    default:
+                    case 127:
+                        status.devMaskExclude |= Device_ANY;
+                        break;
+                    }
+                }
+                else if(m_loopFormat == Loop_HMI)
                 {
                     // Change event type to custom Loop End event and clear data
                     evt.type = MidiEvent::T_SPECIAL;
                     evt.subtype = MidiEvent::ST_LOOPEND;
                 }
-                else if(m_loopFormat != Loop_EMIDI)
+                else if(m_loopFormat == Loop_Default)
                 {
                     // Change event type to custom Loop Start event and clear data
                     evt.type = MidiEvent::T_SPECIAL;
@@ -547,20 +701,32 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
                 }
                 break;
 
-            case 113:
-                if(m_loopFormat == Loop_EMIDI)
+            case 112:
+                if(m_modeEMIDI) // Patch changed in EMIDI format
                 {
-                    // EMIDI does using of CC113 with same purpose as CC7
+                    status.emidiCC112 = true;
+                    evt.type = MidiEvent::T_PATCHCHANGE;
+                    evt.data_loc[0] = evt.data_loc[1];
+                    evt.data_loc_size = 1;
+                }
+                break;
+
+            case 113:
+                if(m_modeEMIDI) // Volume change in EMIDI format
+                {
+                    status.emidiCC113 = true;
+                    // EMIDI does using of CC113 with the same purpose as CC7
                     evt.data_loc[0] = 7;
                 }
                 break;
-#if 0 //WIP
-            case 116:
-                if(m_loopFormat == Loop_EMIDI)
+
+            case 116:  // In-track loop start in EMIDI format
+                if(m_modeEMIDI)
                 {
                     evt.type = MidiEvent::T_SPECIAL;
-                    evt.subtype = MidiEvent::ST_LOOPSTACK_BEGIN;
+                    evt.subtype = MidiEvent::ST_TRACK_LOOPSTACK_BEGIN;
                     evt.data_loc[0] = evt.data_loc[1];
+                    evt.data_loc_size = 1;
 
                     if(m_interface->onDebugMessage)
                     {
@@ -575,11 +741,12 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
                 }
                 break;
 
-            case 117:  // Next/Break Loop Controller
-                if(m_loopFormat == Loop_EMIDI)
+            case 117:  // In-Track Loop End in EMIDI format
+                if(m_modeEMIDI)
                 {
                     evt.type = MidiEvent::T_SPECIAL;
-                    evt.subtype = MidiEvent::ST_LOOPSTACK_END;
+                    evt.subtype = MidiEvent::ST_TRACK_LOOPSTACK_END;
+                    evt.data_loc_size = 0;
 
                     if(m_interface->onDebugMessage)
                     {
@@ -592,7 +759,6 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::smf_parseEvent(FileAndMemReader &f
                     }
                 }
                 break;
-#endif
             }
             break;
 
@@ -738,6 +904,7 @@ bool BW_MidiSequencer::parseSMF(FileAndMemReader &fr)
     m_tempo.nom = 1;
     m_tempo.denom = deltaTicks * 2;
     m_smfFormat = smfFormat;
+    m_loopFormat = m_modeEMIDI ? Loop_EMIDI : Loop_Default;
 
     size_t totalGotten = 0;
     size_t tracks_begin = fr.tell();

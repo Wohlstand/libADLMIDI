@@ -111,6 +111,7 @@ Args::Args() :
     , recordWave(false)
     , loopEnabled(1)
 #endif
+    , modeEMIDI(0)
 
     , sampleRate(44100)
 
@@ -206,6 +207,7 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             " --solo <track>             Selects a solo track to play\n"
             " --only <track1,...,trackN> Selects a subset of tracks to play\n"
             " --song <song ID 0...N-1>   Selects a song to play (if XMI)\n"
+            " --emidi Enables handling of MIDI files as Apogee Sound System EMIDI\n"
             " -ea   Enable the auto-arpeggio\n"
 #ifndef ADLMIDI_ENABLE_HW_DOS
             " -fp Enables full-panning stereo support\n"
@@ -349,6 +351,8 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
         else if(!std::strcmp("-nl", argv[2]))
             loopEnabled = 0; //Enable loop
 #endif
+        else if(!std::strcmp("--emidi", argv[2]))
+            modeEMIDI = 1; //Enable EMIDI mode
         else if(!std::strcmp("-na", argv[2])) // Deprecated
             autoArpeggioEnabled = 0; //Enable auto-arpeggio
         else if(!std::strcmp("-ea", argv[2]))

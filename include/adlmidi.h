@@ -631,6 +631,15 @@ extern ADLMIDI_DECLSPEC void adl_setAutoArpeggio(struct ADL_MIDIPlayer *device, 
 extern ADLMIDI_DECLSPEC int adl_getAutoArpeggio(struct ADL_MIDIPlayer *device);
 
 /**
+ * @brief Enable or disable the handling of events according Apogee Sound System's EMIDI standard for MIDI files
+ * @param device Instance of the library
+ * @param emidiEn 0 - disabled, 1 - enabled
+ *
+ * Note: The mode must be set before loading the MIDI file, otherwise this option will take no effect
+ */
+extern ADLMIDI_DECLSPEC void adl_setModeEMIDI(struct ADL_MIDIPlayer *device, int emidiEn);
+
+/**
  * @brief Enable or disable built-in loop (built-in loop supports 'loopStart' and 'loopEnd' tags to loop specific part)
  * @param device Instance of the library
  * @param loopEn 0 - disabled, 1 - enabled

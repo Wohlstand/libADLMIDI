@@ -100,6 +100,7 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_format(Format_MIDI),
     m_smfFormat(0),
     m_loopFormat(Loop_Default),
+    m_modeEMIDI(false),
     m_loopEnabled(false),
     m_loopHooksOnly(false),
     m_fullSongTimeLength(0.0),
@@ -384,7 +385,17 @@ const char *BW_MidiSequencer::getErrorString() const
     return m_errorString.c_str();
 }
 
-bool BW_MidiSequencer::getLoopEnabled()
+bool BW_MidiSequencer::getModeEMIDI() const
+{
+    return m_modeEMIDI;
+}
+
+void BW_MidiSequencer::setModeEMIDI(bool enabled)
+{
+    m_modeEMIDI = enabled;
+}
+
+bool BW_MidiSequencer::getLoopEnabled() const
 {
     return m_loopEnabled;
 }

@@ -396,6 +396,27 @@ private:
         uint64_t absPosition;
     };
 
+    /*!
+     * \brief Track parse status structure
+     */
+    struct TrackParseStatus
+    {
+        //! Current MIDI status (last parsed event)
+        int status;
+        //! EMIDI controller 112 was caught, set device mask to 0 on first catch
+        bool emidiCC110;
+        //! EMIDI controller 112 was caught, set device mask to 0 on first catch
+        bool emidiCC111;
+        //! EMIDI controller 112 was caught, ignore all path change events
+        bool emidiCC112;
+        //! EMIDI controller 113 was caught, ignore all CC7 volume change events
+        bool emidiCC113;
+        //! Device Mask value
+        uint32_t devMask;
+        //! Exclude Mask value
+        uint32_t devMaskExclude;
+    };
+
     /**
      * @brief A track position event contains a chain of MIDI events until next delay value
      *
@@ -781,6 +802,8 @@ private:
     //! Loop start point
     Position m_loopBeginPosition;
 
+    //! Enables the mode of events handling in Apogee Sound System's EMIDI format, must be enabled before loading a file!
+    bool    m_modeEMIDI;
     //! Is looping enabled or not
     bool    m_loopEnabled;
     //! Don't process loop: trigger hooks only if they are set
@@ -1098,10 +1121,10 @@ private:
      * @brief Parse one event from raw MIDI track stream
      * @param [_inout] ptr pointer to pointer to current position on the raw data track
      * @param [_in] end Address to end of raw track data, needed to validate position and size
-     * @param [_inout] status Status of the track processing
+     * @param [_inout] status The parse status of the track processing
      * @return Parsed MIDI event entry
      */
-    MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, int &status);
+    MidiEvent smf_parseEvent(FileAndMemReader &fr, const size_t end, TrackParseStatus &status);
 
     /**
      * @brief Finalize the MIDI track row and start a new one, additionally increase the abs_position by delay
@@ -1381,10 +1404,25 @@ public:
     const char *getErrorString() const;
 
     /**
+     * @brief Check is EMIDI mode is enabled
+     * @return true if EMIDI mode is enabled
+     */
+    bool getModeEMIDI() const;
+
+    /**
+     * @brief Set the EMIDI mode enable or disable
+     * @param enabled The state of the EMIDI mode
+     *
+     * Enables or disables parsing of MIDI files in EMIDI format of Apogee Sound System.
+     * IMPORTANT: This flag must be set before loading any MIDI file, otherwise it will make no effect.
+     */
+    void setModeEMIDI(bool enabled);
+
+    /**
      * @brief Check is loop enabled
      * @return true if loop enabled
      */
-    bool getLoopEnabled();
+    bool getLoopEnabled() const;
 
     /**
      * @brief Switch loop on/off
