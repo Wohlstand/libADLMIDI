@@ -292,7 +292,7 @@ int main(int argc, char **argv)
 
 #ifdef DEBUG_TRACE_ALL_EVENTS
     //Hook all MIDI events are ticking while generating an output buffer
-    if(!recordWave)
+    if(!s_devSetup.recordWave)
         adl_setRawEventHook(myDevice, debugPrintEvent, NULL);
 #endif
 

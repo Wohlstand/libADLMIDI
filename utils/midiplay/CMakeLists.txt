@@ -85,6 +85,7 @@ endif()
 option(DEBUG_SONG_SWITCHING  "Enable song switching by left and right keys (Linux only)" OFF)
 option(ENABLE_TERMINAL_HOTKEYS  "Enable use of ncurses library to handle keyboard actions" OFF)
 option(TERMINAL_USE_NCURSES  "Enable use of ncurses library to handle keyboard actions" OFF)
+option(DEBUG_TRACE_ALL_EVENTS "Enable printing every single event handled" OFF)
 
 add_executable(adlmidiplay ${ADLMIDI_PLAY_SRC})
 
@@ -104,6 +105,10 @@ set_nopie(adlmidiplay)
 
 if(DEBUG_SONG_SWITCHING)
     target_compile_definitions(adlmidiplay PRIVATE DEBUG_SONG_SWITCHING)
+endif()
+
+if(DEBUG_TRACE_ALL_EVENTS)
+    target_compile_definitions(adlmidiplay PRIVATE DEBUG_TRACE_ALL_EVENTS)
 endif()
 
 if(MIDIPLAY_WAVE_ONLY)
