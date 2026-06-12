@@ -86,8 +86,8 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 void BW_MidiSequencer::buildSmfResizeTracks(size_t tracksCount)
 {
     m_tracksCount = tracksCount;
-    m_trackData.resize_fill(m_tracksCount, MidiTrackQueue());
-    m_trackState.resize_fill(m_tracksCount, MidiTrackState());
+    m_trackData.resize(m_tracksCount);
+    m_trackState.resize(m_tracksCount);
     m_trackBeginPosition.tracks_resize(m_tracksCount);
 }
 
