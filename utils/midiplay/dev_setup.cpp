@@ -250,6 +250,21 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
 #   ifdef ADLMIDI_ENABLE_OPL3_LLE_EMULATOR
             " --emu-lle-opl3 Uses Nuked OPL3-LLE emulator !!EXTRA HEAVY!!\n"
 #   endif
+#if defined(ADLMIDI_ENABLE_HW_SERIAL) && !defined(OUTPUT_WAVE_ONLY)
+            " --serial <devname> Uses hardware OPL2/OPL3 chip via serial port\n"
+#   if defined(_WIN32)
+            "       (for example: COM3 or another valid)\n"
+#   elif defined(__APPLE__)
+            "       (for example: tty.usbmodem411 or another valid at /dev)\n"
+#   else
+            "       (for example: ttyACM0 or another valid at /dev)\n"
+#   endif
+            " --serial-baud <speed> Specify the serial bandwidth value (default 115200)\n"
+            " --serial-proto <1|2|3> Specify the serial data protocol  (default 3):\n"
+            "    1 - ArduinoOPL2\n"
+            "    2 - NukeYktOPL3\n"
+            "    3 - RetroWave OPL3\n"
+#endif
 #else
             "\n"
             //------------------------------------------------------------------------------|
