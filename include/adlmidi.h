@@ -790,6 +790,8 @@ enum ADL_Emulator
     ADLMIDI_EMU_NUKED_OPL2_LITE,
     /*! Nuked CQM */
     ADLMIDI_EMU_NUKED_CQM,
+    /*! DosBox ran in OPL2 mode */
+    ADLMIDI_EMU_DOSBOX_OPL2,
     /*! Count instrument on the level */
     ADLMIDI_EMU_end,
 

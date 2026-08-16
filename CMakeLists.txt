@@ -328,6 +328,12 @@ function(handle_options targetLib)
         target_compile_definitions(${targetLib} PRIVATE BWMIDI_DEBUG_TIME_CALCULATION)
     endif()
 
+    # Common files
+    target_sources(${targetLib} PRIVATE
+        ${libADLMIDI_SOURCE_DIR}/src/chips/common/ptr.hpp
+        ${libADLMIDI_SOURCE_DIR}/src/chips/common/mutex.hpp
+    )
+
     if(ADLMIDI_DOS)
         set(HAS_EMULATOR TRUE)
         target_sources(${targetLib} PRIVATE
@@ -340,7 +346,12 @@ function(handle_options targetLib)
         if(USE_DOSBOX_EMULATOR)
             set(HAS_EMULATOR TRUE)
             target_sources(${targetLib} PRIVATE
+                ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl2.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl2.h
+                ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl2.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl3.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl3.cpp
+                ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/dbopl.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/dbopl.cpp
             )
         else()

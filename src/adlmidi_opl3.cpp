@@ -56,6 +56,7 @@
 // DosBox 0.74 OPL3 emulator, Well-accurate and fast
 #   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
 #       include "chips/dosbox_opl3.h"
+#       include "chips/dosbox_opl2.h"
 #   endif
 
 // Opal emulator
@@ -108,6 +109,7 @@ static const unsigned adl_emulatorSupport = 0
 
 #   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
     | (1u << ADLMIDI_EMU_DOSBOX)
+    | (1u << ADLMIDI_EMU_DOSBOX_OPL2)
 #   endif
 
 #   ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
@@ -1150,6 +1152,10 @@ void OPL3::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
         case ADLMIDI_EMU_DOSBOX:
             chip = new DosBoxOPL3;
+            break;
+
+        case ADLMIDI_EMU_DOSBOX_OPL2:
+            chip = new DosBoxOPL2;
             break;
 #endif
 #ifndef ADLMIDI_DISABLE_OPAL_EMULATOR

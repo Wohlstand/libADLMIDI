@@ -227,6 +227,7 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
 #   endif
 #   ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
             " --emu-dosbox Uses DosBox 0.74 OPL3 emulator\n"
+            " --emu-dosbox-opl2 Uses DosBox 0.74 OPL2 emulator\n"
 #   endif
 #   ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
             " --emu-opal   Uses Opal OPL3 emulator\n"
@@ -384,6 +385,8 @@ int Args::parseArgs(int argc, char **argv_arr, bool *quit)
             emulator = ADLMIDI_EMU_NUKED_CQM;
         else if(!std::strcmp("--emu-dosbox", argv[2]))
             emulator = ADLMIDI_EMU_DOSBOX;
+        else if(!std::strcmp("--emu-dosbox-opl2", argv[2]))
+            emulator = ADLMIDI_EMU_DOSBOX_OPL2;
         else if(!std::strcmp("--emu-opal", argv[2]))
             emulator = ADLMIDI_EMU_OPAL;
         else if(!std::strcmp("--emu-java", argv[2]))

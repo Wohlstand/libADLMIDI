@@ -207,6 +207,7 @@ To build that example you will need to have installed SDL2 library.
  * Added `adl_setDeviceFilterMask()` public API to assign the device filter mask for the HMI/HMP/EMIDI tracks disabling/enabling.
  * Added handling of music files designed for the EMIDI standard from the Apogee Sound System. This feature must be enabled manually to avoid heuristics and possible conflicts.
  * Added `adl_setModeEMIDI()` public API to enable handling EMIDI specification events without conflicts to other formats.
+ * Added an ability to run the DosBox emulator in OPL2 mode.
 
 ## 1.6.1   2025-09-22
  * WinMM: Fixed random crash on waveOutOpen initialisation because of incorrect initialisation structure usage.
