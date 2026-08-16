@@ -1901,6 +1901,7 @@ int main(int argc, char **argv)
             " --emu-nuked7    Uses Nuked OPL3 v 1.7.4 emulator\n"
             " --emu-nuked-opl2 Uses Nuked OPL2 Lite emulator\n"
             " --emu-dosbox    Uses DosBox 0.74 OPL3 emulator\n"
+            " --emu-dosbox-opl2 Uses DosBox 0.74 OPL2 emulator\n"
 #endif
         );
         int banksCount = adl_getBanksCount();
@@ -1979,6 +1980,8 @@ int main(int argc, char **argv)
             emulator = ADLMIDI_EMU_NUKED_OPL2_LITE;
         else if(!std::strcmp("--emu-dosbox", argv[2]))
             emulator = ADLMIDI_EMU_DOSBOX;
+        else if(!std::strcmp("--emu-dosbox-opl2", argv[2]))
+            emulator = ADLMIDI_EMU_DOSBOX_OPL2;
 #endif
 #ifndef __DJGPP__
         else if(!std::strcmp("-nr", argv[2]))

@@ -60,6 +60,7 @@ static const enum ADL_Emulator emulator_type_id[] =
     ADLMIDI_EMU_NUKED_174,
 #endif
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
+    ADLMIDI_EMU_DOSBOX_OPL2,
     ADLMIDI_EMU_DOSBOX,
 #endif
 #ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
@@ -98,7 +99,8 @@ static const char * const emulator_type_descriptions[] =
     "Nuked OPL3 Fast",
 #endif
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
-    "DOSBox",
+    "DOSBox OPL2",
+    "DOSBox OPL3",
 #endif
 #ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
     "Opal",

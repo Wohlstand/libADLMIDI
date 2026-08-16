@@ -167,6 +167,7 @@ static const int emulator_type_values[] =
 #endif
 
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
+    (int)ADLMIDI_EMU_DOSBOX_OPL2,
     (int)ADLMIDI_EMU_DOSBOX,
 #endif
 
@@ -212,7 +213,8 @@ static const char * const emulator_type_descriptions[] =
 #endif
 
 #ifndef ADLMIDI_DISABLE_DOSBOX_EMULATOR
-    N_("DOSBox"),
+    N_("DOSBox OPL2"),
+    N_("DOSBox OPL3"),
 #endif
 
 #ifndef ADLMIDI_DISABLE_OPAL_EMULATOR
