@@ -1,5 +1,5 @@
 /*
- * Interfaces over Creative CQM (A clone of YMF262) chip emulators
+ * Interfaces over Yamaha OPL2 (YM3812) and Yamaha OPL3 (YMF262) chip emulators
  *
  * Copyright (c) 2017-2026 Vitaly Novichkov (Wohlstand)
  *
@@ -17,6 +17,14 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/**
+  \file nuked_cqm.h
+  \brief Interface over the Nuked Creative CQM emulator
+
+  Creative Quadratic Modulation chip is a compatible clone of the Yamaha YMF262
+  chip which sounds slightly different.
+*/
 
 #ifndef NUKED_CQM_H
 #define NUKED_CQM_H
