@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.2...4.0)
-project (libADLMIDI VERSION 1.6.2 LANGUAGES C CXX)
+project (libADLMIDI VERSION 1.6.3 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CheckCCompilerFlag)
