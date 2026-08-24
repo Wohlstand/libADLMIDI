@@ -184,7 +184,7 @@ To build that example you will need to have installed SDL2 library.
 * Add support of MIDI Format 2 files
 
 # Changelog
-## 1.6.2   dev
+## 1.6.2   2025-08-24
  * Fixed the random stuck problem in the DOS version of the ADLMIDI player.
  * Added support for HMI and HMP files!
  * Added support for in-track (local) loops.
