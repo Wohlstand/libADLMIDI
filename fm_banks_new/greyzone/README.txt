@@ -11,5 +11,5 @@ Once any author of each bank will explicitly grant the suitable license, they
 will be moved to the general directory.
 ------------
 And so, until these banks will be fully clarified, there are temporary 
-replacements provided in the "alt" directory that will take places of these
-banks until they will be fully clarified.
+replacements provided in the "placeholders" directory that will take places of
+these banks until they will be fully clarified.
