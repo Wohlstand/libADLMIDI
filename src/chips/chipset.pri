@@ -1,5 +1,6 @@
 SOURCES+= \
     $$PWD/dosbox_opl3.cpp \
+    $$PWD/dosbox_opl2.cpp \
     $$PWD/esfmu_opl3.cpp \
     $$PWD/java_opl3.cpp \
     $$PWD/mame_opl2.cpp \
@@ -29,6 +30,7 @@ SOURCES+= \
 HEADERS+= \
     $$PWD/opl_chip_base.h \
     $$PWD/opl_chip_base.tcc \
+    $$PWD/dosbox_opl2.h \
     $$PWD/dosbox_opl3.h \
     $$PWD/esfmu_opl3.h \
     $$PWD/java_opl3.h \

@@ -43,6 +43,8 @@ endif()
 
 if(OPL_CHIPSET_ENABLE_SW_EMULATORS)
     list(APPEND CHIPS_SOURCES
+        "${CMAKE_CURRENT_LIST_DIR}/dosbox_opl2.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/dosbox_opl2.h"
         "${CMAKE_CURRENT_LIST_DIR}/dosbox_opl3.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/dosbox_opl3.h"
         "${CMAKE_CURRENT_LIST_DIR}/esfmu_opl3.cpp"
