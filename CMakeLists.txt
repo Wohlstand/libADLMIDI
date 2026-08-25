@@ -355,7 +355,6 @@ function(handle_options targetLib)
             target_sources(${targetLib} PRIVATE
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl2.cpp
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl2.h
-                ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl2.cpp
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl3.h
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox_opl3.cpp
                 ${libADLMIDI_SOURCE_DIR}/src/chips/dosbox/dbopl.h
