@@ -65,13 +65,21 @@ sudo make install
 * To compile for DOS via DJGPP on Linux, use `cmake/djgpp/djgpp-cmake.sh` script which a wrapper over CMake to pass DJGPP's stuff required for build
 
 # License
-The library is licensed under in it's parts LGPL 2.1+, GPL v2+, GPL v3+, and MIT.
-* Nuked OPL3 emulators are licensed under LGPL v2.1+.
-* DosBox OPL3 emulator is licensed under GPL v2+.
+The library is licensed under in it's parts LGPL 2.1+, LGPL 2+, GPL v2+, GPL v3+, MIT, BSD 3-Clause, and the Boost Software License 1.0. Some parts are in the public domain, and the embedded FM banks carry their own terms.
+* Nuked OPL3, Nuked-OPL3-fast, Nuked CQM and ESFMu emulators are licensed under LGPL v2.1+.
+* Nuked OPL2 Lite, YMF262-LLE and YM3812-LLE emulators are licensed under GPL v2+.
+* DosBox OPL2 and OPL3 emulators are licensed under GPL v2+.
+* MAME OPL2 emulator is licensed under GPL v2+.
+* JavaOPL3 emulator is licensed under LGPL v2.1+.
+* YMFM emulator is licensed under BSD 3-Clause.
+* Opal emulator is in the public domain.
 * Chip interfaces are licensed under LGPL v2.1+.
-* File Reader class and MIDI Sequencer is licensed under MIT.
+* File Reader class and MIDI Sequencer is licensed under MIT, except the XMIDI converter which is LGPL v2+.
 * WOPL reader and writer module is licensed under MIT.
+* The OPL2/OPL3 models library is licensed under MIT.
+* The pl_list container (src/structures) is licensed under the Boost Software License 1.0.
 * Other parts of library are licensed under GPLv3+.
+* The embedded FM banks carry their own notices where available, see `fm_banks_new/LICENSE-*.txt` and `fm_banks_new/greyzone/README.txt`.
 
 ## Available CMake options
 
