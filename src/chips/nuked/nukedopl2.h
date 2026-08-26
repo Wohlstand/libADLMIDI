@@ -1,18 +1,21 @@
-/*
- * Copyright (C) 2026 nukeykt
+/* Nuked OPL2 Lite
+ * Copyright (C) 2026 Nuke.YKT
  *
  * This file is part of Nuked OPL2 Lite.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * Nuked OPL2 Lite is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 2.1
  * of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * Nuked OPL2 Lite is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Nuked OPL2 Lite. If not, see <https://www.gnu.org/licenses/>.
+
  *  Nuked OPL2 Lite
  *  Thanks:
  *      MAME Development Team(Jarek Burczynski, Tatsuyuki Satoh):

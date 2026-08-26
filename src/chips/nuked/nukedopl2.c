@@ -1,18 +1,21 @@
-/*
- * Copyright (C) 2026 nukeykt
+/* Nuked OPL2 Lite
+ * Copyright (C) 2026 Nuke.YKT
  *
  * This file is part of Nuked OPL2 Lite.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * Nuked OPL2 Lite is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 2.1
  * of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * Nuked OPL2 Lite is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Nuked OPL2 Lite. If not, see <https://www.gnu.org/licenses/>.
+
  *  Nuked OPL2 Lite
  *  Thanks:
  *      MAME Development Team(Jarek Burczynski, Tatsuyuki Satoh):
@@ -177,8 +180,8 @@ static const int8_t ad_ch2[0x10] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, -1, -1, 0, 1
 };
 
-static const uint8_t ch_slot[18] = {
-    0, 1, 2, 6, 7, 8, 12, 13, 14, 18, 19, 20, 24, 25, 26, 30, 31, 32
+static const uint8_t ch_slot[9] = {
+    0, 1, 2, 6, 7, 8, 12, 13, 14
 };
 
 /*
@@ -824,8 +827,8 @@ static void OPL2_ProcessTimers(opl2_chip *chip)
 
 static int16_t OPL2_OutputCrush(int32_t sample)
 {
-    int shift;
-    int16_t top;
+    uint8_t shift;
+    int32_t top;
 
     if (sample > 32767)
         sample = 32767;
@@ -833,11 +836,14 @@ static int16_t OPL2_OutputCrush(int32_t sample)
         sample = -32768;
 
     top = sample >> 9;
+
     if (top < 0)
         top = (~top) & 63;
     else
         top = top & 63;
+
     shift = 0;
+
     if (top & 32)
         shift = 6;
     else if ((top & 48) == 16)
