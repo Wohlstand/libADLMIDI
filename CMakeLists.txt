@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.2...4.0)
-project (libADLMIDI VERSION 1.6.3 LANGUAGES C CXX)
+project (libADLMIDI VERSION 1.6.2.1 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CheckCCompilerFlag)
@@ -787,7 +787,7 @@ endif()
 # === Version check ====
 set(VERSION_CHECK_SOURCE "
     #include \"adlmidi.h\"
-    #if !(ADLMIDI_VERSION_MAJOR == ${PROJECT_VERSION_MAJOR} && ADLMIDI_VERSION_MINOR == ${PROJECT_VERSION_MINOR} && ADLMIDI_VERSION_PATCHLEVEL == ${PROJECT_VERSION_PATCH})
+    #if !(ADLMIDI_VERSION_MAJOR == ${PROJECT_VERSION_MAJOR} && ADLMIDI_VERSION_MINOR == ${PROJECT_VERSION_MINOR} && ADLMIDI_VERSION_PATCHLEVEL == ${PROJECT_VERSION_PATCH} && ADLMIDI_VERSION_TWEAK == ${PROJECT_VERSION_TWEAK})
     #error Project and source code version do not match!
     #endif")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/version_check.c" "${VERSION_CHECK_SOURCE}")
