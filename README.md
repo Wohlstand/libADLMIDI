@@ -193,7 +193,7 @@ To build that example you will need to have installed SDL2 library.
 
 # Changelog
 ## 1.6.3   dev
-coming soon
+ * Fixed misses of register writes problem at the LLE-OPL3 emulator (#318).
 
 ## 1.6.2   2025-08-24
  * Fixed the random stuck problem in the DOS version of the ADLMIDI player.

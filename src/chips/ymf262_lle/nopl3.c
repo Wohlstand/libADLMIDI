@@ -72,6 +72,7 @@ static void nopl3_cycle(nopl3_t *chip, int size)
                 /* Address */
                 writebuf->reg &= 3;
                 nopl3_write2(chip, writebuf->reg, writebuf->data);
+                chip->writebuf_cycle = 32;
             }
             else
             {
@@ -81,9 +82,8 @@ static void nopl3_cycle(nopl3_t *chip, int size)
 
                 chip->writebuf_cur = (chip->writebuf_cur + 1) % OPL_WRITEBUF_SIZE;
                 --chip->writebuf_size;
+                chip->writebuf_cycle = 288;
             }
-
-            chip->writebuf_cycle = 32;
         }
 
         if (chip->writebuf_cycle > 0)
