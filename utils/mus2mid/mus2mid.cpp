@@ -12,13 +12,18 @@
 
 int main(int argc, char *argv[])
 {
-    if(argc != 2)
+    uint16_t frequency = 0;
+
+    if(argc < 2)
     {
-        fprintf(stderr, "Usage: mus2mid <midi-file>\n");
+        fprintf(stderr, "Usage: mus2mid <midi-file> [<freq>]\n");
         return 1;
     }
 
     const char *filename = argv[1];
+
+    if(argc >= 3)
+        frequency = (uint16_t)strtoul(argv[2], NULL, 10);
 
     FILE *fh = fopen(filename, "rb");
     if(!fh)
@@ -50,7 +55,7 @@ int main(int argc, char *argv[])
 
     uint8_t *xmidata = NULL;
     uint32_t xmisize = 0;
-    if(Convert_mus2midi(filedata, static_cast<uint32_t>(insize), &xmidata, &xmisize, 0) < 0)
+    if(Convert_mus2midi(filedata, static_cast<uint32_t>(insize), &xmidata, &xmisize, frequency) < 0)
     {
         fprintf(stderr, "Error converting MUS to SMF.\n");
         return 1;
