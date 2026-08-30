@@ -66,8 +66,8 @@ sudo make install
 
 # License
 The library is licensed under in it's parts LGPL 2.1+, LGPL 2+, GPL v2+, GPL v3+, MIT, BSD 3-Clause, and the Boost Software License 1.0. Some parts are in the public domain, and the embedded FM banks carry their own terms.
-* Nuked OPL3, Nuked-OPL3-fast, Nuked CQM and ESFMu emulators are licensed under LGPL v2.1+.
-* Nuked OPL2 Lite, YMF262-LLE and YM3812-LLE emulators are licensed under GPL v2+.
+* Nuked OPL3, Nuked OPL2 Lite, Nuked-OPL3-fast, Nuked CQM and ESFMu emulators are licensed under LGPL v2.1+.
+* YMF262-LLE and YM3812-LLE emulators are licensed under GPL v2+.
 * DosBox OPL2 and OPL3 emulators are licensed under GPL v2+.
 * MAME OPL2 emulator is licensed under GPL v2+.
 * JavaOPL3 emulator is licensed under LGPL v2.1+.
