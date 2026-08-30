@@ -240,9 +240,17 @@ int DosTaskman::reserve_fprintf(FILE *stream, const char *format, va_list args)
     int ret = vsnprintf(s_snpirntf, 300, format, args);
 
     if(stream == stderr)
-        strncat(s_reserve_print_buffer_err, s_snpirntf, 2047);
+    {
+        size_t len = strlen(s_reserve_print_buffer_err);
+        if(len < sizeof(s_reserve_print_buffer_err) - 1)
+            strncat(s_reserve_print_buffer_err, s_snpirntf, sizeof(s_reserve_print_buffer_err) - len - 1);
+    }
     else if(stream == stdout)
-        strncat(s_reserve_print_buffer_out, s_snpirntf, 2047);
+    {
+        size_t len = strlen(s_reserve_print_buffer_out);
+        if(len < sizeof(s_reserve_print_buffer_out) - 1)
+            strncat(s_reserve_print_buffer_out, s_snpirntf, sizeof(s_reserve_print_buffer_out) - len - 1);
+    }
 
     return ret;
 }
