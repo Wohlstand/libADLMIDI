@@ -79,10 +79,11 @@ static bool woplx_read_inst_line(const char *line, size_t line_len, std::string 
     if(str_starts_with(line, line_len, "NAME="))
     {
         size_t i, o;
+        const size_t osize = 33;
 
-        name.resize(32);
+        name.resize(osize);
 
-        for(i = 5, o = 0; o < 33 && i < line_len && line[i] != '\n' && line[i] != '\r'; ++i, ++o)
+        for(i = 5, o = 0; o < osize && i < line_len && line[i] != '\n' && line[i] != '\r'; ++i, ++o)
             name[o] = line[i];
 
         name.resize(o);
