@@ -146,6 +146,8 @@ static const unsigned adl_emulatorSupport = 0
 //! Check emulator availability
 bool adl_isEmulatorAvailable(int emulator)
 {
+    if(emulator < 0 || (unsigned)emulator >= sizeof(adl_emulatorSupport) * 8)
+        return false;
     return (adl_emulatorSupport & (1u << (unsigned)emulator)) != 0;
 }
 

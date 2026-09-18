@@ -722,6 +722,9 @@ ADLMIDI_EXPORT void adl_setVolumeRangeModel(struct ADL_MIDIPlayer *device, int v
     if(!device)
         return;
 
+    if(volumeModel < 0 || volumeModel >= ADLMIDI_VolumeModel_Count)
+        volumeModel = ADLMIDI_VolumeModel_AUTO;
+
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
     Synth &synth = *play->m_synth;
