@@ -1726,7 +1726,7 @@ ESFM_slot_generate_emu(esfm_slot *slot)
 
 	phase += *slot->in.mod_input & slot->in.emu_mod_enable;
 	slot->in.output = ESFM_envelope_wavegen(waveform, phase, slot->in.eg_output);
-	output_value = (slot->in.output & slot->in.emu_output_enable) << rhythm_slot_double_volume;
+	output_value = (slot->in.output & slot->in.emu_output_enable) * (1 << rhythm_slot_double_volume);
 	if (chip->emu_newmode)
 	{
 		slot->channel->output[0] += output_value & slot->channel->slots[0].out_enable[0];
