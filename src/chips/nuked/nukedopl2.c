@@ -860,7 +860,7 @@ static int16_t OPL2_OutputCrush(int32_t sample)
         shift = 0;
 
     sample >>= shift;
-    sample <<= shift;
+    sample *= 1 << shift;
 
     return (int16_t)sample;
 }
