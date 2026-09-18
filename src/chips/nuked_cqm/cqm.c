@@ -145,11 +145,11 @@ enum {
 static inline int doshifter(int x, int shift)
 {
     if (shift > 12)
-        return x << (shift - 12);
+        return x * (1 << (shift - 12));
     return x >> (12 - shift);
 }
 #else
-#   define doshifter(x, shift) (shift > 12 ? (x << (shift - 12)) : (x >> (12 - shift)))
+#   define doshifter(x, shift) (shift > 12 ? (x * (1 << (shift - 12))) : (x >> (12 - shift)))
 #endif
 
 void CQM_Generate(cqm_t* chip, int16_t* sample)
@@ -274,7 +274,7 @@ void CQM_Generate(cqm_t* chip, int16_t* sample)
             modptr[1] = 0;
         }
         else if (op != 0)
-            modptr[chip->oddeven ^ 1] = chip->wave_prev << 2;
+            modptr[chip->oddeven ^ 1] = chip->wave_prev * 4;
 
         {
             int wf;
@@ -797,7 +797,7 @@ void CQM_Generate(cqm_t* chip, int16_t* sample)
 
             if (chip->dooutput && !(chip->is4op2 && !con))
             {
-                int sumwave = doshifter(chip->wavesample << 5, chip->waveshift);
+                int sumwave = doshifter(chip->wavesample * 32, chip->waveshift);
 
                 if (chip->wavepan & 1)
                     accum[0] += sumwave;
