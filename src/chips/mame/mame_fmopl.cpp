@@ -798,7 +798,7 @@ static inline signed int op_calc(uint32_t phase, unsigned int env, signed int pm
 {
 	uint32_t p;
 
-	p = (env<<4) + sin_tab[wave_tab + ((((signed int)((phase & ~FREQ_MASK) + (pm<<16))) >> FREQ_SH ) & SIN_MASK) ];
+	p = (env<<4) + sin_tab[wave_tab + ((((signed int)((phase & ~FREQ_MASK) + (pm * 65536))) >> FREQ_SH ) & SIN_MASK) ];
 
 	if (p >= TL_TAB_LEN)
 		return 0;
@@ -839,7 +839,7 @@ static inline float OPL_CALC_CH( FM_WorkTable *wt, OPL_CH *CH )
 	{
 		if (!SLOT->FB)
 			out = 0;
-		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out<<SLOT->FB), SLOT->wavetable );
+		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out * (1 << SLOT->FB)), SLOT->wavetable );
 	}
 
 	/* SLOT 2 */
@@ -873,7 +873,7 @@ static inline short OPL_CALC_CH_S( FM_WorkTable *wt, OPL_CH *CH )
 	{
 		if (!SLOT->FB)
 			out = 0;
-		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out<<SLOT->FB), SLOT->wavetable );
+		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out * (1 << SLOT->FB)), SLOT->wavetable );
 	}
 
 	/* SLOT 2 */
@@ -955,7 +955,7 @@ static inline void OPL_CALC_RH( FM_WorkTable *wt, OPL_CH *CH, unsigned int noise
 	{
 		if (!SLOT->FB)
 			out = 0;
-		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out<<SLOT->FB), SLOT->wavetable );
+		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out * (1 << SLOT->FB)), SLOT->wavetable );
 	}
 
 	/* SLOT 2 */
