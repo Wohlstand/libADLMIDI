@@ -901,7 +901,10 @@ static void OPL3_SlotGenerate(opl3_slot *slot)
     phaseshift = slot->phaseshift;
     level = slot->eg_out;
 
-    phase <<= phaseshift;
+    /* The shift is by the width of the value itself for waveform 7, which
+     * means no shift at all; taking it by that width is undefined, so the
+     * count says so and the value is shifted where it is wide enough. */
+    phase = (uint16_t)((uint32_t)phase << (phaseshift & 31));
     if (phaseshift <= 1)
     {
         level += logsinrom[phase & 0x1ff];
