@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include "opl_models.h"
 
 /*! Constant +32 drums boost */
@@ -61,6 +62,8 @@ uint16_t oplModel_OConnellFreq(double tone, uint32_t *mul_offset)
     int_fast32_t pitch;
     double bendDec;
     long lDiff;
+
+    assert(tone >= 0.0);
 
     *mul_offset = 0;
 

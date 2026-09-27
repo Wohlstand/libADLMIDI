@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include "opl_models.h"
 
 /***************************************************************
@@ -94,6 +95,8 @@ uint16_t oplModel_ailFreq(double tone, uint32_t *mul_offset)
     int_fast32_t note, pitch, octave, octaveOffset = 0;
     double bendDec;
 
+    assert(tone >= 0.0);
+
     *mul_offset = 0;
 
     note = (int_fast32_t)(tone);
@@ -146,6 +149,8 @@ uint16_t oplModel_ailFreq(double tone, uint32_t *mul_offset)
     freq &= 0x3FF;
 
     octave += octaveOffset;
+
+    assert(octave >= 0);
 
     while(octave > 7)
     {

@@ -23,6 +23,7 @@
  */
 
 #include <stddef.h>
+#include <assert.h>
 #include "opl_models.h"
 
 /***************************************************************
@@ -55,7 +56,7 @@ static uint_fast32_t s_hmi_bendtable[12] =
         0 : \
         ( \
             (formula) >= (int32_t)maxVal ? \
-            (int32_t)maxVal : \
+            (int32_t)maxVal - 1: \
             (formula) \
         )\
     )
@@ -124,6 +125,8 @@ uint16_t oplModel_hmiFreq(double tone, uint32_t *mul_offset)
     int_fast32_t note, bend, octave, octaveOffset = 0;
     uint_fast32_t inFreq, freq;
     double bendDec;
+
+    assert(tone >= 0.0);
 
     *mul_offset = 0;
 

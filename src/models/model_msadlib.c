@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include "opl_models.h"
 
 /***************************************************************
@@ -71,6 +72,8 @@ uint16_t oplModel_msAdLibFreq(double tone, uint32_t *mul_offset)
     uint32_t dw;
     uint16_t bend, freq;
     double bendDec;
+
+    assert(tone >= 0.0);
 
     *mul_offset = 0;
 

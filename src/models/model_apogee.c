@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include "opl_models.h"
 
 /***************************************************************
@@ -69,6 +70,8 @@ uint16_t oplModel_apogeeFreq(double tone, uint32_t *mul_offset)
     uint_fast32_t noteI;
     int_fast32_t bendI = 0, outHz = 0, octave, scaleNote;
     double bendDec;
+
+    assert(tone >= 0.0);
 
     *mul_offset = 0;
 

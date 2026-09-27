@@ -24,6 +24,7 @@
 
 #include <stddef.h>
 #include <math.h>   /* log() */
+#include <assert.h>
 #include "opl_models.h"
 
 /***************************************************************
@@ -240,6 +241,8 @@ uint16_t oplModel_genericFreq(double tone, uint32_t *mul_offset)
     uint32_t octave = 0;
     uint16_t freq;
     size_t idx;
+
+    assert(tone >= 0.0);
 
     *mul_offset = 0;
 

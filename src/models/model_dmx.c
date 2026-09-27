@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include "opl_models.h"
 
 /***************************************************************
@@ -144,6 +145,8 @@ uint16_t oplModel_dmxFreq(double tone, uint32_t *mul_offset)
     uint_fast32_t noteI;
     int_fast32_t oct = 0, bendI = 0, outHz = 0, freqIndex;
     double bendDec;
+
+    assert(tone >= 0.0);
 
     *mul_offset = 0;
 
