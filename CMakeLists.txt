@@ -284,6 +284,7 @@ if(WIN32)
 endif()
 
 option(ENABLE_ADDRESS_SANITIZER "Enable the Address Sanitizer GCC feature" OFF)
+option(ENABLE_UNDEFINED_BEHAVIOUR_SANITIZER "Enable the Undefined Behaviour Sanitizer GCC feature" OFF)
 
 if(NOT WIN32
    AND NOT VITA
@@ -542,6 +543,10 @@ function(handle_options targetLib)
     if(ENABLE_ADDRESS_SANITIZER)
         target_compile_options(${targetLib} PUBLIC -fsanitize=address)
         target_link_options(${targetLib} PUBLIC -fsanitize=address)
+    endif()
+    if(ENABLE_UNDEFINED_BEHAVIOUR_SANITIZER)
+        target_compile_options(${targetLib} PUBLIC -fsanitize=undefined)
+        target_link_options(${targetLib} PUBLIC -fsanitize=undefined)
     endif()
 endfunction()
 
