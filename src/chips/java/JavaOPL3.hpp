@@ -1420,7 +1420,7 @@ void EnvelopeGenerator::setActualAttackRate(int attackRate, int ksr, int keyScal
 		xMinimumInAttack = percentageToX(0.1);
 		return;
 	}
-	int period0to100inSamples = (int)(period0to100inSeconds*OPL_SAMPLE_RATE);       
+	int period0to100inSamples = (int)(period0to100inSeconds*OPL_SAMPLE_RATE);
 	int period10to90inSamples = (int)(period10to90inSeconds*OPL_SAMPLE_RATE);
 	// The x increment is dictated by the period between 10% and 90%:
 	xAttackIncrement = OPL3DataStruct::calculateIncrement(percentageToX(0.1), percentageToX(0.9), period10to90inSeconds);
