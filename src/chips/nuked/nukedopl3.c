@@ -1037,45 +1037,54 @@ static void OPL3_ChannelUpdateRhythm(opl3_chip *chip, uint8_t data)
     }
 }
 
-static void OPL3_ChannelWriteA0(opl3_channel *channel, uint8_t data)
+static void OPL3_ChannelUpdateFrequency(opl3_channel *channel)
 {
-    if (channel->chip->newm && channel->chtype == ch_4op2)
-    {
-        return;
-    }
-    channel->f_num = (channel->f_num & 0x300) | data;
     channel->ksv = (channel->block << 1)
                  | ((channel->f_num >> (0x09 - channel->chip->nts)) & 0x01);
     OPL3_EnvelopeUpdateKSL(channel->slotz[0]);
     OPL3_EnvelopeUpdateKSL(channel->slotz[1]);
-    if (channel->chip->newm && channel->chtype == ch_4op)
+}
+
+static void OPL3_ChannelRestoreFrequency(opl3_channel *channel)
+{
+    channel->f_num = channel->f_num_reg;
+    channel->block = channel->block_reg;
+    OPL3_ChannelUpdateFrequency(channel);
+}
+
+static void OPL3_ChannelSync4Op(opl3_channel *channel)
+{
+    channel->pair->f_num = channel->f_num;
+    channel->pair->block = channel->block;
+    OPL3_ChannelUpdateFrequency(channel->pair);
+}
+
+static void OPL3_ChannelWriteA0(opl3_channel *channel, uint8_t data)
+{
+    channel->f_num_reg = (channel->f_num_reg & 0x300) | data;
+    if (channel->chtype == ch_4op2)
     {
-        channel->pair->f_num = channel->f_num;
-        channel->pair->ksv = channel->ksv;
-        OPL3_EnvelopeUpdateKSL(channel->pair->slotz[0]);
-        OPL3_EnvelopeUpdateKSL(channel->pair->slotz[1]);
+        return;
+    }
+    OPL3_ChannelRestoreFrequency(channel);
+    if (channel->chtype == ch_4op)
+    {
+        OPL3_ChannelSync4Op(channel);
     }
 }
 
 static void OPL3_ChannelWriteB0(opl3_channel *channel, uint8_t data)
 {
-    if (channel->chip->newm && channel->chtype == ch_4op2)
+    channel->f_num_reg = (channel->f_num_reg & 0xff) | ((data & 0x03) << 8);
+    channel->block_reg = (data >> 2) & 0x07;
+    if (channel->chtype == ch_4op2)
     {
         return;
     }
-    channel->f_num = (channel->f_num & 0xff) | ((data & 0x03) << 8);
-    channel->block = (data >> 2) & 0x07;
-    channel->ksv = (channel->block << 1)
-                 | ((channel->f_num >> (0x09 - channel->chip->nts)) & 0x01);
-    OPL3_EnvelopeUpdateKSL(channel->slotz[0]);
-    OPL3_EnvelopeUpdateKSL(channel->slotz[1]);
-    if (channel->chip->newm && channel->chtype == ch_4op)
+    OPL3_ChannelRestoreFrequency(channel);
+    if (channel->chtype == ch_4op)
     {
-        channel->pair->f_num = channel->f_num;
-        channel->pair->block = channel->block;
-        channel->pair->ksv = channel->ksv;
-        OPL3_EnvelopeUpdateKSL(channel->pair->slotz[0]);
-        OPL3_EnvelopeUpdateKSL(channel->pair->slotz[1]);
+        OPL3_ChannelSync4Op(channel);
     }
 }
 
@@ -1183,24 +1192,17 @@ static void OPL3_ChannelSetupAlg(opl3_channel *channel)
 static void OPL3_ChannelUpdateAlg(opl3_channel *channel)
 {
     channel->alg = channel->con;
-    if (channel->chip->newm)
+    if (channel->chtype == ch_4op)
     {
-        if (channel->chtype == ch_4op)
-        {
-            channel->pair->alg = 0x04 | (channel->con << 1) | (channel->pair->con);
-            channel->alg = 0x08;
-            OPL3_ChannelSetupAlg(channel->pair);
-        }
-        else if (channel->chtype == ch_4op2)
-        {
-            channel->alg = 0x04 | (channel->pair->con << 1) | (channel->con);
-            channel->pair->alg = 0x08;
-            OPL3_ChannelSetupAlg(channel);
-        }
-        else
-        {
-            OPL3_ChannelSetupAlg(channel);
-        }
+        channel->pair->alg = 0x04 | (channel->con << 1) | (channel->pair->con);
+        channel->alg = 0x08;
+        OPL3_ChannelSetupAlg(channel->pair);
+    }
+    else if (channel->chtype == ch_4op2)
+    {
+        channel->alg = 0x04 | (channel->pair->con << 1) | (channel->con);
+        channel->pair->alg = 0x08;
+        OPL3_ChannelSetupAlg(channel);
     }
     else
     {
@@ -1248,22 +1250,14 @@ static void OPL3_ChannelWriteD0(opl3_channel* channel, uint8_t data)
 
 static void OPL3_ChannelKeyOn(opl3_channel *channel)
 {
-    if (channel->chip->newm)
+    if (channel->chtype == ch_4op)
     {
-        if (channel->chtype == ch_4op)
-        {
-            OPL3_EnvelopeKeyOn(channel->slotz[0], egk_norm);
-            OPL3_EnvelopeKeyOn(channel->slotz[1], egk_norm);
-            OPL3_EnvelopeKeyOn(channel->pair->slotz[0], egk_norm);
-            OPL3_EnvelopeKeyOn(channel->pair->slotz[1], egk_norm);
-        }
-        else if (channel->chtype == ch_2op || channel->chtype == ch_drum)
-        {
-            OPL3_EnvelopeKeyOn(channel->slotz[0], egk_norm);
-            OPL3_EnvelopeKeyOn(channel->slotz[1], egk_norm);
-        }
+        OPL3_EnvelopeKeyOn(channel->slotz[0], egk_norm);
+        OPL3_EnvelopeKeyOn(channel->slotz[1], egk_norm);
+        OPL3_EnvelopeKeyOn(channel->pair->slotz[0], egk_norm);
+        OPL3_EnvelopeKeyOn(channel->pair->slotz[1], egk_norm);
     }
-    else
+    else if (channel->chtype == ch_2op || channel->chtype == ch_drum)
     {
         OPL3_EnvelopeKeyOn(channel->slotz[0], egk_norm);
         OPL3_EnvelopeKeyOn(channel->slotz[1], egk_norm);
@@ -1272,22 +1266,14 @@ static void OPL3_ChannelKeyOn(opl3_channel *channel)
 
 static void OPL3_ChannelKeyOff(opl3_channel *channel)
 {
-    if (channel->chip->newm)
+    if (channel->chtype == ch_4op)
     {
-        if (channel->chtype == ch_4op)
-        {
-            OPL3_EnvelopeKeyOff(channel->slotz[0], egk_norm);
-            OPL3_EnvelopeKeyOff(channel->slotz[1], egk_norm);
-            OPL3_EnvelopeKeyOff(channel->pair->slotz[0], egk_norm);
-            OPL3_EnvelopeKeyOff(channel->pair->slotz[1], egk_norm);
-        }
-        else if (channel->chtype == ch_2op || channel->chtype == ch_drum)
-        {
-            OPL3_EnvelopeKeyOff(channel->slotz[0], egk_norm);
-            OPL3_EnvelopeKeyOff(channel->slotz[1], egk_norm);
-        }
+        OPL3_EnvelopeKeyOff(channel->slotz[0], egk_norm);
+        OPL3_EnvelopeKeyOff(channel->slotz[1], egk_norm);
+        OPL3_EnvelopeKeyOff(channel->pair->slotz[0], egk_norm);
+        OPL3_EnvelopeKeyOff(channel->pair->slotz[1], egk_norm);
     }
-    else
+    else if (channel->chtype == ch_2op || channel->chtype == ch_drum)
     {
         OPL3_EnvelopeKeyOff(channel->slotz[0], egk_norm);
         OPL3_EnvelopeKeyOff(channel->slotz[1], egk_norm);
@@ -1309,12 +1295,14 @@ static void OPL3_ChannelSet4Op(opl3_chip *chip, uint8_t data)
         {
             chip->channel[chnum].chtype = ch_4op;
             chip->channel[chnum + 3u].chtype = ch_4op2;
+            OPL3_ChannelSync4Op(&chip->channel[chnum]);
             OPL3_ChannelUpdateAlg(&chip->channel[chnum]);
         }
         else
         {
             chip->channel[chnum].chtype = ch_2op;
             chip->channel[chnum + 3u].chtype = ch_2op;
+            OPL3_ChannelRestoreFrequency(&chip->channel[chnum + 3u]);
             OPL3_ChannelUpdateAlg(&chip->channel[chnum]);
             OPL3_ChannelUpdateAlg(&chip->channel[chnum + 3u]);
         }
