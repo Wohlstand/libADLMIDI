@@ -15,8 +15,12 @@ Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 e
 
 # Differences with original tool
 * Reverb code has been removed.
-* Doesn't contains platform specific code. Library can be used with various purposes include making of a custom music decoders for a media players and usage with a games.
+* Doesn't contains platform specific code (except of executable utilities and drivers targeting to specific platforms). Library can be used with various purposes include making of a custom music decoders for a media players and usage with a games.
 * Supports custom non-hardcoded WOPL banks and ability to build without of embedded banks
+* The project is focused on the behaviour accuracy compared to AIL, HMI SOS, DMX, Win9x drivers, etc. So, resulted sounding is majorly different from the original tool.
+* Support for the real-time MIDI playback.
+* Auto-Arpeggio functionality is disabled by default due to messy playback.
+* Supports OPL2 chips in addition to OPL3.
 
 # Tested on platforms
 * Linux GCC 4.8, 4.9, 5.4 / CLang
