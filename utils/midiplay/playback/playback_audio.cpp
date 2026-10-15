@@ -90,7 +90,7 @@ static void s_audioPlaybackCallback(void *p_data, uint8_t *stream, int len)
     int got;
 
     audio_lock();
-    //short *target = (short *) stream;
+
     g_audioBuffer_lock.Lock();
 
     if(data->isMono)
@@ -103,6 +103,7 @@ static void s_audioPlaybackCallback(void *p_data, uint8_t *stream, int len)
     if(got <= 0)
     {
         data->bufferDone = true;
+        g_audioBuffer_lock.Unlock();
         return;
     }
 
@@ -114,8 +115,8 @@ static void s_audioPlaybackCallback(void *p_data, uint8_t *stream, int len)
 
     applyGain(stream, len);
 
-    // g_audioBuffer.erase(g_audioBuffer.begin(), g_audioBuffer.begin() + ate);
     g_audioBuffer_lock.Unlock();
+
     audio_unlock();
 }
 
