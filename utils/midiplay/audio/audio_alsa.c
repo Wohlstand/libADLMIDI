@@ -47,6 +47,7 @@ struct Audio_t
     unsigned char *buff;
     int buff_size, loops;
     AudioOutputCallback callback;
+    void *userdata;
 
     _Atomic int running;
     pthread_t runner;
@@ -80,7 +81,10 @@ static int audio_next_format(int prev_format)
     return -1;
 }
 
-int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback)
+int audio_init(struct AudioOutputSpec *in_spec,
+               struct AudioOutputSpec *out_obtained,
+               AudioOutputCallback callback,
+               void *userdata)
 {
     snd_pcm_format_t out_format = SND_PCM_FORMAT_S16;
     int sample_size = 2, test_format;
@@ -93,6 +97,7 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     s_audio.channels = in_spec->channels;
     s_audio.frames = in_spec->samples;
     s_audio.callback = callback;
+    s_audio.userdata = userdata;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     out_obtained->is_msb = 0;
@@ -279,7 +284,7 @@ static void* audio_runner(void *nothing)
 
     while(atomic_load(&s_audio.running))
     {
-        s_audio.callback(NULL, s_audio.buff, s_audio.buff_size);
+        s_audio.callback(s_audio.userdata, s_audio.buff, s_audio.buff_size);
 
         write_buff = s_audio.buff;
         write_buff_len = s_audio.frames;

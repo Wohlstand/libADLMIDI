@@ -23,7 +23,7 @@
  */
 
 #include <cstdio>
-#include <deque>
+#include <vector>
 #include <cstring>
 #include "playback.h"
 #include "../dev_setup.h"
@@ -50,9 +50,16 @@ public:
     }
 };
 
-typedef std::deque<uint8_t> AudioBuff;
+typedef std::vector<uint8_t> AudioBuff;
 static AudioBuff g_audioBuffer;
 static MutexType g_audioBuffer_lock;
+
+struct AudioPlaybackData
+{
+    ADL_MIDIPlayer *dev;
+    bool isMono;
+    bool bufferDone;
+};
 
 //#define DEBUG_SONG_CHANGE
 //#define DEBUG_SONG_CHANGE_BY_HOOK
@@ -76,39 +83,38 @@ static void loopEndCallback(void *)
 #endif
 
 
-static void s_audioPlaybackCallback(void *, uint8_t *stream, int len)
+static void s_audioPlaybackCallback(void *p_data, uint8_t *stream, int len)
 {
-    unsigned ate = static_cast<unsigned>(len); // number of bytes
+    AudioPlaybackData *data = (AudioPlaybackData*)p_data;
+    int querySize = len / g_audioFormat.containerSize;
+    int got;
 
     audio_lock();
     //short *target = (short *) stream;
     g_audioBuffer_lock.Lock();
 
-    if(g_audioBuffer.empty()) // Just in a case, if queue is blank, just zero the output
+    if(data->isMono)
+        querySize *= 2;
+
+    got = (size_t)adl_playFormat(data->dev, querySize,
+                                 g_audioBuffer.data(),
+                                 g_audioBuffer.data() + g_audioFormat.containerSize,
+                                 &g_audioFormat) * g_audioFormat.containerSize;
+    if(got <= 0)
     {
-        switch(g_audioFormat.type)
-        {
-        case ADLMIDI_SampleType_S8:
-            std::memset(stream, 0x7f, len);
-            break;
-        case ADLMIDI_SampleType_U16:
-            for(size_t i = 0; i < (size_t)len; i += 2)
-                *(uint32_t*)(stream + i) = 0x7FFF;
-            break;
-        default:
-            std::memset(stream, 0, len);
-        }
+        data->bufferDone = true;
+        return;
     }
 
-    if(ate > g_audioBuffer.size())
-        ate = (unsigned)g_audioBuffer.size();
+    if(data->isMono)
+        got = stereoToMono(g_audioBuffer.data(), got);
 
-    for(unsigned a = 0; a < ate; ++a)
+    for(int a = 0; a < got; ++a)
         stream[a] = g_audioBuffer[a];
 
     applyGain(stream, len);
 
-    g_audioBuffer.erase(g_audioBuffer.begin(), g_audioBuffer.begin() + ate);
+    // g_audioBuffer.erase(g_audioBuffer.begin(), g_audioBuffer.begin() + ate);
     g_audioBuffer_lock.Unlock();
     audio_unlock();
 }
@@ -116,22 +122,14 @@ static void s_audioPlaybackCallback(void *, uint8_t *stream, int len)
 
 int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 {
-    //const unsigned MaxSamplesAtTime = 512; // 512=dbopl limitation
-    // How long is SDL buffer, in seconds?
-    // The smaller the value, the more often SDL_AudioCallBack()
-    // is called.
-    //const double AudioBufferLength = 0.08;
-
-    // How much do WE buffer, in seconds? The smaller the value,
-    // the more prone to sound chopping we are.
-    const double OurHeadRoomLength = 0.1;
-    // The lag between visual content and audio content equals
-    // the sum of these two buffers.
-
     AudioOutputSpec obtained;
+    AudioPlaybackData audioData;
+    audioData.dev = myDevice;
+    audioData.bufferDone = false;
+    audioData.isMono = false;
 
     // Set up Audio Output
-    if(audio_init(&spec, &obtained, s_audioPlaybackCallback) < 0)
+    if(audio_init(&spec, &obtained, s_audioPlaybackCallback, &audioData) < 0)
     {
         s_fprintf(stdout, "\nERROR: Couldn't open audio: %s\n\n", audio_get_error());
         return 1;
@@ -179,10 +177,8 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
     scrollok(stdscr, TRUE);
 #endif
 
-    size_t got;
-    uint8_t buff[4096];
-    bool isMono = obtained.channels == 1;
-    size_t out_buffer_size = static_cast<size_t>(obtained.samples + (obtained.freq * (isMono ? g_audioFormat.sampleOffset >> 1 : g_audioFormat.sampleOffset)) * OurHeadRoomLength);
+    audioData.isMono = obtained.channels == 1;
+    g_audioBuffer.resize(obtained.samples * g_audioFormat.containerSize * 2);
 
     audio_start();
 
@@ -192,15 +188,13 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
 
     while(!stop)
     {
-        got = (size_t)adl_playFormat(myDevice, 1024,
-                                      buff,
-                                      buff + g_audioFormat.containerSize,
-                                      &g_audioFormat) * g_audioFormat.containerSize;
-        if(got <= 0)
-            break;
+        g_audioBuffer_lock.Lock();
 
-        if(isMono)
-            got = stereoToMono(buff, got);
+        if(audioData.bufferDone)
+        {
+            g_audioBuffer_lock.Unlock();
+            break;
+        }
 
 #   ifdef DEBUG_TRACE_ALL_CHANNELS
         enum { TerminalColumns = 80 };
@@ -215,22 +209,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         s_timeCounter.printTime(adl_positionTell(myDevice));
 #   endif
 
-        g_audioBuffer_lock.Lock();
-#if defined(__GNUC__) && (__GNUC__ == 15) && (__GNUC_MINOR__ == 1)
-        // Workaround for GCC 15.1.0 on faulty std::deque's resize() call when C++98 is set
-        // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120931
-        for(size_t p = 0; p < got; ++p)
-            g_audioBuffer.push_back(buff[p]);
-#else
-        size_t pos = g_audioBuffer.size();
-        g_audioBuffer.resize(pos + got);
-        for(size_t p = 0; p < got; ++p)
-            g_audioBuffer[pos + p] = buff[p];
-#endif
         g_audioBuffer_lock.Unlock();
 
-        while(!stop && (g_audioBuffer.size() > out_buffer_size))
-            audio_delay(1);
+        audio_delay(5);
 
 #       if defined(DEBUG_SONG_SWITCHING) || defined(ENABLE_TERMINAL_HOTKEYS)
         if(kbhit())
@@ -248,7 +229,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     s_devSetup.songNumLoad++;
                     if(s_devSetup.songNumLoad >= songsCount)
                         s_devSetup.songNumLoad = songsCount;
+                    g_audioBuffer_lock.Lock();
                     adl_selectSongNum(myDevice, s_devSetup.songNumLoad);
+                    g_audioBuffer_lock.Unlock();
                     s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", s_devSetup.songNumLoad, songsCount);
                     flushout(stdout);
                     break;
@@ -257,7 +240,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     s_devSetup.songNumLoad--;
                     if(s_devSetup.songNumLoad < 0)
                         s_devSetup.songNumLoad = 0;
+                    g_audioBuffer_lock.Lock();
                     adl_selectSongNum(myDevice, s_devSetup.songNumLoad);
+                    g_audioBuffer_lock.Unlock();
                     s_fprintf(stdout, "\rSwitching song to %d/%d...                               \r\n", s_devSetup.songNumLoad, songsCount);
                     flushout(stdout);
                     break;
@@ -273,7 +258,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     bankId++;
                     if(bankId >= adl_getBanksCount())
                         bankId = 0;
+                    g_audioBuffer_lock.Lock();
                     adl_setBank(myDevice, bankId);
+                    g_audioBuffer_lock.Unlock();
                     s_fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
                     flushout(stdout);
                     break;
@@ -282,7 +269,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
                     bankId--;
                     if(bankId < 0)
                         bankId = adl_getBanksCount() - 1;
+                    g_audioBuffer_lock.Lock();
                     adl_setBank(myDevice, bankId);
+                    g_audioBuffer_lock.Unlock();
                     s_fprintf(stdout, "\rSwitching bank to %d/%d...                               \r\n", bankId, adl_getBanksCount());
                     flushout(stdout);
                     break;
@@ -299,7 +288,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         {
             delayBeforeSeek = rand() % 50;
             double seekTo = double((rand() % int(adl_totalTimeLength(myDevice)) - delayBeforeSeek - 1 ));
+            g_audioBuffer_lock.Lock();
             adl_positionSeek(myDevice, seekTo);
+            g_audioBuffer_lock.Unlock();
         }
 #       endif
 
@@ -307,7 +298,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         if(delayBeforeSongChange-- <= 0)
         {
             delayBeforeSongChange = rand() % 100;
+            g_audioBuffer_lock.Lock();
             adl_selectSongNum(myDevice, rand() % 10);
+            g_audioBuffer_lock.Unlock();
         }
 #       endif
 
@@ -315,7 +308,9 @@ int runAudioLoop(ADL_MIDIPlayer *myDevice, AudioOutputSpec &spec)
         if(gotXmiTrigger)
         {
             gotXmiTrigger = false;
+            g_audioBuffer_lock.Lock();
             adl_selectSongNum(myDevice, (rand() % 10) + 1);
+            g_audioBuffer_lock.Unlock();
         }
 #       endif
     }

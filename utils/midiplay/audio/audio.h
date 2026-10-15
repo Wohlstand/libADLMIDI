@@ -73,7 +73,10 @@ struct AudioOutputSpec
     unsigned char  channels;
 };
 
-extern int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback);
+extern int audio_init(struct AudioOutputSpec *in_spec,
+                      struct AudioOutputSpec *out_obtained,
+                      AudioOutputCallback callback,
+                      void *userdata);
 
 extern int audio_is_big_endian(void);
 

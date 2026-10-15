@@ -70,7 +70,10 @@ static void SDLCALL audio_sdl3_callback(void *userdata, SDL_AudioStream *stream,
 #endif
 
 
-int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback)
+int audio_init(struct AudioOutputSpec *in_spec,
+               struct AudioOutputSpec *out_obtained,
+               AudioOutputCallback callback,
+               void *userdata)
 {
     SDL_AudioSpec spec;
     SDL_AudioSpec obtained;
@@ -86,6 +89,7 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     s_callback = callback;
 #else
     spec.callback = callback;
+    spec.userdata = userdata;
 #endif
 
 #if defined(MIDIPLAY_USE_SDL3)
@@ -118,7 +122,7 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     }
 
 #if defined(MIDIPLAY_USE_SDL3)
-    s_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, audio_sdl3_callback, NULL);
+    s_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, audio_sdl3_callback, userdata);
     if(!s_stream)
         return -1;
     SDL_memcpy(&obtained, &spec, sizeof(SDL_AudioSpec));

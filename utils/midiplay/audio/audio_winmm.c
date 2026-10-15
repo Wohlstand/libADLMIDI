@@ -44,6 +44,7 @@ static HANDLE       g_event;
 static HANDLE       g_thread;
 
 static AudioOutputCallback g_audioCallback = NULL;
+static void               *g_audioCallbackData = NULL;
 
 static DWORD WINAPI s_audioThread(PVOID pDataInput)
 {
@@ -58,7 +59,7 @@ static DWORD WINAPI s_audioThread(PVOID pDataInput)
         {
             if(g_hdr[i].dwFlags & WHDR_DONE)
             {
-                g_audioCallback(NULL, (UINT8*)g_hdr[i].lpData, (int)g_hdr[i].dwBufferLength);
+                g_audioCallback(g_audioCallbackData, (UINT8*)g_hdr[i].lpData, (int)g_hdr[i].dwBufferLength);
                 audio_lock();
                 waveOutWrite(g_waveOut, &g_hdr[i], sizeof(WAVEHDR));
                 audio_unlock();
@@ -85,24 +86,34 @@ static void CALLBACK s_waveOutProc(HWAVEOUT waveout, UINT msg, DWORD_PTR userDat
     }
 }
 
-int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obtained, AudioOutputCallback callback)
+int audio_init(struct AudioOutputSpec *in_spec,
+               struct AudioOutputSpec *out_obtained,
+               AudioOutputCallback callback,
+               void *userdata)
 {
     WORD bits = 16;
     WORD format = WAVE_FORMAT_PCM;
     WAVEFORMATEX wformat;
     MMRESULT result;
+    WORD samples, sample_size = 1;
 
     g_waveOut = NULL;
     g_started = 0;
     memset(g_hdr, 0, sizeof(WAVEHDR) * BUFFERS_COUNT);
 
     g_audioCallback = callback;
+    g_audioCallbackData = userdata;
 
     out_obtained->channels = in_spec->channels;
     out_obtained->format = in_spec->format;
     out_obtained->freq = in_spec->freq;
     out_obtained->is_msb = in_spec->is_msb;
-    out_obtained->samples = in_spec->samples;
+    samples = in_spec->samples;
+
+    if(samples < 2048)
+        samples = 2048; // Fixes the choppy playback problem on some systems
+
+    out_obtained->samples = samples;
 
     switch(in_spec->format)
     {
@@ -111,16 +122,16 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     case MidiPlay_SampleType_U8:
         bits = 8; break;
     case MidiPlay_SampleType_S16:
-        bits = 16; break;
+        bits = 16; sample_size = 2; break;
     case MidiPlay_SampleType_U16:
-        bits = 16; out_obtained->format = MidiPlay_SampleType_S16; break;
+        bits = 16; sample_size = 2; out_obtained->format = MidiPlay_SampleType_S16; break;
     case MidiPlay_SampleType_S32:
-        bits = 32; break;
+        bits = 32; sample_size = 4; break;
     case MidiPlay_SampleType_F32:
-        bits = 32; format = WAVE_FORMAT_IEEE_FLOAT; break;
+        bits = 32; sample_size = 4; format = WAVE_FORMAT_IEEE_FLOAT; break;
     }
 
-    g_bufferSize = (size_t)in_spec->samples * (bits / 8) * in_spec->channels;
+    g_bufferSize = (size_t)samples * sample_size * in_spec->channels;
     g_buffer = (UINT8 *)malloc(g_bufferSize * BUFFERS_COUNT);
     if(!g_buffer)
     {
@@ -130,13 +141,13 @@ int audio_init(struct AudioOutputSpec *in_spec, struct AudioOutputSpec *out_obta
     }
 
     memset(&wformat, 0, sizeof(wformat));
-    wformat.cbSize = sizeof(WAVEFORMATEX);
+    wformat.wFormatTag      = format;
     wformat.nChannels       = (WORD)in_spec->channels;
     wformat.nSamplesPerSec  = (WORD)in_spec->freq;
-    wformat.wFormatTag      = format;
+    wformat.nAvgBytesPerSec = (WORD)(in_spec->freq * sample_size * in_spec->channels);
+    wformat.nBlockAlign     = (WORD)(in_spec->channels * sample_size);
     wformat.wBitsPerSample  = bits;
-    wformat.nBlockAlign     = wformat.nChannels * (wformat.wBitsPerSample >> 3);
-    wformat.nAvgBytesPerSec = wformat.nSamplesPerSec * wformat.nBlockAlign;
+    wformat.cbSize = sizeof(WAVEFORMATEX);
 
     result = waveOutOpen(&g_waveOut, WAVE_MAPPER, &wformat, (DWORD_PTR)s_waveOutProc, 0, CALLBACK_FUNCTION);
     if(result != MMSYSERR_NOERROR)
@@ -166,6 +177,7 @@ void audio_close(void)
     free(g_buffer);
     g_waveOut = NULL;
     g_audioCallback = NULL;
+    g_audioCallbackData = NULL;
     audio_mutex_unlock(g_audioLock);
     audio_mutex_destroy(g_audioLock);
 }
@@ -179,8 +191,10 @@ void audio_start(void)
 {
     DWORD dwThreadId;
     size_t i = 0;
+
     if(!g_audioCallback)
         return;
+
     if(g_started)
         return;
 
@@ -193,7 +207,7 @@ void audio_start(void)
         g_hdr[i].dwBufferLength = (DWORD)g_bufferSize;
         g_hdr[i].lpData = (LPSTR)(g_buffer + (g_bufferSize * i));
         waveOutPrepareHeader(g_waveOut, &g_hdr[i], sizeof(WAVEHDR));
-        g_audioCallback(NULL, (UINT8*)g_hdr[i].lpData, (int)g_hdr[i].dwBufferLength);
+        g_audioCallback(g_audioCallbackData, (UINT8*)g_hdr[i].lpData, (int)g_hdr[i].dwBufferLength);
         waveOutWrite(g_waveOut, &g_hdr[i], sizeof(WAVEHDR));
     }
 
