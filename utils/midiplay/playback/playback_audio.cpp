@@ -110,9 +110,7 @@ static void s_audioPlaybackCallback(void *p_data, uint8_t *stream, int len)
     if(data->isMono)
         got = stereoToMono(g_audioBuffer.data(), got);
 
-    for(int a = 0; a < got; ++a)
-        stream[a] = g_audioBuffer[a];
-
+    std::memcpy(stream, g_audioBuffer.data(), got);
     applyGain(stream, len);
 
     g_audioBuffer_lock.Unlock();
