@@ -197,7 +197,11 @@ To build that example you will need to have installed SDL2 library.
 
 # Changelog
 ## 1.6.3   dev
-Comming soon
+ * Fixed several minor glitches, contributed by @yumasansansan.
+ * Disabled the Fast Wavegen hack at the Nuked OPL3 emulator and actualised to the latest mainstream version.
+ * Fixed unstable playback on Windows via the terminal player tool.
+ * The adlmidi2 player tool now shares the same audio backend as the primary `adlmidiplay` tool.
+ * Fixed the incorrect reverb effect at the adlmidi2 player tool.
 
 ## 1.6.2.1 2026-08-30
  * Fixed misses of register writes problem at the LLE-OPL3 emulator (#318).
