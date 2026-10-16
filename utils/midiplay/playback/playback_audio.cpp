@@ -93,6 +93,12 @@ static void s_audioPlaybackCallback(void *p_data, uint8_t *stream, int len)
 
     g_audioBuffer_lock.Lock();
 
+    if((size_t)len > g_audioBuffer.size())
+    {
+        g_audioBuffer.resize(len);
+        querySize = len / g_audioFormat.containerSize;
+    }
+
     if(data->isMono)
         querySize *= 2;
 
