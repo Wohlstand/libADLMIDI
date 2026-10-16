@@ -406,7 +406,7 @@ public:
             #pragma omp parallel for schedule(static)
 # ifdef _WIN32
             // MSVC refuses to compile unless scan is a signed variable
-            for(long scan = 0; scan < TxWidth * TxHeight; ++scan)
+            for(long scan = 0; scan < (long)TxWidth * (long)TxHeight; ++scan)
 # else
             for(unsigned scan = 0; scan < TxWidth * TxHeight; ++scan)
 # endif
@@ -438,7 +438,7 @@ public:
         ++x; // One letter drawn. Update cursor position.
     }
 
-    int Print(unsigned beginx, unsigned color, bool ln, const char *fmt, va_list ap)
+    int PrintV(unsigned beginx, unsigned color, bool ln, const char *fmt, va_list ap)
     {
         char Line[1024];
 #ifndef __CYGWIN__
@@ -482,7 +482,7 @@ public:
     {
         va_list ap;
         va_start(ap, fmt);
-        int r = Print(beginx, color, ln, fmt, ap);
+        int r = PrintV(beginx, color, ln, fmt, ap);
         va_end(ap);
         return r;
     }
@@ -491,7 +491,7 @@ public:
     {
         va_list ap;
         va_start(ap, fmt);
-        int r = Print(2/*column*/, 8/*color*/, true/*line*/, fmt, ap);
+        int r = PrintV(2/*column*/, 8/*color*/, true/*line*/, fmt, ap);
         va_end(ap);
         return r;
     }
@@ -1583,88 +1583,6 @@ static void TidyupAndExit(int sig)
     }
 }
 
-#ifdef _WIN32
-/* Parse a command line buffer into arguments */
-static void UnEscapeQuotes(char *arg)
-{
-    for(char *last = 0; *arg != '\0'; last = arg++)
-        if(*arg == '"' && *last == '\\')
-        {
-            char *c_last = last;
-            for(char *c_curr = arg; *c_curr; ++c_curr)
-            {
-                *c_last = *c_curr;
-                c_last = c_curr;
-            }
-            *c_last = '\0';
-        }
-}
-static int ParseCommandLine(char *cmdline, char **argv)
-{
-    char *bufp, *lastp = NULL;
-    int argc = 0, last_argc = 0;
-    for(bufp = cmdline; *bufp;)
-    {
-        /* Skip leading whitespace */
-        while(std::isspace(*bufp)) ++bufp;
-        /* Skip over argument */
-        if(*bufp == '"')
-        {
-            ++bufp;
-            if(*bufp)
-            {
-                if(argv) argv[argc] = bufp;
-                ++argc;
-            }
-            /* Skip over word */
-            while(*bufp && (*bufp != '"' || *lastp == '\\'))
-            {
-                lastp = bufp;
-                ++bufp;
-            }
-        }
-        else
-        {
-            if(*bufp)
-            {
-                if(argv) argv[argc] = bufp;
-                ++argc;
-            }
-            /* Skip over word */
-            while(*bufp && ! std::isspace(*bufp)) ++bufp;
-        }
-        if(*bufp)
-        {
-            if(argv) *bufp = '\0';
-            ++bufp;
-        }
-        /* Strip out \ from \" sequences */
-        if(argv && last_argc != argc) UnEscapeQuotes(argv[last_argc]);
-        last_argc = argc;
-    }
-    if(argv) argv[argc] = 0;
-    return(argc);
-}
-
-extern int main(int argc, char **argv);
-
-// Replaced by UTF8Main
-
-//int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
-//{
-//    (void)hInst;
-//    (void)hPrev;
-//    (void)szCmdLine;
-//    (void)sw;
-//    //extern int main(int, char **);
-//    char *cmdline = GetCommandLine();
-//    int argc = ParseCommandLine(cmdline, NULL);
-//    char **argv = new char *[argc + 1];
-//    ParseCommandLine(cmdline, argv);
-//    return main(argc, argv);
-//}
-#endif
-
 static void adlEventHook(void *, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 /*channel*/, const ADL_UInt8 *data, size_t len)
 {
     if(type == 0xF7 || type  == 0xF0) // Ignore SysEx
@@ -2013,10 +1931,13 @@ int main(int argc, char **argv)
 #else
     WritingToTTY = true;
 #endif
+
     if(WritingToTTY)
     {
-        UI.Print(0, 3, true, "(C) -- http://iki.fi/bisqwit/source/adlmidi.html");
+        UI.Print(0, 3, true, "(C) libADLMIDI by Wohlstand");
+        UI.Print(0, 3, true, "(C) Origin by: -- http://iki.fi/bisqwit/source/adlmidi.html");
     }
+
     UI.Color(7);
     std::fflush(stderr);
 
