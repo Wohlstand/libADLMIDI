@@ -199,11 +199,11 @@ To build that example you will need to have installed SDL2 library.
 ## 1.6.3   dev
 Comming soon
 
-## 1.6.2.1 2025-08-30
+## 1.6.2.1 2026-08-30
  * Fixed misses of register writes problem at the LLE-OPL3 emulator (#318).
  * Fixed build when default embedded banks database regeneration is enabled (#316).
 
-## 1.6.2   2025-08-24
+## 1.6.2   2026-08-24
  * Fixed the random stuck problem in the DOS version of the ADLMIDI player.
  * Added support for HMI and HMP files!
  * Added support for in-track (local) loops.
