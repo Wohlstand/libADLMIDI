@@ -16,6 +16,31 @@ endif()
 try_compile(HAS_TERMIO ${CMAKE_BINARY_DIR}/compile_tests "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-termio.c")
 try_compile(HAS_TERMIOS ${CMAKE_BINARY_DIR}/compile_tests "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-termios.c")
 
+if(ADLMIDI_DOS)
+    set(MIDIPLAY2_PREFER_SDL OFF)
+else()
+    option(MIDIPLAY2_PREFER_SDL  "Prefer use of SDL2 or SDL3 audio instead of WinMM/ALSA/PulseAudio" OFF)
+endif()
+
+if(UNIX AND NOT APPLE AND NOT MIDIPLAY2_PREFER_SDL)
+    set(USE_ALSA_AUDIO 1)
+endif()
+
+if(WIN32 AND NOT MIDIPLAY2_PREFER_SDL)
+    set(USE_WINMM_AUDIO 1)
+endif()
+
+if(MIDIPLAY2_PREFER_SDL OR (NOT ADLMIDI_DOS AND NOT USE_WINMM_AUDIO AND NOT USE_ALSA_AUDIO))
+    libADLMIDI_find_SDL3()
+    if(TARGET ADLMIDI_SDL3)
+        set(USE_SDL3_AUDIO 1)
+    else()
+        libADLMIDI_find_SDL2()
+        set(USE_SDL2_AUDIO 1)
+    endif()
+endif()
+
+
 include(../common/utf8main.cmake)
 
 set(adlmidi2_src)
@@ -35,6 +60,31 @@ if(ADLMIDI_DOS)
         ../midiplay/playback/dos_tman_c.h
         ../midiplay/playback/dos_tman.cpp
     )
+else()
+    list(APPEND adlmidi2_src
+        ../midiplay/audio/audio.h
+        ../midiplay/playback/playback.h
+        ../midiplay/playback/playback_common.cpp
+    )
+
+    if(USE_SDL2_AUDIO OR USE_SDL3_AUDIO)
+        list(APPEND adlmidi2_src
+            ../midiplay/audio/audio_sdl.c
+        )
+    endif()
+
+    if(USE_ALSA_AUDIO)
+        list(APPEND adlmidi2_src
+            ../midiplay/audio/audio_alsa.c
+        )
+    endif()
+
+    if(USE_WINMM_AUDIO)
+        list(APPEND adlmidi2_src
+            ../midiplay/audio/audio_winmm.c
+        )
+    endif()
+
 endif()
 
 if(ADLMIDI2_HAS_PUZZLE_GAME)
@@ -44,9 +94,16 @@ endif()
 add_executable(adlmidi2 ${adlmidi2_src})
 target_link_libraries(adlmidi2 PRIVATE ADLMIDI)
 
-if(NOT WIN32 AND NOT ADLMIDI_DOS)
-    libADLMIDI_find_SDL2()
+if(USE_SDL3_AUDIO)
+    target_link_libraries(adlmidi2 PRIVATE ADLMIDI_SDL3)
+    target_compile_definitions(adlmidi2 PRIVATE ADLMIDI_USE_SDL3 MIDIPLAY_USE_SDL3)
+elseif(USE_SDL2_AUDIO)
     target_link_libraries(adlmidi2 PRIVATE ADLMIDI_SDL2)
+    target_compile_definitions(adlmidi2 PRIVATE ADLMIDI_USE_SDL2 MIDIPLAY_USE_SDL2)
+elseif(USE_ALSA_AUDIO)
+    target_link_libraries(adlmidi2 PRIVATE asound)
+elseif(WIN32)
+    target_link_libraries(adlmidi2 PRIVATE winmm)
 endif()
 
 set_nopie(adlmidi2)

@@ -19,7 +19,8 @@
 #include <vector> // vector
 #include <deque>  // deque
 #include <cmath>  // exp, log, ceil
-#include "utf8main.h"
+#include "utf8main.h"  // IWYU pragma: keep
+#include "../midiplay/playback/playback.h"
 
 #include <assert.h>
 
@@ -47,41 +48,32 @@ static void waitDosTimerTick()
 
 #ifdef _WIN32
 # include <cctype>
-# define WIN32_LEAN_AND_MEAN
-# ifndef NOMINMAX
-#   define NOMINMAX //To don't damage std::min and std::max
-# endif
-# include <windows.h>
-# include <mmsystem.h>
 # ifdef SUPPORT_VIDEO_OUTPUT
 #  define popen _popen
 # endif
 #endif
 
-#if defined(_WIN32) || defined(__DJGPP__)
+#if defined(__DJGPP__)
 typedef unsigned char Uint8;
 typedef unsigned short Uint16;
 typedef unsigned Uint32;
 #else
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
-
 class MutexType
 {
-    SDL_mutex *mut;
+    void *mut;
 public:
-    MutexType() : mut(SDL_CreateMutex()) { }
+    MutexType() : mut(audio_mutex_create()) { }
     ~MutexType()
     {
-        SDL_DestroyMutex(mut);
+        audio_mutex_destroy(mut);
     }
     void Lock()
     {
-        SDL_mutexP(mut);
+        audio_mutex_lock(mut);
     }
     void Unlock()
     {
-        SDL_mutexV(mut);
+        audio_mutex_unlock(mut);
     }
 };
 #endif
@@ -100,7 +92,6 @@ public:
 
 static const unsigned long PCM_RATE = 48000;
 static const unsigned MaxCards = 100;
-static const unsigned MaxSamplesAtTime = 512; // 512=dbopl limitation
 #else // DJGPP
 static const unsigned MaxCards = 1;
 static const unsigned OPLBase = 0x388;
@@ -130,15 +121,18 @@ static unsigned WinHeight()
 }
 
 #if (!defined(_WIN32) || defined(__CYGWIN__)) && defined(TIOCGWINSZ)
-extern "C" {
+extern "C"
+{
     static void SigWinchHandler(int);
 }
+
 static void SigWinchHandler(int)
 {
     struct winsize w;
     if(ioctl(2, TIOCGWINSZ, &w) >= 0 || ioctl(1, TIOCGWINSZ, &w) >= 0 || ioctl(0, TIOCGWINSZ, &w) >= 0)
         WindowLines = w.ws_row;
 }
+
 #else
 static void SigWinchHandler(int) {}
 #endif
@@ -455,6 +449,7 @@ public:
         //if(nchars == 0) return nchars;
 
         HideCursor();
+
         for(unsigned tx = beginx; tx < NColumns; ++tx)
         {
             int n = (int)(tx - beginx); // Index into Line[]
@@ -472,6 +467,7 @@ public:
                 PutC(background[tx][txtline] = '.');
             }
         }
+
         std::fflush(stderr);
 
         if(ln)
@@ -481,6 +477,7 @@ public:
 
         return nchars;
     }
+
     int Print(unsigned beginx, unsigned color, bool ln, const char *fmt, ...) ATTRIBUTE_FORMAT_PRINTF(5, 6)
     {
         va_list ap;
@@ -489,6 +486,7 @@ public:
         va_end(ap);
         return r;
     }
+
     int PrintLn(const char *fmt, ...) ATTRIBUTE_FORMAT_PRINTF(2, 3)
     {
         va_list ap;
@@ -497,6 +495,7 @@ public:
         va_end(ap);
         return r;
     }
+
     void IllustrateNote(int adlchn, int note, int ins, int pressure, double bend)
     {
         HideCursor();
@@ -739,10 +738,132 @@ void ADLMIDI_PuzzleGame::PutCell(int x, int y, unsigned cell)
 }
 #endif
 
+
+struct IllustrateQueueEntry
+{
+    enum Type
+    {
+        T_META,
+        T_SYSEX,
+        T_NOTE,
+        T_MSG
+    } type;
+
+    union
+    {
+        char msg[80];
+
+        struct Meta
+        {
+            char msg[78];
+            uint8_t subtype;
+        } meta;
+
+        struct Note
+        {
+            int chan;
+            int note;
+            int ins;
+            int pressure;
+            double bend;
+        } note;
+
+        struct SysEx
+        {
+            uint8_t type;
+            unsigned len;
+        } sysex;
+    } data;
+};
+
+
+
+static size_t s_ill_queue_num = 0;
+static IllustrateQueueEntry s_ill_queue[1024];
+
+static void ill_addMessage(const char *fmt, va_list ap)
+{
+    if(s_ill_queue_num >= 1024)
+        return; // Queue is full!
+
+    s_ill_queue[s_ill_queue_num].type = IllustrateQueueEntry::T_MSG;
+    s_ill_queue[s_ill_queue_num].data.msg[0] = '\0';
+    std::vsnprintf(s_ill_queue[s_ill_queue_num].data.msg, 80, fmt, ap);
+    ++s_ill_queue_num;
+}
+
+static void ill_addMeta(uint8_t subtype, const char *msg)
+{
+    if(s_ill_queue_num >= 1024)
+        return; // Queue is full!
+
+    s_ill_queue[s_ill_queue_num].type = IllustrateQueueEntry::T_MSG;
+    std::strncpy(s_ill_queue[s_ill_queue_num].data.meta.msg, msg, 78);
+    s_ill_queue[s_ill_queue_num].data.meta.subtype = subtype;
+    ++s_ill_queue_num;
+}
+
+
+static void ill_addSysEx(uint8_t type, unsigned len)
+{
+    if(s_ill_queue_num >= 1024)
+        return; // Queue is full!
+
+    s_ill_queue[s_ill_queue_num].type = IllustrateQueueEntry::T_SYSEX;
+    s_ill_queue[s_ill_queue_num].data.sysex.type = type;
+    s_ill_queue[s_ill_queue_num].data.sysex.len = len;
+    ++s_ill_queue_num;
+}
+
+static void ill_addNote(int adlchn, int note, int ins, int pressure, double bend)
+{
+    if(s_ill_queue_num >= 1024)
+        return; // Queue is full!
+
+    s_ill_queue[s_ill_queue_num].type = IllustrateQueueEntry::T_NOTE;
+    s_ill_queue[s_ill_queue_num].data.note.chan = adlchn;
+    s_ill_queue[s_ill_queue_num].data.note.note = note;
+    s_ill_queue[s_ill_queue_num].data.note.ins = ins;
+    s_ill_queue[s_ill_queue_num].data.note.pressure = pressure;
+    s_ill_queue[s_ill_queue_num].data.note.bend = bend;
+    ++s_ill_queue_num;
+}
+
+static void ill_flush()
+{
+    for(size_t i = 0; i < s_ill_queue_num; ++i)
+    {
+        IllustrateQueueEntry &e = s_ill_queue[i];
+
+        switch(e.type)
+        {
+        case IllustrateQueueEntry::T_MSG:
+            UI.Print(2/*column*/, 8/*color*/, true/*line*/, "%s", e.data.msg);
+            break;
+
+        case IllustrateQueueEntry::T_NOTE:
+            UI.IllustrateNote(e.data.note.chan, e.data.note.note, e.data.note.ins, e.data.note.pressure, e.data.note.bend);
+            break;
+
+        case IllustrateQueueEntry::T_SYSEX:
+            UI.PrintLn("SysEx %02X: %u bytes", e.data.sysex.type, e.data.sysex.len/*, data.c_str()*/);
+            break;
+
+        case IllustrateQueueEntry::T_META:
+            UI.PrintLn("Meta %d: %s", e.data.meta.subtype, e.data.meta.msg);
+            break;
+        }
+    }
+
+    s_ill_queue_num = 0;
+}
+
+
 #ifndef __DJGPP__
 struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
 {
     float feedback, hf_damping, gain;
+
     struct FilterArray
     {
         struct Filter
@@ -750,12 +871,14 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
             std::vector<float> Ptr;
             size_t pos;
             float Store;
+
             void Create(size_t size)
             {
                 Ptr.resize(size);
                 pos = 0;
                 Store = 0.f;
             }
+
             float Update(float a, float b)
             {
                 Ptr[pos] = a;
@@ -763,16 +886,19 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
                 else --pos;
                 return b;
             }
+
             float ProcessComb(float input, const float feedback, const float hf_damping)
             {
                 Store = Ptr[pos] + (Store - Ptr[pos]) * hf_damping;
                 return Update(input + feedback * Store, Ptr[pos]);
             }
+
             float ProcessAllPass(float input)
             {
                 return Update(input + Ptr[pos] * .5f, Ptr[pos] - input);
             }
         } comb[8], allpass[4];
+
         void Create(double rate, double scale, double offset)
         {
             /* Filter delay lengths in samples (44100Hz sample-rate) */
@@ -780,11 +906,14 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
             static const int allpass_lengths[4] = {225, 341, 441, 556};
             double r = rate * (1 / 44100.0); // Compensate for actual sample-rate
             const int stereo_adjust = 12;
+
             for(size_t i = 0; i < 8; ++i, offset = -offset)
                 comb[i].Create(static_cast<size_t>(scale * r * (comb_lengths[i] + stereo_adjust * offset) + .5));
+
             for(size_t i = 0; i < 4; ++i, offset = -offset)
                 allpass[i].Create(static_cast<size_t>(r * (allpass_lengths[i] + stereo_adjust * offset) + .5));
         }
+
         void Process(size_t length,
                      const std::deque<float> &input, std::vector<float> &output,
                      const float feedback, const float hf_damping, const float gain)
@@ -798,6 +927,7 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
             }
         }
     } chan[2];
+
     std::vector<float> out[2];
     std::deque<float> input_fifo;
 
@@ -816,6 +946,7 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
         hf_damping = static_cast<float>(fhf_damping * .3 + .2);
         gain = static_cast<float>(std::exp(wet_gain_dB * (std::log(10.0) * 0.05)) * .015);
         input_fifo.insert(input_fifo.end(), delay, 0.f);
+
         for(size_t i = 0; i <= std::ceil(depth); ++i)
         {
             chan[i].Create(sample_rate_Hz, scale, i * depth);
@@ -825,13 +956,19 @@ struct Reverb /* This reverb implementation is based on Freeverb impl. in Sox */
     void Process(size_t length)
     {
         for(size_t i = 0; i < 2; ++i)
-            if(!out[i].empty())
-                chan[i].Process(length,
-                                input_fifo,
-                                out[i], feedback, hf_damping, gain);
+        {
+            if(out[i].empty())
+                continue;
+
+            chan[i].Process(length,
+                            input_fifo,
+                            out[i], feedback, hf_damping, gain);
+        }
+
         input_fifo.erase(input_fifo.begin(), input_fifo.begin() + length);
     }
 };
+
 static union ReverbSpecs
 {
     float array[7];
@@ -846,6 +983,7 @@ static union ReverbSpecs
         float stereo_depth;     // stereo_depth (0..1)
     } byname = {1.f, 6.f, .7f, .6f, .8f, 0.f, 1.f};
 } ReverbSpecs;
+
 static struct MyReverbData
 {
     float  wetonly;
@@ -853,12 +991,14 @@ static struct MyReverbData
 
     MyReverbData()
     {
-        ReInit();
+        ReInit(1024);
     }
-    void ReInit()
+
+    void ReInit(size_t buff_size)
     {
         wetonly = ReverbSpecs.byname.do_reverb;
-        for(std::size_t i=0; i<2; ++i)
+
+        for(std::size_t i = 0; i < 2; ++i)
         {
             chan[i].Create(PCM_RATE,
                 ReverbSpecs.byname.wet_gain_db,
@@ -867,7 +1007,7 @@ static struct MyReverbData
                 ReverbSpecs.byname.hf_damping,
                 ReverbSpecs.byname.pre_delay_s,
                 ReverbSpecs.byname.stereo_depth,
-                MaxSamplesAtTime);
+                buff_size);
         }
     }
 } reverb_data;
@@ -943,164 +1083,135 @@ static void ParseReverb(std::string specs)
         ReverbSpecs.byname.stereo_depth);
 }
 
-#ifdef _WIN32
-namespace WindowsAudio
-{
-    static const unsigned BUFFER_COUNT = 16;
-    static const unsigned BUFFER_SIZE  = 8192;
-    static HWAVEOUT hWaveOut;
-    static WAVEHDR headers[BUFFER_COUNT];
-    static volatile unsigned buf_read = 0, buf_write = 0;
 
-    static void CALLBACK Callback(HWAVEOUT, UINT msg, DWORD, DWORD, DWORD)
-    {
-        if(msg == WOM_DONE)
-        {
-            buf_read = (buf_read + 1) % BUFFER_COUNT;
-        }
-    }
-    static void Open(const int rate, const int channels, const int bits)
-    {
-        WAVEFORMATEX wformat;
-        MMRESULT result;
 
-        //fill waveformatex
-        memset(&wformat, 0, sizeof(wformat));
-        wformat.nChannels       = channels;
-        wformat.nSamplesPerSec  = rate;
-        wformat.wFormatTag      = WAVE_FORMAT_PCM;
-        wformat.wBitsPerSample  = bits;
-        wformat.nBlockAlign     = wformat.nChannels * (wformat.wBitsPerSample >> 3);
-        wformat.nAvgBytesPerSec = wformat.nSamplesPerSec * wformat.nBlockAlign;
-
-        //open sound device
-        //WAVE_MAPPER always points to the default wave device on the system
-        result = waveOutOpen
-                 (
-                     &hWaveOut, WAVE_MAPPER, &wformat,
-                     (DWORD_PTR)Callback, 0, CALLBACK_FUNCTION
-                 );
-        if(result == WAVERR_BADFORMAT)
-        {
-            fprintf(stderr, "ao_win32: format not supported\n");
-            return;
-        }
-        if(result != MMSYSERR_NOERROR)
-        {
-            fprintf(stderr, "ao_win32: unable to open wave mapper device\n");
-            return;
-        }
-        char *buffer = new char[BUFFER_COUNT * BUFFER_SIZE];
-        std::memset(headers, 0, sizeof(headers));
-        std::memset(buffer, 0, BUFFER_COUNT * BUFFER_SIZE);
-        for(unsigned a = 0; a < BUFFER_COUNT; ++a)
-            headers[a].lpData = buffer + a * BUFFER_SIZE;
-    }
-    static void Close()
-    {
-        waveOutReset(hWaveOut);
-        waveOutClose(hWaveOut);
-    }
-    static void Write(const unsigned char *Buf, unsigned len)
-    {
-        static std::vector<unsigned char> cache;
-        size_t cache_reduction = 0;
-        if(0 && len < BUFFER_SIZE && cache.size() + len <= BUFFER_SIZE)
-        {
-            cache.insert(cache.end(), Buf, Buf + len);
-            Buf = &cache[0];
-            len = static_cast<unsigned>(cache.size());
-            if(len < BUFFER_SIZE / 2)
-                return;
-            cache_reduction = cache.size();
-        }
-
-        while(len > 0)
-        {
-            unsigned buf_next = (buf_write + 1) % BUFFER_COUNT;
-            WAVEHDR *Work = &headers[buf_write];
-            while(buf_next == buf_read)
-            {
-                /*UI.Color(4);
-                UI.GotoXY(60,-5+5); fprintf(stderr, "waits\r"); UI.x=0; std::fflush(stderr);
-                UI.Color(4);
-                UI.GotoXY(60,-4+5); fprintf(stderr, "r%u w%u n%u\r",buf_read,buf_write,buf_next); UI.x=0; std::fflush(stderr);
-                */
-                /* Wait until at least one of the buffers is free */
-                Sleep(0);
-                /*UI.Color(2);
-                UI.GotoXY(60,-3+5); fprintf(stderr, "wait completed\r"); UI.x=0; std::fflush(stderr);*/
-            }
-
-            unsigned npending = (buf_write + BUFFER_COUNT - buf_read) % BUFFER_COUNT;
-            static unsigned counter = 0, lo = 0;
-            if(!counter-- || npending < lo)
-            {
-                lo = npending;
-                counter = 100;
-            }
-
-            if(!DoingInstrumentTesting)
-            {
-                if(UI.maxy >= 5)
-                {
-                    UI.Color(9);
-                    UI.GotoXY(70, -5 + 6);
-                    fprintf(stderr, "%3u bufs\r", (unsigned)npending);
-                    UI.x = 0;
-                    std::fflush(stderr);
-                    UI.GotoXY(71, -4 + 6);
-                    fprintf(stderr, "lo:%3u\r", lo);
-                    UI.x = 0;
-                }
-            }
-
-            //unprepare the header if it is prepared
-            if(Work->dwFlags & WHDR_PREPARED) waveOutUnprepareHeader(hWaveOut, Work, sizeof(WAVEHDR));
-            unsigned x = BUFFER_SIZE;
-            if(x > len) x = len;
-            std::memcpy(Work->lpData, Buf, x);
-            Buf += x;
-            len -= x;
-            //prepare the header and write to device
-            Work->dwBufferLength = x;
-            {
-                int err = waveOutPrepareHeader(hWaveOut, Work, sizeof(WAVEHDR));
-                if(err != MMSYSERR_NOERROR) fprintf(stderr, "waveOutPrepareHeader: %d\n", err);
-            }
-            {
-                int err = waveOutWrite(hWaveOut, Work, sizeof(WAVEHDR));
-                if(err != MMSYSERR_NOERROR) fprintf(stderr, "waveOutWrite: %d\n", err);
-            }
-            buf_write = buf_next;
-            //if(npending>=BUFFER_COUNT-2)
-            //    buf_read=(buf_read+1)%BUFFER_COUNT; // Simulate a read
-        }
-        if(cache_reduction)
-            cache.erase(cache.begin(), cache.begin() + cache_reduction);
-    }
-}
-#else
-static std::deque<short> AudioBuffer;
+static std::vector<uint8_t> AudioBuffer;
 static MutexType AudioBuffer_lock;
-static void AdlAudioCallback(void *, Uint8 *stream, int len)
+static bool AudioBufferReceived = false;
+static size_t AudioBufferReceivedSize = 0;
+static bool g_enableReverb = true;
+ADLMIDI_AudioFormat g_audioFormat = {ADLMIDI_SampleType_S16, sizeof(ADL_SInt16), sizeof(ADL_SInt16) * 2};
+float               g_gaining = 2.0f;
+
+struct AudioPlaybackData
 {
-    SDL_LockAudio();
-    short *target = (short *) stream;
-    AudioBuffer_lock.Lock();
-    /*if(len != AudioBuffer.size())
-        fprintf(stderr, "len=%d stereo samples, AudioBuffer has %u stereo samples",
-            len/4, (unsigned) AudioBuffer.size()/2);*/
-    unsigned ate = len / 2; // number of shorts
-    if(ate > AudioBuffer.size()) ate = AudioBuffer.size();
-    for(unsigned a = 0; a < ate; ++a)
-        target[a] = AudioBuffer[a];
-    AudioBuffer.erase(AudioBuffer.begin(), AudioBuffer.begin() + ate);
-    //fprintf(stderr, " - remain %u\n", (unsigned) AudioBuffer.size()/2);
-    AudioBuffer_lock.Unlock();
-    SDL_UnlockAudio();
+    ADL_MIDIPlayer *dev;
+    bool isMono;
+    bool bufferDone;
+};
+
+static void processReverb(size_t buff_size)
+{
+    int16_t *buff = (int16_t *)AudioBuffer.data();
+    size_t buff_len = buff_size / sizeof(int16_t);
+    size_t count = buff_len / 2;
+
+    if(!g_enableReverb)
+        return; // Skip reverb processing
+
+    std::vector<float> dry[2];
+
+    // Attempt to filter out the DC component. However, avoid doing
+    // sudden changes to the offset, for it can be audible.
+    double average[2] = {0,0};
+
+    for(unsigned w = 0; w < 2; ++w)
+    {
+        for(size_t p = 0; p < count; ++p)
+            average[w] += buff[p * 2 + w];
+    }
+
+    static float prev_avg_flt[2] = {0,0};
+    float average_flt[2] =
+    {
+        prev_avg_flt[0] = (prev_avg_flt[0] + average[0] * 0.04 / double(count)) / 1.04,
+        prev_avg_flt[1] = (prev_avg_flt[1] + average[1] * 0.04 / double(count)) / 1.04
+    };
+
+    for(unsigned w = 0; w < 2; ++w)
+    {
+        dry[w].resize(count);
+
+        float a = average_flt[w];
+        for(unsigned long p = 0; p < count; ++p)
+        {
+            int   s = buff[p*2+w];
+            dry[w][p] = (s - a) * double(0.3 / 32768.0);
+        }
+        // ^  Note: ftree-vectorize causes an error in this loop on g++-4.4.5
+        reverb_data.chan[w].input_fifo.insert(reverb_data.chan[w].input_fifo.end(), dry[w].begin(), dry[w].end());
+    }
+
+    // Reverbify it
+    for(unsigned w = 0; w < 2; ++w)
+        reverb_data.chan[w].Process(count);
+
+    for(unsigned long p = 0; p < count; ++p)
+    {
+        for(unsigned w = 0; w < 2; ++w)
+        {
+            float out = (/*(1 - reverb_data.wetonly) **/ dry[w][p] +
+                          reverb_data.wetonly * (
+                            .5 * (reverb_data.chan[0].out[w][p]
+                                + reverb_data.chan[1].out[w][p]))
+                        ) * 32768.0f + average_flt[w];
+
+            buff[p * 2 + w] = out < -32768.f ? -32768 : out>32767.f ?  32767 : out;
+        }
+    }
 }
-#endif // WIN32
+
+static void AdlAudioCallback(void *p_data, uint8_t *stream, int len)
+{
+    AudioPlaybackData *data = (AudioPlaybackData*)p_data;
+    int querySize = len / g_audioFormat.containerSize;
+    int got;
+
+    audio_lock();
+
+    AudioBuffer_lock.Lock();
+
+    if((size_t)len > AudioBuffer.size())
+    {
+        AudioBuffer.resize(len);
+        reverb_data.ReInit(querySize / 2);
+    }
+
+    if(data->isMono)
+        querySize *= 2;
+
+    if(DoingInstrumentTesting)
+        got = adl_generateFormat(data->dev, querySize,
+                                 AudioBuffer.data(),
+                                 AudioBuffer.data() + g_audioFormat.containerSize,
+                                 &g_audioFormat) * g_audioFormat.containerSize;
+    else
+        got = adl_playFormat(data->dev, querySize,
+                             AudioBuffer.data(),
+                             AudioBuffer.data() + g_audioFormat.containerSize,
+                             &g_audioFormat) * g_audioFormat.containerSize;
+    if(got <= 0)
+    {
+        data->bufferDone = true;
+        AudioBuffer_lock.Unlock();
+        return;
+    }
+
+    processReverb(got);
+
+    if(data->isMono)
+        got = stereoToMono(AudioBuffer.data(), got);
+
+    std::memcpy(stream, AudioBuffer.data(), got);
+    applyGain(stream, len);
+
+    AudioBufferReceived = true;
+    AudioBufferReceivedSize = got;
+
+    AudioBuffer_lock.Unlock();
+
+    audio_unlock();
+}
 
 struct FourChars
 {
@@ -1108,54 +1219,43 @@ struct FourChars
 
     FourChars(const char *s)
     {
-        for(unsigned c = 0; c < 4; ++c) ret[c] = s[c];
+        for(unsigned c = 0; c < 4; ++c)
+            ret[c] = s[c];
     }
+
     FourChars(unsigned w) // Little-endian
     {
-        for(unsigned c = 0; c < 4; ++c) ret[c] = (w >> (c * 8)) & 0xFF;
+        for(unsigned c = 0; c < 4; ++c)
+            ret[c] = (w >> (c * 8)) & 0xFF;
     }
 };
 
 
 static void SendStereoAudio(unsigned long count, short* samples)
 {
-    if(count > MaxSamplesAtTime)
-    {
-        SendStereoAudio(MaxSamplesAtTime, samples);
-        SendStereoAudio(count-MaxSamplesAtTime, samples+MaxSamplesAtTime);
+    if(!count)
         return;
-    }
-#if 0
-    if(count % 2 == 1)
-    {
-        // An uneven number of samples? To avoid complicating matters,
-        // just ignore the odd sample.
-        count   -= 1;
-        samples += 1;
-    }
-#endif
-    if(!count) return;
 
     // Attempt to filter out the DC component. However, avoid doing
     // sudden changes to the offset, for it can be audible.
-    double average[2]={0,0};
-    for(unsigned w=0; w<2; ++w)
-        for(unsigned long p = 0; p < count; ++p)
-            average[w] += samples[p*2+w];
-    static float prev_avg_flt[2] = {0,0};
-    float average_flt[2] =
+    double average[2] = {0, 0};
+
+    for(unsigned w = 0; w < 2; ++w)
     {
-        prev_avg_flt[0] = (prev_avg_flt[0] + average[0]*0.04/double(count)) / 1.04,
-        prev_avg_flt[1] = (prev_avg_flt[1] + average[1]*0.04/double(count)) / 1.04
-    };
+        for(unsigned long p = 0; p < count; ++p)
+            average[w] += samples[p * 2 + w];
+    }
+
     // Figure out the amplitude of both channels
     if(!DoingInstrumentTesting)
     {
         static unsigned amplitude_display_counter = 0;
+
         if(!amplitude_display_counter--)
         {
             amplitude_display_counter = (PCM_RATE / count) / 24;
-            double amp[2]={0,0};
+            double amp[2] = {0,0};
+
             for(unsigned w=0; w<2; ++w)
             {
                 average[w] /= double(count);
@@ -1167,114 +1267,11 @@ static void SendStereoAudio(unsigned long count, short* samples)
                 const double maxdB = 3*16; // = 3 * log2(65536)
                 amp[w] = dB/maxdB;
             }
+
             UI.IllustrateVolumes(amp[0], amp[1]);
         }
     }
 
-    //static unsigned counter = 0; if(++counter < 8000)  return;
-
-#if defined(_WIN32) && 0
-    // Cheat on dosbox recording: easier on the cpu load.
-   {count*=2;
-    std::vector<short> AudioBuffer(count);
-    for(unsigned long p = 0; p < count; ++p)
-        AudioBuffer[p] = samples[p];
-    WindowsAudio::Write( (const unsigned char*) &AudioBuffer[0], count*2);
-    return;}
-#endif
-
-    // Convert input to float format
-    std::vector<float> dry[2];
-    for(unsigned w=0; w<2; ++w)
-    {
-        dry[w].resize(count);
-        float a = average_flt[w];
-        for(unsigned long p = 0; p < count; ++p)
-        {
-            int   s = samples[p*2+w];
-            dry[w][p] = (s - a) * double(0.3/32768.0);
-        }
-        // ^  Note: ftree-vectorize causes an error in this loop on g++-4.4.5
-        reverb_data.chan[w].input_fifo.insert(
-        reverb_data.chan[w].input_fifo.end(),
-            dry[w].begin(), dry[w].end());
-    }
-    // Reverbify it
-    for(unsigned w=0; w<2; ++w)
-        reverb_data.chan[w].Process(count);
-
-    // Convert to signed 16-bit int format and put to playback queue
-#ifdef _WIN32
-    std::vector<short> AudioBuffer(count*2);
-    const size_t pos = 0;
-#else
-    AudioBuffer_lock.Lock();
-    size_t pos = AudioBuffer.size();
-    AudioBuffer.resize(pos + count*2);
-#endif
-    for(unsigned long p = 0; p < count; ++p)
-        for(unsigned w=0; w<2; ++w)
-        {
-            float out = ((1 - reverb_data.wetonly) * dry[w][p] +
-                          reverb_data.wetonly * (
-                .5 * (reverb_data.chan[0].out[w][p]
-                    + reverb_data.chan[1].out[w][p]))
-                        ) * 32768.0f
-                 + average_flt[w];
-            AudioBuffer[pos+p*2+w] =
-                out<-32768.f ? -32768 :
-                out>32767.f ?  32767 : out;
-        }
-    if(WritePCMfile)
-    {
-        /* HACK: Cheat on DOSBox recording: Record audio separately on Windows. */
-        static FILE* fp = nullptr;
-        if(!fp)
-        {
-            fp = PCMfilepath == "-" ? stdout
-                                    : fopen(PCMfilepath.c_str(), "wb");
-            if(fp)
-            {
-                FourChars Bufs[] = {
-                    "RIFF", (0x24u),  // RIFF type, file length - 8
-                    "WAVE",           // WAVE file
-                    "fmt ", (0x10u),  // fmt subchunk, which is 16 bytes:
-                      "\1\0\2\0",     // PCM (1) & stereo (2)
-                      (48000u    ), // sampling rate
-                      (48000u*2*2), // byte rate
-                      "\2\0\20\0",    // block align & bits per sample
-                    "data", (0x00u)  //  data subchunk, which is so far 0 bytes.
-                };
-                for(unsigned c=0; c<sizeof(Bufs)/sizeof(*Bufs); ++c)
-                    std::fwrite(Bufs[c].ret, 1, 4, fp);
-            }
-        }
-
-        // Using a loop, because our data type is a deque, and
-        // the data might not be contiguously stored in memory.
-        for(unsigned long p = 0; p < 2*count; ++p)
-            std::fwrite(&AudioBuffer[pos+p], 1, 2, fp);
-
-        /* Update the WAV header */
-        if(true)
-        {
-            long pos = std::ftell(fp);
-            if(pos != -1)
-            {
-                long datasize = pos - 0x2C;
-                if(std::fseek(fp, 4,  SEEK_SET) == 0) // Patch the RIFF length
-                    std::fwrite( FourChars(0x24u+datasize).ret, 1,4, fp);
-                if(std::fseek(fp, 40, SEEK_SET) == 0) // Patch the data length
-                    std::fwrite( FourChars(datasize).ret, 1,4, fp);
-                std::fseek(fp, pos, SEEK_SET);
-            }
-        }
-
-        std::fflush(fp);
-
-        //if(std::ftell(fp) >= 48000*4*10*60)
-        //    raise(SIGINT);
-    }
 #ifdef SUPPORT_VIDEO_OUTPUT
     if(WriteVideoFile)
     {
@@ -1302,9 +1299,11 @@ static void SendStereoAudio(unsigned long count, short* samples)
 # endif
             fp = popen(cmdline.c_str(), "w");
         }
+
         if(fp)
         {
             samples_carry += count;
+
             while(samples_carry >= PCM_RATE / framerate)
             {
                 UI.VidRender();
@@ -1318,16 +1317,11 @@ static void SendStereoAudio(unsigned long count, short* samples)
                     bytes_remain -= r;
                     source       += r;
                 }
+
                 samples_carry -= PCM_RATE / framerate;
             }
         }
     }
-#endif
-#ifndef _WIN32
-    AudioBuffer_lock.Unlock();
-#else
-    if(!WritePCMfile)
-        WindowsAudio::Write( (const unsigned char*) &AudioBuffer[0], 2*AudioBuffer.size());
 #endif
 }
 #endif /* not DJGPP */
@@ -1408,7 +1402,17 @@ void AdlInstrumentTester::DoNote(int note)
 {
 #ifndef DISABLE_EMBEDDED_BANKS
     DoNoteOff();
+
+#   ifndef __DJGPP__
+    AudioBuffer_lock.Lock();
+#   endif
+
     adl_rt_noteOn(p->device, p->play_chan, note, 127);
+
+#   ifndef __DJGPP__
+    AudioBuffer_lock.Unlock();
+#   endif
+
     p->cur_note = note;
 #else
     (void)(note);
@@ -1418,8 +1422,16 @@ void AdlInstrumentTester::DoNote(int note)
 void AdlInstrumentTester::DoNoteOff()
 {
 #ifndef DISABLE_EMBEDDED_BANKS
+#   ifndef __DJGPP__
+    AudioBuffer_lock.Lock();
+#   endif
+
     if(p->cur_note > 0)
         adl_rt_noteOff(p->device, 0, p->cur_note);
+
+#   ifndef __DJGPP__
+    AudioBuffer_lock.Unlock();
+#   endif
 #endif
 }
 
@@ -1435,9 +1447,16 @@ void AdlInstrumentTester::NextGM(int offset)
     if(p->cur_gm >= maxBanks)
         p->cur_gm = (p->cur_gm + offset) - maxBanks;
 
-    adl_setBank(p->device, p->cur_gm);
+#ifndef __DJGPP__
+    AudioBuffer_lock.Lock();
+#endif
 
+    adl_setBank(p->device, p->cur_gm);
     FindAdlList();
+
+#ifndef __DJGPP__
+    AudioBuffer_lock.Unlock();
+#endif
 
     printIntst();
 #else
@@ -1468,10 +1487,18 @@ void AdlInstrumentTester::NextAdl(int offset)
     if(p->ins_idx >= 127)
         p->ins_idx = (p->ins_idx + offset) - 127;
 
+#ifndef __DJGPP__
+    AudioBuffer_lock.Lock();
+#endif
+
     adl_rt_patchChange(p->device, p->play_chan, p->ins_idx);
     adl_rt_controllerChange(p->device, p->play_chan, 7, 127);
     adl_rt_controllerChange(p->device, p->play_chan, 11, 127);
     adl_rt_controllerChange(p->device, p->play_chan, 10, 64);
+
+#ifndef __DJGPP__
+    AudioBuffer_lock.Unlock();
+#endif
 
     printIntst();
 #else
@@ -1638,13 +1665,11 @@ extern int main(int argc, char **argv);
 //}
 #endif
 
-static void adlEventHook(void *ui, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 /*channel*/, const ADL_UInt8 *data, size_t len)
+static void adlEventHook(void *, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 /*channel*/, const ADL_UInt8 *data, size_t len)
 {
-    UserInterface *mUI = (UserInterface *)ui;
-
     if(type == 0xF7 || type  == 0xF0) // Ignore SysEx
     {
-        mUI->PrintLn("SysEx %02X: %u bytes", type, (unsigned)len/*, data.c_str()*/);
+        ill_addSysEx(type, (unsigned)len);
         return;
     }
 
@@ -1652,24 +1677,21 @@ static void adlEventHook(void *ui, ADL_UInt8 type, ADL_UInt8 subtype, ADL_UInt8 
     {
         std::string eData((const char *)data, len);
         if(subtype >= 1 && subtype <= 6)
-            mUI->PrintLn("Meta %d: %s", subtype, eData.c_str());
+            ill_addMeta(subtype, eData.c_str());
     }
 }
 
-static void adlNoteHook(void *userdata, int adlchn, int note, int ins, int pressure, double bend)
+static void adlNoteHook(void *, int adlchn, int note, int ins, int pressure, double bend)
 {
-    UserInterface *mUI = (UserInterface *)userdata;
-    mUI->IllustrateNote(adlchn, note, ins, pressure, bend);
+    ill_addNote(adlchn, note, ins, pressure, bend);
 }
 
-static void adlDebugMsgHook(void *userdata, const char *fmt, ...)
+static void adlDebugMsgHook(void *, const char *fmt, ...)
 {
-    UserInterface *mUI = (UserInterface *)userdata;
     va_list ap;
     va_start(ap, fmt);
-    /*int r = */ mUI->Print(2/*column*/, 8/*color*/, true/*line*/, fmt, ap);
+    ill_addMessage(fmt, ap);
     va_end(ap);
-    //return r;
 }
 
 static bool is_number(const std::string &s)
@@ -1698,43 +1720,173 @@ static void s_midiLoop(DosTask *task)
             QuitFlag = true;
     }
 }
+#else
+
+static FILE *s_waveWriteOpen(const AudioOutputSpec *spec)
+{
+    FILE* fp = PCMfilepath == "-" ? stdout : fopen(PCMfilepath.c_str(), "wb");
+
+    if(fp)
+    {
+        FourChars Bufs[] =
+        {
+            "RIFF", (0x24u),  // RIFF type, file length - 8
+            "WAVE",           // WAVE file
+            "fmt ", (0x10u),  // fmt subchunk, which is 16 bytes:
+              "\1\0\2\0",     // PCM (1) & stereo (2)
+              (spec->freq), // sampling rate
+              (spec->freq * spec->channels * 2), // byte rate
+              "\2\0\20\0",    // block align & bits per sample
+            "data", (0x00u)  //  data subchunk, which is so far 0 bytes.
+        };
+
+        for(unsigned c = 0; c < sizeof(Bufs) / sizeof(*Bufs); ++c)
+            std::fwrite(Bufs[c].ret, 1, 4, fp);
+    }
+
+    return fp;
+}
+
+static bool s_waveWriteProcess(AudioPlaybackData *data, FILE *fp)
+{
+    int querySize = AudioBuffer.size() / g_audioFormat.containerSize;
+    int got;
+
+    got = adl_playFormat(data->dev, querySize,
+                         AudioBuffer.data(),
+                         AudioBuffer.data() + g_audioFormat.containerSize,
+                         &g_audioFormat) * g_audioFormat.containerSize;
+
+    if(got <= 0)
+    {
+        data->bufferDone = true;
+        return true;
+    }
+
+    processReverb(got);
+
+    if(data->isMono)
+        got = stereoToMono(AudioBuffer.data(), got);
+
+    AudioBufferReceived = true;
+    AudioBufferReceivedSize = got;
+
+    // Using a loop, because our data type is a deque, and
+    // the data might not be contiguously stored in memory.
+    std::fwrite(AudioBuffer.data(), 1, got, fp);
+
+    long pos = std::ftell(fp);
+
+    if(pos != -1)
+    {
+        long datasize = pos - 0x2C;
+
+        if(std::fseek(fp, 4,  SEEK_SET) == 0) // Patch the RIFF length
+            std::fwrite(FourChars(0x24u + datasize).ret, 1, 4, fp);
+
+        if(std::fseek(fp, 40, SEEK_SET) == 0) // Patch the data length
+            std::fwrite(FourChars(datasize).ret, 1, 4, fp);
+
+        std::fseek(fp, pos, SEEK_SET);
+    }
+
+    std::fflush(fp);
+
+    return false;
+}
+
 #endif
 
 static void runPlaybackLoop(ADL_MIDIPlayer *myDevice,
-                            AdlInstrumentTester &InstrumentTester
-#ifndef __DJGPP__
-                            ,
-                            const SDL_AudioSpec &spec,
-                            const SDL_AudioSpec &obtained
-#endif
-                            )
+                            AdlInstrumentTester &InstrumentTester)
 {
-#ifndef __DJGPP__
-    short buff[1024];
-    // How much do WE buffer, in seconds? The smaller the value,
-    // the more prone to sound chopping we are.
-    const double OurHeadRoomLength = 0.1;
-    // The lag between visual content and audio content equals
-    // the sum of these two buffers.
-#else
+#ifdef __DJGPP__
     (void)myDevice;
 #endif
+
+#if !defined(__DJGPP__)
+    FILE *waveFile = NULL;
+    AudioPlaybackData audioData;
+    audioData.dev = myDevice;
+    audioData.bufferDone = false;
+    audioData.isMono = false;
+
+    AudioOutputSpec spec, obtained;
+    spec.freq     = PCM_RATE;
+    spec.format   = MidiPlay_SampleType_S16;
+    spec.channels = 2;
+    spec.samples  = 1024;
+
+    if(!WritePCMfile)
+    {
+        // Set up SDL
+        if(audio_init(&spec, &obtained, &AdlAudioCallback, &audioData) < 0)
+        {
+            std::fprintf(stderr, "Couldn't open audio: %s\n", audio_get_error());
+            //return 1;
+        }
+
+        if(spec.samples != obtained.samples || spec.freq != obtained.freq || spec.format != obtained.format)
+        {
+            std::fprintf(stdout, " - Audio wanted (format=%s,samples=%u,rate=%u,channels=%u);\n"
+                                 " - Audio obtained (format=%s,samples=%u,rate=%u,channels=%u)\n",
+                                 audio_format_to_str(spec.format, spec.is_msb),         spec.samples,     spec.freq,     spec.channels,
+                                 audio_format_to_str(obtained.format, obtained.is_msb), obtained.samples, obtained.freq, obtained.channels);
+        }
+
+    }
+    else
+    {
+        std::memcpy(&obtained, &spec, sizeof(AudioOutputSpec));
+        waveFile = s_waveWriteOpen(&obtained);
+
+        if(!waveFile)
+        {
+            std::fprintf(stderr, "Couldn't open WAVE file for write!\n");
+            return;
+        }
+    }
+
+    fillAudioFormat(obtained);
+
+    audioData.isMono = obtained.channels == 1;
+    AudioBuffer.resize(obtained.samples * g_audioFormat.containerSize * 2);
+    AudioBufferReceived = false;
+
+    reverb_data.ReInit(obtained.samples);
+
+    if(!WritePCMfile)
+        audio_start();
+
+#endif /* not DJGPP and not WIN32 */
 
     while(!QuitFlag)
     {
 #ifndef __DJGPP__
-        //const double eat_delay = delay < maxdelay ? delay : maxdelay;
-        //delay -= eat_delay;
-        size_t got = 0;
+        if(WritePCMfile)
+        {
+            if(s_waveWriteProcess(&audioData, waveFile))
+                break;
+        }
 
-        if(!DoingInstrumentTesting)
-            got = (size_t)adl_play(myDevice, 1024, buff);
-        else
-            got = (size_t)adl_generate(myDevice, 1024, buff);
-        if(got <= 0)
+        AudioBuffer_lock.Lock();
+
+        if(audioData.bufferDone)
+        {
+            AudioBuffer_lock.Unlock();
             break;
+        }
+
+        ill_flush();
+
         /* Process it */
-        SendStereoAudio(static_cast<unsigned long>(got / 2), buff);
+        if(AudioBufferReceived)
+        {
+            SendStereoAudio(static_cast<unsigned long>(AudioBufferReceivedSize / 4), (short*)AudioBuffer.data());
+            AudioBufferReceived = false;
+        }
+
+        AudioBuffer_lock.Unlock();
 
         //static double carry = 0.0;
         //carry += PCM_RATE * eat_delay;
@@ -1776,32 +1928,26 @@ static void runPlaybackLoop(ADL_MIDIPlayer *myDevice,
 
         //fprintf(stderr, "Enter: %u (%.2f ms)\n", (unsigned)AudioBuffer.size(),
         //    AudioBuffer.size() * .5e3 / obtained.freq);
-        #ifndef _WIN32
-        const SDL_AudioSpec &spec_ = (WritePCMfile ? spec : obtained);
-        for(unsigned grant = 0; AudioBuffer.size() > spec_.samples + (spec_.freq * 2) * OurHeadRoomLength; ++grant)
+#   ifndef _WIN32
+        if(!WritePCMfile)
         {
-            if(!WritePCMfile)
-            {
-                if(UI.CheckTetris() || grant % 4 == 0)
-                {
-                    SDL_Delay(1); // std::min(10.0, 1e3 * eat_delay) );
-                }
-            }
-            else
-            {
-                for(unsigned n = 0; n < 128; ++n) UI.CheckTetris();
-                AudioBuffer_lock.Lock();
-                AudioBuffer.clear();
-                AudioBuffer_lock.Unlock();
-            }
+            audio_delay(5);
+            UI.CheckTetris();
         }
-        #else
+        else
+        {
+            for(unsigned n = 0; n < 128; ++n)
+                UI.CheckTetris();
+        }
+#   else
         //Sleep(1e3 * eat_delay);
-        #endif
+#   endif
         //fprintf(stderr, "Exit: %u\n", (unsigned)AudioBuffer.size());
         //}
 #else /* DJGPP */
         UI.IllustrateVolumes(0, 0);
+
+        ill_flush();
 
         waitDosTimerTick();
 
@@ -1831,19 +1977,25 @@ static void runPlaybackLoop(ADL_MIDIPlayer *myDevice,
 
         //tick_delay = nextdelay;
     }
+
+#ifndef __DJGPP__
+    if(WritePCMfile)
+    {
+        if(waveFile)
+            std::fclose(waveFile);
+    }
+    else
+    {
+        audio_stop();
+        audio_close();
+    }
+#endif
 }
 
 int main(int argc, char **argv)
 {
 #ifdef __DJGPP__
     DosTaskman taskMan;
-#endif
-
-#if !defined(HARDWARE_OPL3) && !defined(_WIN32)
-    // How long is SDL buffer, in seconds?
-    // The smaller the value, the more often AdlAudioCallBack()
-    // is called.
-    const double AudioBufferLength = 0.045;
 #endif
 
 #ifndef _WIN32
@@ -1898,7 +2050,7 @@ int main(int argc, char **argv)
 #ifndef HARDWARE_OPL3
             " -fp             Enables full-panning stereo support\n"
             " --emu-nuked     Uses Nuked OPL3 v 1.8 emulator\n"
-            " --emu-nuked7    Uses Nuked OPL3 v 1.7.4 emulator\n"
+            " --emu-nuked7    Uses Nuked OPL3 Fast emulator\n"
             " --emu-nuked-opl2 Uses Nuked OPL2 Lite emulator\n"
             " --emu-dosbox    Uses DosBox 0.74 OPL3 emulator\n"
             " --emu-dosbox-opl2 Uses DosBox 0.74 OPL2 emulator\n"
@@ -1985,7 +2137,10 @@ int main(int argc, char **argv)
 #endif
 #ifndef __DJGPP__
         else if(!std::strcmp("-nr", argv[2]))
+        {
             ParseReverb("none");
+            g_enableReverb = false;
+        }
         else if(!std::strcmp("-reverb", argv[2]))
         {
             ParseReverb(argv[3]);
@@ -2057,28 +2212,6 @@ int main(int argc, char **argv)
     adl_switchEmulator(myDevice, emulator);
 #endif
     adl_setLoopEnabled(myDevice, loopEnabled);
-
-#if !defined(__DJGPP__) && !defined(_WIN32)
-    static SDL_AudioSpec spec, obtained;
-    spec.freq     = PCM_RATE;
-    spec.format   = AUDIO_S16SYS;
-    spec.channels = 2;
-    spec.samples  = (Uint16)(spec.freq * AudioBufferLength);
-    spec.callback = AdlAudioCallback;
-    if(!WritePCMfile)
-    {
-        // Set up SDL
-        if(SDL_OpenAudio(&spec, &obtained) < 0)
-        {
-            std::fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
-            //return 1;
-        }
-        if(spec.samples != obtained.samples)
-            std::fprintf(stderr, "Wanted (samples=%u,rate=%u,channels=%u); obtained (samples=%u,rate=%u,channels=%u)\n",
-                         spec.samples,    spec.freq,    spec.channels,
-                         obtained.samples, obtained.freq, obtained.channels);
-    }
-#endif /* not DJGPP and not WIN32 */
 
     if(argc >= 3)
     {
@@ -2205,7 +2338,6 @@ int main(int argc, char **argv)
     }
 
 #ifdef __DJGPP__
-
     unsigned TimerPeriod = 0x1234DDul / NewTimerFreq;
     //disable();
     outportb(0x43, 0x34);
@@ -2213,18 +2345,6 @@ int main(int argc, char **argv)
     outportb(0x40, TimerPeriod >>   8);
     //enable();
     unsigned long BIOStimer_begin = BIOStimer;
-
-#else
-
-    //const double maxdelay = MaxSamplesAtTime / (double)PCM_RATE;
-    reverb_data.ReInit();
-
-#ifdef _WIN32
-    WindowsAudio::Open(PCM_RATE, 2, 16);
-#else
-    SDL_PauseAudio(0);
-#endif
-
 #endif /* djgpp */
 
     AdlInstrumentTester InstrumentTester(myDevice);
@@ -2250,7 +2370,7 @@ int main(int argc, char **argv)
     taskMan.terminate(midiTask);
     midiTask = NULL;
 #else
-    runPlaybackLoop(myDevice, InstrumentTester, spec, obtained);
+    runPlaybackLoop(myDevice, InstrumentTester);
 #endif
 
     //Shut up all sustaining notes
@@ -2271,14 +2391,6 @@ int main(int argc, char **argv)
     UI.ShowCursor();
     UI.Color(7);
     clrscr();
-#else
-
-#ifdef _WIN32
-    WindowsAudio::Close();
-#else
-    SDL_CloseAudio();
-#endif
-
 #endif /* djgpp */
 
     UI.ClearScreen();
@@ -2298,5 +2410,6 @@ int main(int argc, char **argv)
                     "    (C)Copyright Megasoft Corp 1981 - 1999.\n"*/
                     "");
     }
+
     return 0;
 }
