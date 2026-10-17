@@ -90,12 +90,9 @@ jobs:
         ls -lR .
         cd $oldpath
 
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 3
-        submodules: recursive
+    - uses: Wohlstand/checkout-bash@v0.1
 
-    - uses: Wohlstand/branch-name@v1.0.1-wohl
+    - uses: Wohlstand/branch-name-bash@v0.1
 
     - name: Check if a pull request
       id: event-check
