@@ -36,15 +36,6 @@ blocks:
             - cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DEXAMPLE_SDL2_AUDIO=ON -DWITH_VLC_PLUGIN=OFF -DVLC_PLUGIN_NOINSTALL=ON -DlibADLMIDI_SHARED=ON -DlibADLMIDI_STATIC=ON -DWITH_UNIT_TESTS=ON ..
             - cmake --build . --config Debug --target install -- -j 3
             - cd ..
-        - name: DJGPP DOS Without Embedded banks
-          commands:
-            - mkdir build-dos-ne
-            - cd build-dos-ne
-            - 'wget https://wohlsoft.ru/docs/Software/DJGPP/djgpp-linux-x-dos-12.1.0.tar.gz -O djgpp.tar.gz'
-            - sudo tar -xf djgpp.tar.gz -C /usr/local/
-            - ../cmake/djgpp/djgpp-cmake-core.sh -G "Ninja" -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=libADLMIDI -DWITH_EMBEDDED_BANKS=OFF -DWITH_MIDIPLAY=ON -DWITH_OLD_UTILS=ON -DWITH_GENADLDATA=OFF -DWITH_CPP_EXTRAS=ON -DWITH_ADLMIDI2=ON -DlibADLMIDI_SHARED=OFF -DlibADLMIDI_STATIC=ON ..
-            - ../cmake/djgpp/djgpp-cmake-core.sh --build . --config Release --target all -- -j 3
-            - cd ..
       env_vars:
         - name: ' FTP_SERVER'
           value: home.wohlsoft.ru
