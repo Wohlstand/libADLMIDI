@@ -115,6 +115,43 @@ void *ctx_wave_open(int chans_count,
     return ctx;
 }
 
+static void byte_swipe(unsigned char *buff, long size)
+{
+    unsigned char *head = buff;
+    unsigned char *tail = buff + size - 1;
+    unsigned char piv;
+
+    while(head < tail)
+    {
+        piv = *head;
+        *head = *tail;
+        *tail = piv;
+        ++head;
+        --tail;
+    }
+}
+
+static void format_s8_to_u8(unsigned char *buff, long size)
+{
+    long i;
+    for(i = 0; i < size; ++i)
+    {
+        char s = (char )*buff;
+        *(buff++) = (unsigned char)((int)s + 0x7F);
+    }
+}
+
+static void format_U16LE_to_S16LE(unsigned char *buff, long size)
+{
+    long i;
+    for(i = 0; i < size; i += 2)
+    {
+        unsigned short s = ((unsigned short)buff[0] & 0xFF) | (((unsigned short)buff[1] << 8) & 0xFF00);
+        short so = (short)((int)s - 32767);
+        *(buff++) = (unsigned char)(so & 0xFF);
+        *(buff++) = (unsigned char)(so >> 8 & 0xFF);
+    }
+}
 
 static void flush_(struct Context *ctx)
 {
@@ -136,20 +173,31 @@ void ctx_wave_write(void *ctx, const unsigned char *in, long remain)
 
         {
             unsigned char *p = &wWriter->m_buf[wWriter->m_buf_pos];
+            unsigned char *p2 = p;
             long n = (buf_size - (unsigned long)wWriter->m_buf_pos);
+            long n2 = n;
+            long a, s = wWriter->m_sample_size;
 
             if(n > remain)
                 n = remain;
             remain -= n;
 
-            /*
-             * TODO: Implement the conversion into valid formats:
-             * - 8-bit into unsigned, 16 and 32 bits into signed
-             * - all records must be little-endian
-             */
             /* convert to LSB first format */
             while(n--)
                 *p++ = (unsigned char)(*in++);
+
+            /* Convert BE samples to LE */
+            if(wWriter->m_is_big_endian && s > 1)
+            {
+                for(a = 0; a < n2; a += s)
+                    byte_swipe(p2 + a, s);
+            }
+
+            /* Convert Signed 8 to Unsigned 8 */
+            if(s == 1 && wWriter->m_has_sign)
+                format_s8_to_u8(p2, n2);
+            else if(s == 2 && !wWriter->m_has_sign)
+                format_U16LE_to_S16LE(p2, n2);
 
             wWriter->m_buf_pos = p - wWriter->m_buf;
             assert(wWriter->m_buf_pos <= buf_size);
